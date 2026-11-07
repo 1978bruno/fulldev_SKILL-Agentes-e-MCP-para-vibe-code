@@ -34,8 +34,8 @@ nele exige reinstalar nos dois projetos. O projeto `agents` é gerenciado pelo u
 
 ```
 apps/
-  web/            Frontend/BFF (Next.js)                              planejada
-  chat-api/       API do chat (NestJS): REST, WebSocket e o comando   planejada
+  web/            Frontend/BFF (Next.js)                              existe
+  chat-api/       API do chat (NestJS): REST, WebSocket e o comando   existe
                   de contas e permissões (HLD, seção 2)
     migrations/   migrações do Banco do chat                          planejada
   agents/         Serviço de agentes e Worker (Python + ADK),         planejada
