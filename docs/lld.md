@@ -333,8 +333,53 @@ A definir. O que cada contêiner recebe está no HLD, seção 8, "Configuração
 
 ## 10. Ambiente de desenvolvimento
 
-A definir. O que substitui cada serviço de produção está no HLD, seção 9, "Implantação e
-ambientes".
+Tudo roda em contêineres, pelo `compose.yaml` da raiz (projeto `fullcycle-slack-ia`). O que
+substitui cada serviço de produção segue o HLD, seção 9, "Implantação e ambientes".
+
+| Serviço | Imagem | Porta no host | Papel |
+| --- | --- | --- | --- |
+| `web` | `apps/web/Dockerfile.dev` (Node 26, pnpm 11) | 3000 | Frontend/BFF |
+| `chat-api` | `apps/chat-api/Dockerfile.dev` (Node 26, pnpm 11) | 3001 (3000 no contêiner) | API do chat |
+| `postgres` | `postgres:18` | 5432 | Banco do chat, dos agentes e de negócio |
+| `s3` | `chrislusf/seaweedfs:4.52` (`weed mini`) | 8333 | Substituto do armazenamento compatível com S3, com o bucket `reports` |
+
+Entram depois: o Redis, quando o primeiro uso dele for implementado, e os serviços `agents` e
+`worker`, quando `apps/agents` existir.
+
+**Contêineres dos apps**
+
+- A imagem não tem dependências. O `CMD` roda `pnpm install --frozen-lockfile` e mantém o
+  contêiner de pé; o app sobe na mão: `docker compose exec chat-api pnpm start:dev` e
+  `docker compose exec web pnpm dev`. Se o install falha, o contêiner continua de pé e o erro
+  fica em `docker compose logs`.
+- O repositório inteiro é montado em `/home/node/app`, para o `file:../../packages/chat-events`
+  resolver igual dentro e fora. O `node_modules` fica no disco do host, visível para o editor.
+- Os contêineres rodam como `node` (uid 1000), o mesmo usuário do host no WSL.
+- O store do pnpm fica em `.pnpm-store/` na raiz, ignorado pelo git e compartilhado pelos dois
+  apps. A versão do pnpm é a do `packageManager` de cada projeto, igual nos dois.
+- Bindings nativos são compilados no contêiner: o Node do host precisa ser o mesmo major (26)
+  para rodar ferramentas pelo host sobre o mesmo `node_modules`.
+
+**Postgres.** O script `docker/postgres/init/01-create-databases.sh` roda só com o volume vazio
+e cria os bancos `chat`, `agents` e `business`, cada um com um usuário dono de mesmo nome, e o
+usuário `business_readonly`, que só conecta no `business` e só lê, inclusive as tabelas que o
+script de carga criar depois ([ADR 0013](adr/0013-somente-leitura-banco-e-codigo.md)). Nenhum
+usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário, só locais.
+
+**Diferenças do ambiente local que mudam o código**
+
+- **Cookie de sessão:** localmente é só de host, em `localhost`, sem o atributo `Domain`; os
+  cookies não separam portas, então `web` e `chat-api` o recebem. Em produção vale para os
+  subdomínios (HLD 6.1).
+- **Endereço da API do chat:** o BFF a chama pela rede interna (`http://chat-api:3000`); o
+  navegador abre o WebSocket em `localhost:3001`. São dois endereços configurados.
+- **Endereço do S3:** a API do chat assina a URL do PDF com o endereço que o navegador alcança
+  (`http://localhost:8333`), porque a assinatura inclui o host; o Worker grava pelo endereço
+  interno (`http://s3:8333`). São dois endereços configurados, com acesso por caminho
+  (path-style).
+- Os nomes dessas variáveis seguem em aberto ("Valores e configuração"); por enquanto o
+  `compose.yaml` não passa variáveis aos apps.
+- O local não reproduz a rede privada nem a volta automática da PaaS (HLD, seção 9).
 
 ## 11. Decisões
 
@@ -415,4 +460,4 @@ As decisões que mudam o desenho estão no HLD, seção 10.
 - [ ] Valores de regra marcados "A definir" em "Valores e configuração", e se o limite de pedidos
       é constante ou variável.
 - [ ] Nomes, projetos e origem das variáveis de ambiente.
-- [ ] Diferenças do ambiente local que mudam o código ou os testes.
+- [x] Diferenças do ambiente local que mudam o código ou os testes (seção 10).

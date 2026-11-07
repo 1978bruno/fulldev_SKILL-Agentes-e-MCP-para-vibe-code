@@ -1,0 +1,17 @@
+FROM node:26-trixie-slim
+
+RUN npm install -g pnpm@11.28.9
+
+# Store do pnpm dentro do repositório montado (ignorado pelo git): sobrevive à recriação do
+# contêiner, é compartilhado entre os apps e fica no mesmo sistema de arquivos do node_modules.
+ENV pnpm_config_store_dir=/home/node/app/.pnpm-store
+
+USER node
+
+WORKDIR /home/node/app/apps/chat-api
+
+# Nenhuma dependência na imagem: o install roda na subida, sobre o código montado do host.
+# Se o install falhar, o contêiner continua de pé para correção via `docker compose exec`.
+# confirm-modules-purge=false: sem TTY, o pnpm aborta em vez de refazer um node_modules criado
+# com outro store (por exemplo, um install feito no host); só funciona como flag, não como ENV.
+CMD ["sh", "-c", "pnpm install --frozen-lockfile --config.confirm-modules-purge=false; tail -f /dev/null"]

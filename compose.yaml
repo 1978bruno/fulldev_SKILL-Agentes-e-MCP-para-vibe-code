@@ -1,0 +1,64 @@
+name: fullcycle-slack-ia
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    # Init como PID 1: o sh do CMD ignora SIGTERM, e sem isso todo stop termina em kill (137).
+    init: true
+    volumes:
+      # Repositório inteiro: o file:../../packages/chat-events precisa resolver igual dentro e fora.
+      - .:/home/node/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - chat-api
+
+  chat-api:
+    build:
+      context: ./apps/chat-api
+      dockerfile: Dockerfile.dev
+    init: true
+    volumes:
+      - .:/home/node/app
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      s3:
+        condition: service_started
+
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - postgres-data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Substituto local do armazenamento compatível com S3.
+  s3:
+    image: chrislusf/seaweedfs:4.52
+    command: ["mini", "-dir=/data"]
+    environment:
+      AWS_ACCESS_KEY_ID: fullcycle
+      AWS_SECRET_ACCESS_KEY: fullcycle-secret
+      S3_BUCKET: reports
+    volumes:
+      - s3-data:/data
+    ports:
+      - "8333:8333"
+
+volumes:
+  postgres-data:
+  s3-data:
