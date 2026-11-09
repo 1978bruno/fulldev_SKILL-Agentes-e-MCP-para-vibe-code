@@ -56,6 +56,14 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
   3. Shift+Tab até a Senha e Enter
     - expect: a URL é `/` e a Home aparece
 
+#### 1.4. entrar-antes-da-hidratacao
+
+**File:** `e2e/login/entrar-antes-da-hidratacao.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar` com os bundles do Next bloqueados (o React não hidrata), preencher E-mail e Senha e clicar em "Entrar"
+    - expect: a URL é `/` (o envio nativo é um POST para a Server Action, sem a senha na URL)
+
 ### 2. Sem Sessão
 
 **Seed:** `e2e/seed.spec.ts`

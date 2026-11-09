@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { login, type LoginState } from "@/app/actions/login";
+import { login, submitLogin, type LoginState } from "@/app/actions/login";
 import { Button } from "@/app/components/ui/button";
 import { Field } from "@/app/components/ui/field";
 import { Input } from "@/app/components/ui/input";
@@ -163,13 +163,13 @@ export function LoginForm({ returnPath }: LoginFormProps) {
         </div>
       </div>
 
-      {/* O action vale antes da hidratação (o React o renderiza como POST para o Server Action):
-          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
-          chama o mesmo Server Action. */}
+      {/* O action nativo é a Server Action submitLogin: sem JavaScript, ou antes da hidratação,
+          o navegador faz um POST para ela (e nunca um GET com a senha na URL). Com o JS, o
+          onSubmit valida e chama o login pelo useActionState, que trata a falha de rede. */}
       <form
         ref={formRef}
         className="flex w-full flex-col gap-4"
-        action={formAction}
+        action={submitLogin}
         onSubmit={handleSubmit}
         noValidate
       >

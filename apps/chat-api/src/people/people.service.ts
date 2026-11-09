@@ -79,11 +79,21 @@ export class PeopleService {
     });
   }
 
-  async changePassword(personId: string, password: string): Promise<void> {
-    await this.people.update(
-      { id: personId },
-      { passwordHash: await this.passwords.hash(password) },
-    );
+  // Troca o hash e roda `alsoInTransaction` (a revogação das Sessões, no reset-password) na
+  // mesma transação: ou as duas escritas valem, ou nenhuma. O hash é calculado antes, para o
+  // Argon2id não segurar a trava da linha.
+  async changePassword<T>(
+    personId: string,
+    password: string,
+    alsoInTransaction?: (manager: EntityManager) => Promise<T>,
+  ): Promise<T | undefined> {
+    const passwordHash = await this.passwords.hash(password);
+    return this.people.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(Person)
+        .update({ id: personId }, { passwordHash });
+      return alsoInTransaction?.(manager);
+    });
   }
 
   findByEmail(email: string): Promise<Person | null> {

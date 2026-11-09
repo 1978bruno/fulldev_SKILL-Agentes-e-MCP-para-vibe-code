@@ -6,6 +6,8 @@ type EmptyStateProps = {
   titleAs?: "h1" | "h2";
   icon?: LucideIcon;
   action?: React.ReactNode;
+  // Anuncia o título e a descrição ao leitor de tela (role="alert"), deixando a ação fora.
+  announce?: boolean;
 };
 
 // Ícone num quadro de 48, título, descrição e ação opcional.
@@ -15,6 +17,7 @@ export function EmptyState({
   titleAs: Title = "h2",
   icon: Icon,
   action,
+  announce,
 }: EmptyStateProps) {
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-3 px-6 py-12">
@@ -23,7 +26,10 @@ export function EmptyState({
           <Icon size={24} aria-hidden />
         </div>
       )}
-      <div className="flex w-full max-w-96 flex-col gap-1 text-center">
+      <div
+        role={announce ? "alert" : undefined}
+        className="flex w-full max-w-96 flex-col gap-1 text-center"
+      >
         <Title className="text-title font-black text-fg">{title}</Title>
         <p className="text-body text-fg-muted">{description}</p>
       </div>

@@ -186,6 +186,19 @@ describe('comando de contas', () => {
       expect(await sessionCount(person.id)).toBe(0);
     });
 
+    it('não troca a senha quando a revogação falha na mesma transação', async () => {
+      const person = await personWithSessions(1);
+
+      const attempt = people.changePassword(person.id, 'senha-nova', () =>
+        Promise.reject(new Error('falha na revogação')),
+      );
+
+      await expect(attempt).rejects.toThrow('falha na revogação');
+      const unchanged = await people.findByEmail(person.email);
+      expect(await verify(unchanged!.passwordHash, 'senha-antiga')).toBe(true);
+      expect(await sessionCount(person.id)).toBe(1);
+    });
+
     it('recusa operação com e-mail sem conta', async () => {
       const output = recordingOutput();
 

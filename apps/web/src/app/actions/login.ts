@@ -8,7 +8,7 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
-import { safeReturnPath } from "@/app/utils/return-path";
+import { loginPath, safeReturnPath } from "@/app/utils/return-path";
 
 export type LoginState =
   | { status: "idle" }
@@ -41,4 +41,12 @@ export async function login(
 
   await writeSessionCookie(result.token);
   redirect(safeReturnPath(formData.get("para")));
+}
+
+// O mesmo login, como ação nativa do <form>: funciona sem JavaScript e antes da hidratação. O
+// login certo redireciona; nos outros casos a página volta a "Entrar" com o mesmo para, sem as
+// mensagens, que dependem do formulário hidratado.
+export async function submitLogin(formData: FormData): Promise<void> {
+  await login({ status: "idle" }, formData);
+  redirect(loginPath(formData.get("para")));
 }

@@ -16,6 +16,7 @@ export function SessionError() {
     <main className="flex h-screen items-center justify-center bg-surface">
       <EmptyState
         titleAs="h1"
+        announce
         icon={WifiOff}
         title="Não foi possível verificar sua sessão"
         description="Confira sua conexão e tente de novo."
