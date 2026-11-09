@@ -14,7 +14,7 @@
 | Contrato REST da API do chat | `apps/chat-api/openapi.json`, gerado pelo `@nestjs/swagger` (planejado) |
 | Contrato REST do Serviço de agentes | `apps/agents/openapi.json`, gerado pelo FastAPI (planejado) |
 | Catálogo de códigos de erro | Os snapshots OpenAPI, como enum na resposta de erro de cada rota (planejado) |
-| Eventos do WebSocket | Tipos TypeScript em `packages/chat-events/` (planejado) |
+| Eventos do WebSocket | Tipos TypeScript em `packages/chat-events/` |
 | Schema do Banco do chat | `apps/chat-api/migrations/`, migrações do TypeORM |
 | Schema do Banco dos agentes | A definir |
 | Schema do Banco de negócio | Script de carga em `apps/agents/scripts/` (planejado) |
@@ -42,7 +42,7 @@ apps/
                   dois processos do mesmo projeto
     scripts/      script de carga do Banco de negócio                 planejada
 packages/
-  chat-events/    tipos dos eventos do WebSocket, usados por          planejada
+  chat-events/    tipos dos eventos do WebSocket, usados por          existe
                   chat-api e web
 docs/             HLD, LLD, ADRs, brief
 ```
@@ -130,7 +130,8 @@ novas tentativas e idempotência").
   vencida só leva a um 401. `Lax` não atrapalha o WebSocket, porque `app.` e `api.` são o mesmo
   site.
 - **CSRF:** sem token anti-CSRF. As mutações do navegador são Server Actions, que conferem o
-  cabeçalho `Origin`; o handshake do WebSocket confere a origem contra `WEB_ORIGIN`.
+  cabeçalho `Origin`; o handshake do WebSocket confere a origem contra `WEB_ORIGIN`, no
+  `allowRequest` do Socket.IO, porque o transporte `websocket` não passa por CORS.
 - **Identificador de sessão:** token aleatório de 32 bytes, entregue ao BFF uma vez, ao entrar.
   O Banco do chat guarda só o SHA-256 dele, então um vazamento do banco não dá Sessões válidas. O
   token nunca vai para o log.
@@ -296,7 +297,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | planejada | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão e salas; eventos planejados | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -512,7 +513,7 @@ Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota
 **Variáveis de ambiente**
 
 O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos". As já decididas
-(`DATABASE_URL`, `PORT`, `SESSION_COOKIE_NAME` e `SESSION_TTL_DAYS` da API do chat e as quatro da Web já existem; as demais são `planejadas`):
+(`DATABASE_URL`, `PORT`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS` e `WEB_ORIGIN` da API do chat e as cinco da Web já existem; as demais são `planejadas`):
 
 | Projeto | Variável | Para quê |
 | --- | --- | --- |
@@ -542,7 +543,7 @@ substitui cada serviço de produção segue o HLD, seção 9, "Implantação e a
 | `chat-api` | `apps/chat-api/Dockerfile.dev` (Node 26, pnpm 11) | 3001 (3000 no contêiner) | API do chat |
 | `postgres` | `postgres:18` | 5432 | Banco do chat, dos agentes e de negócio |
 | `s3` | `chrislusf/seaweedfs:4.52` (`weed mini`) | 8333 | Substituto do armazenamento compatível com S3, com o bucket `reports` |
-| `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://web:3000` e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
+| `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://localhost:3000`, encaminhado para a web, e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
 
 O Redis entra com a F03 (`redis:8`, porta 6379, eventos de reconexão), `planejado`. Entram
 depois os serviços `agents` e `worker`, quando `apps/agents` existir.
@@ -589,6 +590,11 @@ usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário,
   mesmo contêiner. O `playwright-cli` é o do `@playwright/test` instalado no `web`, sem instalação
   global, e o relatório HTML não abre sozinho (`PLAYWRIGHT_HTML_OPEN=never` no ambiente do
   serviço).
+- **Endereços no contêiner `e2e`:** o navegador do teste abre a web e a API por `localhost`, como o
+  da máquina: um encaminhador de portas em Node, que o serviço sobe junto, liga `localhost:3000` a
+  `web:3000` e `localhost:3001` a `chat-api:3000`. Com os nomes dos serviços, o cookie de sessão,
+  gravado para o host da web, não iria ao WebSocket da API, que é outro host; em `localhost` os
+  cookies valem para as duas portas.
 - **Dados dos testes da web:** o Playwright roda contra o ambiente de desenvolvimento, no banco
   `chat`. Cada teste cria a própria Pessoa, com e-mail de prefixo `e2e-` no domínio `teste.local`,
   e as Pessoas de teste ficam no banco até serem apagadas pelo prefixo ou por um `down -v`.

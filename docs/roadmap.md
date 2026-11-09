@@ -19,7 +19,7 @@ O ID vira link para a pasta da funcionalidade, em `docs/funcionalidades/`, quand
 | --- | --- | --- | --- | --- |
 | [F01](funcionalidades/01-login-e-sessao/) | Login e sessão | Entrar com e-mail e senha numa conta criada pela empresa, continuar logada em todas as abas do navegador e sair. | — | concluída |
 | [F02](funcionalidades/02-mensagens-em-canal-publico/) | Mensagens em canal público | Abrir um canal público, enviar mensagens e rolar o histórico até as mais antigas. | F01 | concluída |
-| [F03](funcionalidades/03-tempo-real/) | Tempo real | Ver as mensagens dos outros chegarem sem recarregar a página, ver quem está digitando e não perder nada depois de uma queda de conexão. | F02 | spec pronta |
+| [F03](funcionalidades/03-tempo-real/) | Tempo real | Ver as mensagens dos outros chegarem sem recarregar a página, ver quem está digitando e não perder nada depois de uma queda de conexão. | F02 | em andamento |
 | F04 | Criação de canais e convite para canal privado | Criar um canal público ou privado e convidar pessoas para o privado, que só os convidados veem. | F02 | planejada |
 | F05 | Busca de pessoas, perfil e conversa direta | Buscar uma pessoa por nome ou @usuário, ver o perfil dela e conversar com ela numa conversa direta. | F02 | planejada |
 | F06 | Ações na mensagem | Mencionar pessoas, responder citando uma mensagem, copiar o texto e editar ou apagar as próprias mensagens, com a mudança aparecendo para todos na hora. | F03 | planejada |
@@ -91,7 +91,7 @@ flowchart LR
   classDef concluida fill:#d1fae5,stroke:#059669,color:#111827
 
   class F01,F02 concluida
-  class F03 specPronta
+  class F03 emAndamento
   class F04,F05,F06,F07,F08,F09,F10,F11,F12,F13,F14 planejada
 ```
 

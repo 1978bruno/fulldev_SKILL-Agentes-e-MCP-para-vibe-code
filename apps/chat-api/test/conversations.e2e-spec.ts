@@ -27,11 +27,7 @@ describe('conversas', () => {
     await app.close();
   });
 
-  async function loggedIn() {
-    const { person, email, password } = await authRoutes.createPerson(app);
-    const token = await authRoutes.login(app, email, password);
-    return { person, cookie: authRoutes.sessionCookie(token) };
-  }
+  const loggedIn = () => authRoutes.loggedIn(app);
 
   describe('GET /v1/conversations', () => {
     it('lista só as Conversas de que a Pessoa é Membro, em ordem alfabética', async () => {

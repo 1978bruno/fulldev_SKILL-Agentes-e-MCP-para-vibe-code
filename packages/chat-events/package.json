@@ -1,0 +1,7 @@
+{
+  "name": "chat-events",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Tipos dos eventos do WebSocket da API do chat, usados pela chat-api e pela web (LLD, \"Interfaces\").",
+  "types": "index.d.ts"
+}
