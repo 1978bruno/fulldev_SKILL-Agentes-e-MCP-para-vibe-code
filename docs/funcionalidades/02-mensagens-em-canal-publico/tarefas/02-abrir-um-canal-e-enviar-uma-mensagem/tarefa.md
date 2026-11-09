@@ -1,6 +1,6 @@
 # 02: Abrir um Canal criado por comando e enviar uma Mensagem
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a fatia tracer bullet da F02, em quatro passos:
 1. Quem opera a instalação cria um Canal público por comando, e todas as Pessoas viram Membros.
