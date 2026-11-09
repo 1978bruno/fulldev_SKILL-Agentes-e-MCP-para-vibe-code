@@ -24,10 +24,6 @@ export class ConversationsService {
     return this.txHost.tx.getRepository(Conversation);
   }
 
-  private get members(): Repository<ConversationMember> {
-    return this.txHost.tx.getRepository(ConversationMember);
-  }
-
   // Conversas de que a Pessoa é Membro, em ordem alfabética do nome.
   listForMember(personId: string): Promise<Conversation[]> {
     return this.memberConversations(personId)
@@ -73,20 +69,14 @@ export class ConversationsService {
         topic: topic.value,
       }),
     );
+    // Dois arrays como parâmetros, e não três parâmetros por Pessoa: o número de parâmetros não
+    // cresce com o workspace.
     const personIds = await this.people.listIds();
-    if (personIds.length > 0) {
-      await this.members
-        .createQueryBuilder()
-        .insert()
-        .values(
-          personIds.map((personId) => ({
-            id: randomUUIDv7(),
-            conversationId: channel.id,
-            personId,
-          })),
-        )
-        .execute();
-    }
+    await this.txHost.tx.query(
+      `INSERT INTO conversation_members (id, conversation_id, person_id)
+       SELECT id, $1, person_id FROM unnest($2::uuid[], $3::uuid[]) AS rows(id, person_id)`,
+      [channel.id, personIds.map(() => randomUUIDv7()), personIds],
+    );
     return channel;
   }
 

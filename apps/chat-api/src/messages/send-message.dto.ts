@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
 import { MaxCodePoints } from '../common/validation/max-code-points';
+import { NoNullCharacter } from '../common/validation/no-null-character';
 import { MESSAGE_MAX_LENGTH } from './message-values';
 
 export class SendMessageDto {
@@ -15,5 +16,6 @@ export class SendMessageDto {
   @IsString()
   @IsNotEmpty()
   @MaxCodePoints(MESSAGE_MAX_LENGTH)
+  @NoNullCharacter()
   body!: string;
 }

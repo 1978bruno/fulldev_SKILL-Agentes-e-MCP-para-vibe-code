@@ -156,6 +156,10 @@ describe('mensagens', () => {
       ['só espaços', { client_id: randomUUID(), body: '  \n ' }],
       ['sem client_id', { body: 'Olá' }],
       ['client_id que não é uuid', { client_id: 'abc', body: 'Olá' }],
+      [
+        'texto com o caractere nulo',
+        { client_id: randomUUID(), body: 'a\u0000b' },
+      ],
     ])('recusa %s com validation_failed', async (_caso, payload) => {
       const { channel, cookie } = await memberOfNewChannel();
 

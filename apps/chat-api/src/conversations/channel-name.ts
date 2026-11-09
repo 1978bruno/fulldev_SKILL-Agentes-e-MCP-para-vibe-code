@@ -31,10 +31,14 @@ export function parseChannelName(raw: string): Parsed<string> {
 }
 
 // Tópico opcional, numa linha só. Vazio vira Canal sem Tópico.
+// Caracteres de controle (quebras de linha, tabulação, U+0000) e separadores de linha e de
+// parágrafo: o Tópico é uma linha só, mostrada inteira no cabeçalho.
+const TOPIC_FORBIDDEN = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+
 export function parseTopic(raw: string | undefined): Parsed<string | null> {
-  const topic = (raw ?? '').trim();
+  const topic = (raw ?? '').trim().normalize('NFC');
   if (topic === '') return { ok: true, value: null };
-  if (/[\r\n]/.test(topic)) {
+  if (TOPIC_FORBIDDEN.test(topic)) {
     return { ok: false, error: 'O tópico precisa caber numa linha só.' };
   }
   if (codePointLength(topic) > TOPIC_MAX_LENGTH) {

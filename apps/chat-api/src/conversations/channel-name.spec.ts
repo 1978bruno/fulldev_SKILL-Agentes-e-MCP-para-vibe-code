@@ -48,6 +48,13 @@ describe('parseTopic', () => {
     });
   });
 
+  it('normaliza o Tópico para NFC', () => {
+    expect(parseTopic('Anu\u0301ncios')).toEqual({
+      ok: true,
+      value: 'Anúncios',
+    });
+  });
+
   it.each([undefined, '', '   '])('trata %p como Canal sem Tópico', (raw) => {
     expect(parseTopic(raw)).toEqual({ ok: true, value: null });
   });
@@ -56,6 +63,9 @@ describe('parseTopic', () => {
     ['acima de 250 caracteres', 'a'.repeat(251)],
     ['com quebra de linha', 'linha um\nlinha dois'],
     ['com retorno de carro', 'linha um\rlinha dois'],
+    ['com tabulação', 'coluna\tcoluna'],
+    ['com separador de linha', 'linha um\u2028linha dois'],
+    ['com o caractere nulo', 'a\u0000b'],
   ])('recusa um Tópico %s', (_caso, raw) => {
     expect(parseTopic(raw)).toMatchObject({ ok: false });
   });

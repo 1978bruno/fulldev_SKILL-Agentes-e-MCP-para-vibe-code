@@ -5,7 +5,7 @@ import { ConversationsService } from '../conversations/conversations.service';
 const USAGE = `Uso: pnpm channels <operação> [argumentos]
 
 Operações:
-  create <nome> [tópico]     Cria um Canal público, com todas as Pessoas como Membros`;
+  create <nome> ["<tópico>"] Cria um Canal público, com todas as Pessoas como Membros`;
 
 // Comando de canais de quem opera a instalação (spec da F02, "Comando de canais").
 // Devolve o código de saída do processo.
@@ -34,9 +34,11 @@ export class ChannelsCommand implements Command {
     }
   }
 
-  private async create([name, topic]: string[]): Promise<number> {
-    if (name === undefined) {
-      this.output.error('Uso: pnpm channels create <nome> [tópico]');
+  private async create([name, topic, ...extra]: string[]): Promise<number> {
+    // Um Tópico de várias palavras sem aspas chegaria partido: recusa, em vez de gravar só a
+    // primeira palavra.
+    if (name === undefined || extra.length > 0) {
+      this.output.error('Uso: pnpm channels create <nome> ["<tópico>"]');
       return 1;
     }
     const channel = await this.conversations.createPublicChannel(name, topic);

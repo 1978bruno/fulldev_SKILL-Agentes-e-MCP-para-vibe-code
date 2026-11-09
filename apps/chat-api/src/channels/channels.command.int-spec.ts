@@ -107,6 +107,22 @@ describe('comando de canais', () => {
     expect(await channelsNamed(name)).toHaveLength(0);
   });
 
+  it('create recusa um Tópico partido em vários argumentos, sem gravar o Canal', async () => {
+    const name = uniqueChannelName();
+    const output = recordingOutput();
+
+    const exitCode = await run(
+      ['create', name, 'Canal', 'da', 'empresa'],
+      output,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(output.errors).toEqual([
+      'Uso: pnpm channels create <nome> ["<tópico>"]',
+    ]);
+    expect(await channelsNamed(name)).toHaveLength(0);
+  });
+
   it('create recusa Tópico com quebra de linha, sem gravar o Canal', async () => {
     const name = uniqueChannelName();
     const output = recordingOutput();
