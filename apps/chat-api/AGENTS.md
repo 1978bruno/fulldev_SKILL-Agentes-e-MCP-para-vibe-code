@@ -37,11 +37,13 @@ docker compose -f compose.yaml exec chat-api <comando>
 | `pnpm migration:generate migrations/<Nome>` | Gera uma migração a partir da diferença entre as entidades e o Banco do chat |
 | `pnpm migration:run` | Roda as migrações pendentes no Banco do chat |
 | `pnpm migration:revert` | Reverte a última migração rodada |
-| `pnpm accounts create <e-mail> "<nome>"` | Comando de contas: cria a conta de uma Pessoa. A senha é lida do terminal, sem eco, e nunca de argumento nem de variável |
+| `pnpm accounts create <e-mail> "<nome>"` | Comando de contas: cria a conta de uma Pessoa, já Membro de todos os Canais públicos. A senha é lida do terminal, sem eco, e nunca de argumento nem de variável |
 | `pnpm accounts reset-password <e-mail>` | Troca a senha (lida do terminal) e revoga todas as Sessões da Pessoa |
 | `pnpm accounts revoke-sessions <e-mail>` | Apaga todas as Sessões da Pessoa |
 | `pnpm accounts purge-expired-sessions` | Apaga as Sessões vencidas |
 | `pnpm channels create <nome> ["<tópico>"]` | Comando de canais: cria um Canal público, com todas as Pessoas como Membros |
+| `pnpm channels set-topic <nome> "<tópico>"` | Troca o Tópico do Canal; `""` apaga |
+| `pnpm channels list` | Lista os Canais públicos, com o número de Membros e o Tópico |
 
 O comando de contas precisa do terminal para ler a senha: rode com `docker compose -f compose.yaml exec chat-api ...`, que abre um TTY. As operações estão na spec da F01, "Comando de contas". As do comando de canais estão na spec da F02, "Comando de canais".
 

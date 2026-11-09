@@ -1,6 +1,7 @@
 import { isEmail } from 'class-validator';
 import { Command, CommandOutput } from '../common/cli/command';
 import { DomainError } from '../common/errors/domain.error';
+import { ConversationsService } from '../conversations/conversations.service';
 import { normalizeEmail } from '../people/normalize-email';
 import { PASSWORD_MAX_LENGTH } from '../people/password-policy';
 import { PeopleService } from '../people/people.service';
@@ -12,7 +13,7 @@ import { PasswordPrompt } from './password-prompt';
 const USAGE = `Uso: pnpm accounts <operação> [argumentos]
 
 Operações:
-  create <e-mail> <nome>     Cria a conta de uma Pessoa; a senha é lida do terminal
+  create <e-mail> <nome>     Cria a conta de uma Pessoa, já nos Canais públicos; a senha é lida do terminal
   reset-password <e-mail>    Troca a senha (lida do terminal) e revoga todas as Sessões
   revoke-sessions <e-mail>   Apaga todas as Sessões da Pessoa
   purge-expired-sessions     Apaga as Sessões vencidas`;
@@ -22,6 +23,7 @@ Operações:
 export class AccountsCommand implements Command {
   constructor(
     private readonly people: PeopleService,
+    private readonly conversations: ConversationsService,
     private readonly sessions: SessionsService,
     private readonly prompt: PasswordPrompt,
     private readonly output: CommandOutput,
@@ -64,7 +66,12 @@ export class AccountsCommand implements Command {
     }
     const password = await this.askNewPassword('Senha: ');
     if (!password) return 1;
-    const person = await this.people.create({ email, name, password });
+    // A Pessoa entra em todos os Canais públicos na mesma transação (spec da F02, história 11).
+    const person = await this.conversations.createPersonInPublicChannels({
+      email,
+      name,
+      password,
+    });
     this.output.info(`Pessoa criada: ${person.email} (${person.id}).`);
     return 0;
   }

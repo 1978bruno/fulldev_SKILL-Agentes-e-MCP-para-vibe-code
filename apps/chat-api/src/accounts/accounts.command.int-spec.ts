@@ -4,6 +4,9 @@ import { verify } from '@node-rs/argon2';
 import { ClsService } from 'nestjs-cls';
 import { DataSource } from 'typeorm';
 import { uniqueEmail } from '../../test/support/unique-email';
+import { uniqueChannelName } from '../../test/support/unique-channel-name';
+import { ConversationsService } from '../conversations/conversations.service';
+import { lockPublicMembership } from '../conversations/public-membership-lock';
 import { PeopleService } from '../people/people.service';
 import { SessionsService } from '../sessions/sessions.service';
 import { CommandOutput } from '../common/cli/command';
@@ -22,6 +25,7 @@ function recordingOutput(): CommandOutput & { errors: string[] } {
 describe('comando de contas', () => {
   let context: INestApplicationContext;
   let people: PeopleService;
+  let conversations: ConversationsService;
   let sessions: SessionsService;
   let dataSource: DataSource;
   let cls: ClsService;
@@ -32,6 +36,7 @@ describe('comando de contas', () => {
     }).compile();
     context = await moduleRef.init();
     people = context.get(PeopleService);
+    conversations = context.get(ConversationsService);
     sessions = context.get(SessionsService);
     dataSource = context.get(DataSource);
     cls = context.get(ClsService);
@@ -45,6 +50,7 @@ describe('comando de contas', () => {
   function command(password = 'senha-do-terminal', output = recordingOutput()) {
     const accounts = new AccountsCommand(
       people,
+      conversations,
       sessions,
       givenPassword(password),
       output,
@@ -89,6 +95,80 @@ describe('comando de contas', () => {
       expect(await verify(person!.passwordHash, 'senha-do-terminal')).toBe(
         true,
       );
+    });
+
+    it('inclui a Pessoa em todos os Canais públicos', async () => {
+      const channels = [
+        await conversations.createPublicChannel(uniqueChannelName()),
+        await conversations.createPublicChannel(uniqueChannelName()),
+      ];
+      const email = uniqueEmail();
+
+      const exitCode = await command().run(['create', email, 'Ana Souza']);
+
+      expect(exitCode).toBe(0);
+      const person = await people.findByEmail(email);
+      const [{ outside }] = await dataSource.query<{ outside: string }[]>(
+        `SELECT count(*) AS outside FROM conversations c
+         WHERE c.kind = 'public_channel'
+           AND NOT EXISTS (SELECT 1 FROM conversation_members m
+                           WHERE m.conversation_id = c.id AND m.person_id = $1)`,
+        [person!.id],
+      );
+      expect(Number(outside)).toBe(0);
+      const memberships = await dataSource.query<unknown[]>(
+        'SELECT 1 FROM conversation_members WHERE person_id = $1 AND conversation_id = ANY($2)',
+        [person!.id, channels.map((channel) => channel.id)],
+      );
+      expect(memberships).toHaveLength(2);
+    });
+
+    it('desfaz a Pessoa quando a participação falha', async () => {
+      const email = uniqueEmail();
+      // O método é privado: a troca é pelo protótipo, só neste teste.
+      const failure = jest
+        .spyOn(
+          ConversationsService.prototype as unknown as {
+            addToPublicChannels: (personId: string) => Promise<void>;
+          },
+          'addToPublicChannels',
+        )
+        .mockRejectedValueOnce(new Error('falha ao gravar a participação'));
+
+      await expect(
+        command().run(['create', email, 'Ana Souza']),
+      ).rejects.toThrow('falha ao gravar a participação');
+
+      failure.mockRestore();
+      expect(await people.findByEmail(email)).toBeNull();
+    });
+
+    it('espera a trava de participação tomada por outra transação', async () => {
+      const email = uniqueEmail();
+      const runner = dataSource.createQueryRunner();
+      await runner.connect();
+      await runner.startTransaction();
+      await lockPublicMembership(runner.manager);
+
+      let finished = false;
+      let creation: Promise<number>;
+      try {
+        creation = command()
+          .run(['create', email, 'Ana Souza'])
+          .then((code) => {
+            finished = true;
+            return code;
+          });
+        // Tempo de sobra para a criação chegar à trava e ficar parada nela.
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        expect(finished).toBe(false);
+      } finally {
+        // Solta a trava mesmo com a asserção falhando, para a suíte não travar.
+        await runner.commitTransaction();
+        await runner.release();
+      }
+      expect(await creation).toBe(0);
+      expect(await people.findByEmail(email)).not.toBeNull();
     });
 
     it('recusa um e-mail que já existe', async () => {

@@ -136,4 +136,73 @@ describe('comando de canais', () => {
     expect(output.errors).toEqual(['O tópico precisa caber numa linha só.']);
     expect(await channelsNamed(name)).toHaveLength(0);
   });
+
+  it('set-topic troca o Tópico e, com "", o apaga', async () => {
+    const name = uniqueChannelName();
+    await run(['create', name, 'Tópico antigo']);
+
+    expect(await run(['set-topic', name, '  Tópico novo  '])).toBe(0);
+    expect((await channelsNamed(name))[0].topic).toBe('Tópico novo');
+
+    expect(await run(['set-topic', name, ''])).toBe(0);
+    expect((await channelsNamed(name))[0].topic).toBeNull();
+  });
+
+  it('set-topic recusa um Canal que não existe', async () => {
+    const name = uniqueChannelName();
+    const output = recordingOutput();
+
+    const exitCode = await run(['set-topic', name, 'Tópico'], output);
+
+    expect(exitCode).toBe(1);
+    expect(output.errors).toEqual([`Canal não encontrado: ${name}.`]);
+  });
+
+  it('set-topic recusa Tópico com quebra de linha, sem gravar', async () => {
+    const name = uniqueChannelName();
+    await run(['create', name, 'Tópico antigo']);
+    const output = recordingOutput();
+
+    const exitCode = await run(['set-topic', name, 'um\ndois'], output);
+
+    expect(exitCode).toBe(1);
+    expect(output.errors).toEqual(['O tópico precisa caber numa linha só.']);
+    expect((await channelsNamed(name))[0].topic).toBe('Tópico antigo');
+  });
+
+  it('set-topic sem o Tópico mostra o uso', async () => {
+    const output = recordingOutput();
+
+    const exitCode = await run(['set-topic', uniqueChannelName()], output);
+
+    expect(exitCode).toBe(1);
+    expect(output.errors).toEqual([
+      'Uso: pnpm channels set-topic <nome> "<tópico>"',
+    ]);
+  });
+
+  it('list mostra os Canais em ordem, com o número de Membros e o Tópico', async () => {
+    const prefix = uniqueChannelName();
+    await people.create({
+      email: uniqueEmail(),
+      name: 'Ana Souza',
+      password: 'senha',
+    });
+    await run(['create', `${prefix}-b`]);
+    await run(['create', `${prefix}-a`, 'Avisos do time']);
+    const lines: string[] = [];
+    const output = { ...recordingOutput(), info: (m: string) => lines.push(m) };
+
+    const exitCode = await run(['list'], output);
+
+    expect(exitCode).toBe(0);
+    // Outras suítes criam contas ao mesmo tempo, e elas entram nos Canais: o número de Membros
+    // só é conferido no formato.
+    const mine = lines.filter((line) => line.startsWith(`#${prefix}-`));
+    expect(mine).toHaveLength(2);
+    expect(mine[0]).toMatch(
+      new RegExp(`^#${prefix}-a \\(\\d+ Membros?\\) Avisos do time$`),
+    );
+    expect(mine[1]).toMatch(new RegExp(`^#${prefix}-b \\(\\d+ Membros?\\)$`));
+  });
 });
