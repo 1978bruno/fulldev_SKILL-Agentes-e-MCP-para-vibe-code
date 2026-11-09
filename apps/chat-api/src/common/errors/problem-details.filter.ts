@@ -1,6 +1,6 @@
+import { STATUS_CODES } from 'node:http';
 import {
   ArgumentsHost,
-  BadRequestException,
   Catch,
   ExceptionFilter,
   HttpException,
@@ -10,26 +10,18 @@ import { HttpAdapterHost } from '@nestjs/core';
 import { DomainError } from './domain.error';
 import { ERROR_STATUS, ErrorCode } from './error-code';
 
-const TITLES: Record<number, string> = {
-  400: 'Bad Request',
-  401: 'Unauthorized',
-  403: 'Forbidden',
-  404: 'Not Found',
-  405: 'Method Not Allowed',
-  409: 'Conflict',
-  413: 'Payload Too Large',
-  415: 'Unsupported Media Type',
-  422: 'Unprocessable Entity',
-  429: 'Too Many Requests',
-  500: 'Internal Server Error',
-};
-
 const DETAILS: Record<ErrorCode, string> = {
   validation_failed: 'Os dados enviados são inválidos.',
   not_found: 'Recurso não encontrado.',
   payload_too_large: 'O corpo da requisição é grande demais.',
   request_rejected: 'A requisição foi recusada.',
   internal_error: 'Erro interno. Tente novamente mais tarde.',
+};
+
+const CLIENT_ERROR_CODE: Partial<Record<number, ErrorCode>> = {
+  400: 'validation_failed',
+  404: 'not_found',
+  413: 'payload_too_large',
 };
 
 interface Resolved {
@@ -48,7 +40,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const { status, code, detail } = this.resolve(exception);
     const body = {
       type: 'about:blank',
-      title: TITLES[status] ?? 'Error',
+      title: STATUS_CODES[status] ?? 'Error',
       status,
       detail,
       code,
@@ -67,29 +59,21 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         detail: exception.message,
       };
     }
-    if (exception instanceof HttpException && exception.getStatus() < 500) {
-      return this.fromStatus(
-        exception.getStatus(),
-        exception instanceof BadRequestException,
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : this.bodyReaderStatus(exception);
+    if (status !== undefined && status < 500) {
+      return this.build(
+        status,
+        CLIENT_ERROR_CODE[status] ?? 'request_rejected',
       );
-    }
-    const bodyReaderStatus = this.bodyReaderStatus(exception);
-    if (bodyReaderStatus !== undefined) {
-      return this.fromStatus(bodyReaderStatus, bodyReaderStatus === 400);
     }
     this.logger.error(
       exception instanceof Error ? exception.message : String(exception),
       exception instanceof Error ? exception.stack : undefined,
     );
     return this.build(500, 'internal_error');
-  }
-
-  private fromStatus(status: number, isBadRequest: boolean): Resolved {
-    if (status === 404) return this.build(404, 'not_found');
-    if (status === 413) return this.build(413, 'payload_too_large');
-    if (isBadRequest || status === 400)
-      return this.build(400, 'validation_failed');
-    return this.build(status, 'request_rejected');
   }
 
   private build(status: number, code: ErrorCode): Resolved {
