@@ -1,0 +1,15 @@
+- generic [active] [ref=f1e1]:
+  - main [ref=f1e7]:
+    - generic [ref=f1e8]:
+      - generic [ref=f1e17]:
+        - heading "Não foi possível verificar sua sessão" [level=1] [ref=f1e18]
+        - paragraph [ref=f1e19]: Confira sua conexão e tente de novo.
+      - button "Tentar de novo" [ref=f1e20]
+  - generic [ref=f1e26] [cursor=pointer]:
+    - button "Open issues overlay" [ref=f1e27]:
+      - generic [ref=f1e31]:
+        - generic [aria-hidden] [ref=f1e32]: "0"
+        - generic [ref=f1e33]: "1"
+      - generic [ref=f1e34]: Insight
+    - button "Collapse issues badge" [ref=f1e35]
+  - alert [ref=f1e6]
