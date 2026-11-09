@@ -6,10 +6,16 @@ export function flattenPages(pages: MessagePage[]): Message[] {
   return pages.toReversed().flatMap((page) => page.messages);
 }
 
-// A Mensagem gravada pelo envio entra no fim de pages[0], sem repetir a que já está lá.
+// A Mensagem gravada pelo envio entra em pages[0], na ordem do id (UUID v7, a ordem da Conversa),
+// sem repetir uma que já está em alguma página. Quase sempre ela é a mais nova e vai para o fim;
+// um reenvio que a API devolve já gravada pode ser mais antigo que outras do fim.
 export function appendToLatestPage(pages: MessagePage[], message: Message): MessagePage[] {
   const [latest, ...older] = pages;
   if (!latest) return [{ messages: [message], hasMore: false }];
-  if (latest.messages.some((existing) => existing.id === message.id)) return pages;
-  return [{ ...latest, messages: [...latest.messages, message] }, ...older];
+  if (pages.some((page) => page.messages.some((existing) => existing.id === message.id))) {
+    return pages;
+  }
+  const position = latest.messages.findLastIndex((existing) => existing.id < message.id) + 1;
+  const messages = latest.messages.toSpliced(position, 0, message);
+  return [{ ...latest, messages }, ...older];
 }

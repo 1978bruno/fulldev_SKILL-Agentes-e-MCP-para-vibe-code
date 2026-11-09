@@ -33,6 +33,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
+  const { id: authorId, name, initials } = personResult.person;
+  const author = { id: authorId, name, initials };
   const timeZone = await readTimeZone();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -43,11 +45,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         initialPage={pageResult.page}
         timeZone={timeZone}
         renderedAt={new Date().toISOString()}
-        currentPerson={{
-          id: personResult.person.id,
-          name: personResult.person.name,
-          initials: personResult.person.initials,
-        }}
+        currentPerson={author}
       />
     </div>
   );

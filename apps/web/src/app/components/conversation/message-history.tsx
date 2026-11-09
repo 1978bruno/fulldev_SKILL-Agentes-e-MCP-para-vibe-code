@@ -6,7 +6,11 @@ import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
-import { type PendingStatus, usePendingMessages } from "@/app/hooks/use-pending-messages";
+import {
+  type PendingMessage,
+  type PendingStatus,
+  usePendingMessages,
+} from "@/app/hooks/use-pending-messages";
 import type {
   Conversation,
   Message,
@@ -195,8 +199,8 @@ function History({
               compact={compact}
               dayLabel={dayLabel}
               status={message.status ?? "sent"}
-              onRetry={() => retry(message.clientId)}
-              onDiscard={() => discard(message.clientId)}
+              onRetry={message.status ? () => retry(message as PendingMessage) : undefined}
+              onDiscard={message.status ? () => discard(message.clientId) : undefined}
             />
           ))}
         </ol>

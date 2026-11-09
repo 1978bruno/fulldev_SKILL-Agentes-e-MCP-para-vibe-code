@@ -1,7 +1,7 @@
 "use client";
 
 import { SendHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { IconButton } from "@/app/components/ui/icon-button";
 import { Kbd } from "@/app/components/ui/kbd";
 import { codePointLength, MESSAGE_MAX_LENGTH } from "@/app/utils/message-text";
@@ -20,6 +20,8 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
   const overLimit = codePointLength(body) - MESSAGE_MAX_LENGTH;
   const canSend = body !== "" && overLimit <= 0;
   const label = `Mensagem para #${conversationName}`;
+  // O contador fica ligado à caixa: o leitor de tela o lê com ela, sem anunciar cada tecla.
+  const counterId = useId();
 
   function submit() {
     if (!canSend) return;
@@ -39,6 +41,8 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
         <div className="flex px-3 pt-3 pb-1">
           <textarea
             aria-label={label}
+            aria-invalid={overLimit > 0 || undefined}
+            aria-describedby={overLimit > 0 ? counterId : undefined}
             placeholder={label}
             rows={1}
             autoFocus
@@ -55,7 +59,7 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
         </div>
         <div className="flex items-center justify-end gap-3 p-1.5">
           {overLimit > 0 ? (
-            <p role="status" className="text-caption text-danger-fg">
+            <p id={counterId} className="text-caption text-danger-fg">
               {overLimit === 1
                 ? "1 caractere acima do limite"
                 : `${overLimit} caracteres acima do limite`}

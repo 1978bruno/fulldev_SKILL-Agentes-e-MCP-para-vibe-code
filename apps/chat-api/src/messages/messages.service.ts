@@ -5,6 +5,7 @@ import { randomUUIDv7 } from 'node:crypto';
 import { LessThan, Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
+import { ClientIdConflictError } from './client-id-conflict.error';
 import { Message } from './message.entity';
 
 export interface MessageAuthor {
@@ -78,7 +79,7 @@ export class MessagesService {
     { clientId, body }: NewMessage,
   ): Promise<MessageView> {
     await this.conversations.getForMember(author.id, conversationId);
-    await this.messages
+    const inserted = await this.messages
       .createQueryBuilder()
       .insert()
       .values({
@@ -89,11 +90,24 @@ export class MessagesService {
         body,
       })
       .orIgnore()
+      .returning(['id', 'created_at'])
       .execute();
-    const message = await this.messages.findOneByOrFail({
-      authorId: author.id,
-      clientId,
-    });
+    const [row] = inserted.raw as { id: string; created_at: Date }[];
+    // Sem conflito, a linha nova volta no RETURNING; com conflito, lê a que já estava lá.
+    const message = row
+      ? this.messages.create({
+          id: row.id,
+          conversationId,
+          authorId: author.id,
+          clientId,
+          body,
+          createdAt: row.created_at,
+        })
+      : await this.messages.findOneByOrFail({ authorId: author.id, clientId });
+    // O mesmo client_id usado em outra Conversa não é reenvio desta.
+    if (message.conversationId !== conversationId) {
+      throw new ClientIdConflictError();
+    }
     return toView(message, author);
   }
 

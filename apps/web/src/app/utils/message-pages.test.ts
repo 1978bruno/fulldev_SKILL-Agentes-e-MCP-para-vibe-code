@@ -46,6 +46,25 @@ describe("appendToLatestPage", () => {
     expect(appendToLatestPage(pages, message("1"))).toBe(pages);
   });
 
+  it("põe na ordem do id uma Mensagem mais antiga que as do fim", () => {
+    const pages = [{ messages: [message("1"), message("3")], hasMore: false }];
+
+    expect(appendToLatestPage(pages, message("2"))[0].messages.map((item) => item.id)).toEqual([
+      "1",
+      "2",
+      "3",
+    ]);
+  });
+
+  it("não repete uma Mensagem que está numa página anterior", () => {
+    const pages = [
+      { messages: [message("3")], hasMore: true },
+      { messages: [message("1")], hasMore: false },
+    ];
+
+    expect(appendToLatestPage(pages, message("1"))).toBe(pages);
+  });
+
   it("cria a página mais recente quando não há nenhuma", () => {
     expect(appendToLatestPage([], message("1"))).toEqual([
       { messages: [message("1")], hasMore: false },

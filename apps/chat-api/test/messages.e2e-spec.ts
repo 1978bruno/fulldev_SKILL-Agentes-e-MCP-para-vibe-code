@@ -327,6 +327,26 @@ describe('mensagens', () => {
       expect(await countByClientId(clientId)).toBe(1);
     });
 
+    it('recusa um client_id já usado pelo mesmo autor em outra Conversa', async () => {
+      const { channel, cookie } = await memberOfNewChannel();
+      const other = await conversationRoutes.createChannel(app);
+      const clientId = randomUUID();
+      await request(server)
+        .post(`/v1/conversations/${other.id}/messages`)
+        .set('Cookie', cookie)
+        .send({ client_id: clientId, body: 'Na outra Conversa' });
+
+      const response = await request(server)
+        .post(`/v1/conversations/${channel.id}/messages`)
+        .set('Cookie', cookie)
+        .send({ client_id: clientId, body: 'Nesta Conversa' });
+
+      expect(response.status).toBe(400);
+      expect((response.body as { code: string }).code).toBe(
+        'validation_failed',
+      );
+    });
+
     it('aceita exatamente o limite em emojis', async () => {
       const { channel, cookie } = await memberOfNewChannel();
 
