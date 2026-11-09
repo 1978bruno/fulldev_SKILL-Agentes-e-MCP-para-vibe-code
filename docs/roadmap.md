@@ -90,7 +90,7 @@ flowchart LR
   classDef emAndamento fill:#fef3c7,stroke:#d97706,color:#111827
   classDef concluida fill:#d1fae5,stroke:#059669,color:#111827
 
-  class F01 specPronta
+  class F01 emAndamento
   class F02,F03,F04,F05,F06,F07,F08,F09,F10,F11,F12,F13,F14 planejada
 ```
 
