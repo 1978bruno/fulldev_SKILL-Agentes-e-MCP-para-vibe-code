@@ -189,3 +189,14 @@ provedor derruba o socket na hora.
 #### 6.5. faixa-de-conexao-sem-violacoes
   1. Com a faixa na tela, rodar o axe
     - expect: nenhuma violação
+
+### 7. Sessão que acabou
+
+#### 7.1. sair numa aba leva a outra a Entrar
+
+**File:** `e2e/tempo-real/sair-em-outra-aba.spec.ts`
+
+**Steps:**
+  1. O Canal aberto em duas abas da mesma Sessão, a segunda conectada
+  2. Sair na primeira aba
+    - expect: a segunda vai para "Entrar" sem navegar, com o `?para=` do Canal

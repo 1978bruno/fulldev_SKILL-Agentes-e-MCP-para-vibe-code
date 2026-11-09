@@ -297,7 +297,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created`, `sync`, abertura da Conversa e "digitando"; `session.ended` planejado | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created`, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -381,9 +381,10 @@ Legenda: "livre" é o e-mail sem linha de tentativas; o estado vale por e-mail n
 - O handshake lê o cookie e verifica a Sessão como o REST; sem Sessão, recusa com
   `unauthenticated`.
 - Sair desconecta na hora os sockets daquela Sessão, e só os dela.
-- Cada socket reconfere a Sessão a cada `intervalo de reconferência da Sessão no WebSocket`. Se ela
-  venceu ou foi revogada, a API emite `session.ended` e desconecta. A reconferência renova a Sessão
-  como uma requisição REST, então uma aba aberta conta como uso.
+- A cada `intervalo de reconferência da Sessão no WebSocket`, a API reconfere as Sessões das abas
+  conectadas, uma vez por Sessão. Se ela venceu ou foi revogada, a API emite `session.ended` e
+  desconecta as abas dela. A reconferência renova a Sessão como uma requisição REST, então uma aba
+  aberta conta como uso.
 
 ### 6.3 Digitando
 

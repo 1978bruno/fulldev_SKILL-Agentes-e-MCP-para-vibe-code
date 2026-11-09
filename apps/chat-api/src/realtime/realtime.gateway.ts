@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ConnectedSocket,
@@ -21,6 +21,7 @@ import { readSessionCookie } from '../sessions/session-cookie';
 import { SessionsService } from '../sessions/sessions.service';
 import { UnauthenticatedError } from '../sessions/unauthenticated.error';
 import { conversationRoom, personRoom, sessionRoom } from './realtime-socket';
+import { SESSION_RECHECK_INTERVAL_MS } from './realtime-values';
 import type { RealtimeServer, RealtimeSocket } from './realtime-socket';
 
 const UNAUTHENTICATED: HandshakeErrorCode = 'unauthenticated';
@@ -28,7 +29,9 @@ const UNAUTHENTICATED: HandshakeErrorCode = 'unauthenticated';
 // WebSocket da API do chat (spec da F03, "Conexão" e "Sessão no WebSocket"). O handshake verifica a
 // Sessão pelo mesmo authenticate do guard REST e põe o socket nas salas da Pessoa e da Sessão.
 @WebSocketGateway()
-export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
+export class RealtimeGateway
+  implements OnGatewayInit, OnGatewayConnection, OnModuleDestroy
+{
   private readonly logger = new Logger(RealtimeGateway.name);
 
   @WebSocketServer()
@@ -40,7 +43,28 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     private readonly conversations: ConversationsService,
   ) {}
 
+  private recheckTimer?: ReturnType<typeof setInterval>;
+  private stopListening?: () => void;
+
   afterInit(server: RealtimeServer): void {
+    // Sair desconecta na hora as abas daquela Sessão (LLD, "Sessão e login", "WebSocket").
+    this.stopListening = this.sessions.onSessionEnded((sessionId) =>
+      this.endSession(server, sessionRoom(sessionId)),
+    );
+    // Uma volta lenta não se sobrepõe à seguinte: a próxima só começa quando esta termina.
+    let isRechecking = false;
+    this.recheckTimer = setInterval(() => {
+      if (isRechecking) return;
+      isRechecking = true;
+      this.recheckSessions()
+        .catch((error: unknown) =>
+          this.logger.error('Falha na reconferência das Sessões', error),
+        )
+        .finally(() => {
+          isRechecking = false;
+        });
+    }, SESSION_RECHECK_INTERVAL_MS);
+    this.recheckTimer.unref();
     const cookieName = this.config.get('SESSION_COOKIE_NAME', { infer: true });
     server.use((socket, next) => {
       void this.authenticateSocket(socket, cookieName, next);
@@ -153,6 +177,41 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       });
   }
 
+  onModuleDestroy(): void {
+    clearInterval(this.recheckTimer);
+    this.stopListening?.();
+  }
+
+  // Reconfere as Sessões das abas conectadas, uma vez por Sessão e uma de cada vez, para não
+  // disputar o pool do banco com as requisições. Usa o mesmo authenticate do REST, que também a
+  // renova. A Sessão revogada ou vencida encerra as abas dela; outra falha, como o banco fora, as
+  // mantém até a próxima volta.
+  async recheckSessions(): Promise<void> {
+    const tokens = new Map<string, string>();
+    for (const socket of this.server.sockets.sockets.values()) {
+      if (socket.data.sessionId) {
+        tokens.set(socket.data.sessionId, socket.data.sessionToken);
+      }
+    }
+    for (const [sessionId, token] of tokens) {
+      try {
+        await this.sessions.authenticate(token);
+      } catch (error) {
+        if (error instanceof UnauthenticatedError) {
+          this.endSession(this.server, sessionRoom(sessionId));
+        } else {
+          this.logger.error('Falha ao reconferir a Sessão no WebSocket', error);
+        }
+      }
+    }
+  }
+
+  // Avisa a aba de que a Sessão acabou e a desconecta.
+  private endSession(server: RealtimeServer, room: string): void {
+    server.to(room).emit('session.ended');
+    server.in(room).disconnectSockets(true);
+  }
+
   // Grava a Pessoa e a Sessão no socket, ou recusa o handshake.
   private async authenticateSocket(
     socket: RealtimeSocket,
@@ -167,6 +226,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       const { person, sessionId } = await this.sessions.authenticate(token);
       socket.data.person = person;
       socket.data.sessionId = sessionId;
+      socket.data.sessionToken = token ?? '';
       // As salas entram antes do CONNECT: nenhum evento emitido logo depois se perde.
       await socket.join([personRoom(person.id), sessionRoom(sessionId)]);
       next();

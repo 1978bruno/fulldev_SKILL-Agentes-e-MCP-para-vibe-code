@@ -257,8 +257,8 @@ F01-T04 (`falha-no-envio.md`).
 **Steps:**
   1. Logada, abrir a Home numa segunda aba
   2. Sair na primeira aba
-  3. Navegar para `/` na segunda aba
-    - expect: a URL é `/entrar`
+    - expect: a segunda aba vai para `/entrar` sozinha, pelo tempo real (desde a F03; antes, na
+      próxima navegação)
 
 #### 7.5. voltar-depois-de-sair
 

@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/app/components/ui/dropdown-menu";
 import type { Person } from "@/app/services/chat-api";
+import { markLeaving } from "@/app/utils/leaving";
 
 type UserMenuProps = { person: Person };
 
@@ -40,6 +41,7 @@ export function UserMenu({ person }: UserMenuProps) {
             // O menu fica aberto, com o item desabilitado, até a saída terminar: sem um segundo
             // clique enquanto a API responde.
             event.preventDefault();
+            markLeaving();
             startTransition(() => logout());
           }}
         >

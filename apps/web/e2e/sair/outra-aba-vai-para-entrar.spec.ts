@@ -14,9 +14,7 @@ test.describe("Sair", () => {
     await page.getByRole("menuitem", { name: "Sair do Full Cycle" }).click();
     await expect(page).toHaveURL("/entrar");
 
-    // 3. Na segunda aba, a próxima navegação
-    await otherTab.goto("/");
-
+    // 3. A segunda aba vai para "Entrar" sozinha, pelo tempo real (F03, história 6)
     await expect(otherTab).toHaveURL("/entrar");
   });
 });

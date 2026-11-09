@@ -6,6 +6,8 @@ import type { Person } from '../people/person.entity';
 export interface RealtimeSocketData {
   person: Person;
   sessionId: string;
+  // O token da Sessão, para a reconferência periódica.
+  sessionToken: string;
   // A Conversa aberta na aba, cuja sala o socket ocupa (spec da F03, "Digitando").
   conversationId?: string;
   // Conta as aberturas e os fechamentos da aba: uma abertura que retoma depois de outra operação

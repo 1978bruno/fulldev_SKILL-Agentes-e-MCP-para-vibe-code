@@ -129,3 +129,8 @@ export function openConversation(
     .timeout(2000)
     .emitWithAck('conversation.open', { conversation_id: conversationId });
 }
+
+// O motivo da próxima desconexão do socket.
+export function nextDisconnection(socket: TestSocket): Promise<string> {
+  return new Promise((resolve) => socket.once('disconnect', resolve));
+}
