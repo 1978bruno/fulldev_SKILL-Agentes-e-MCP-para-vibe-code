@@ -1,6 +1,6 @@
 # 06: Cair na última Conversa ao entrar
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** ao chegar na Home, a Pessoa cai no último Canal que abriu naquele navegador.
 Na primeira visita, ou se aquele Canal não está mais na lista dela, cai no primeiro da lista, e
