@@ -1,6 +1,6 @@
 # 03: Canais novos na barra lateral sem recarregar
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** quando alguém cria um Canal público, ele aparece na barra lateral de todas as
 Pessoas em até 1 s, sem recarregar a página, em todas as abas, na ordem alfabética e sem abrir
