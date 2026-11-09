@@ -1,6 +1,6 @@
 # 01: Bases de transação e de testes de unidade
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** as duas bases que deixam as próximas tarefas da F02 fáceis, sem comportamento
 de produto novo:
