@@ -228,6 +228,7 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 | --- | --- | --- |
 | Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
 | Chat | Sessões | existe (`sessions`) |
+| Chat | Tentativas de login por e-mail | existe (`login_attempts`) |
 | Chat | Canais e membros | a detalhar |
 | Chat | Conversas diretas | a detalhar |
 | Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | a detalhar |
@@ -289,7 +290,7 @@ Dois estados: aberta e concluída (HLD 6.6).
 
 ### 6.2 Sessão e login
 
-Situação: `planejada`. Rotas em "Interfaces"; cookie, token e senha em "Conceitos transversais
+Situação: `existe`. Rotas em "Interfaces"; cookie, token e senha em "Conceitos transversais
 de implementação", seção "Segurança".
 
 **Entrar**
