@@ -46,7 +46,14 @@ test.describe("Erros ao entrar", () => {
 
     // 3. Preencher e-mails com domínio inválido e enviar
     for (const invalid of ["ana@empresa..com", "ana@empresa/com.br"]) {
+      // Um envio com e-mail válido e senha vazia tira a mensagem do E-mail antes de cada caso.
+      await email.fill("ana@empresa.com");
+      await password.fill("");
+      await password.press("Enter");
+      await expect(page.getByText(EMAIL_INVALID)).toBeHidden();
+
       await email.fill(invalid);
+      await password.fill("qualquer-senha");
       await password.press("Enter");
 
       await expect(page.getByText(EMAIL_INVALID)).toBeVisible();

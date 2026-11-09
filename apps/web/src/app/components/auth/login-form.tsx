@@ -122,21 +122,20 @@ export function LoginForm({ returnPath }: LoginFormProps) {
     startTransition(() => formAction(formData));
   }
 
-  // Os erros do Server Action valem só até a próxima validação no cliente ou o próximo envio.
+  // O resultado do último envio (erros do Server Action, dados incorretos, mensagem do
+  // formulário) vale só até a próxima validação no cliente ou o próximo envio.
+  const hasClientErrors = hasErrors(clientErrors);
+  const showsLastResult = !hasClientErrors && !isPending;
   const serverErrors =
-    state.status === "invalid_input" && !hasErrors(clientErrors) && !isPending
-      ? state.fieldErrors
-      : {};
+    showsLastResult && state.status === "invalid_input" ? state.fieldErrors : {};
   const emailError = clientErrors.email ?? serverErrors.email;
   const passwordError =
     clientErrors.password ??
     serverErrors.password ??
-    (state.status === "invalid_credentials" && !hasErrors(clientErrors)
+    (showsLastResult && state.status === "invalid_credentials"
       ? INVALID_CREDENTIALS
       : undefined);
-  // A mensagem do envio anterior some enquanto o novo está em andamento.
-  const formMessage =
-    hasErrors(clientErrors) || isPending ? undefined : FORM_MESSAGES[state.status];
+  const formMessage = showsLastResult ? FORM_MESSAGES[state.status] : undefined;
 
   return (
     <div className="flex w-full max-w-md flex-col gap-6 rounded-panel bg-surface-raised p-8 shadow-2">
