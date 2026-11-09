@@ -95,6 +95,17 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
     - expect: só a mensagem da Senha, com o foco na Senha
     - expect: nenhum envio saiu para o servidor em todo o cenário
 
+#### 3.2. tentativas-demais
+
+**File:** `e2e/login/tentativas-demais.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar` e errar a senha da Pessoa 5 vezes seguidas
+    - expect: cada tentativa mostra "E-mail ou senha incorretos."
+  2. Tentar de novo com a senha certa
+    - expect: "Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo." no `alert` do formulário
+    - expect: o E-mail e a Senha continuam preenchidos
+
 A falha no envio (API do chat parada) é verificada pelo `playwright-cli` e registrada na pasta da
 F01-T04 (`falha-no-envio.md`).
 

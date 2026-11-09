@@ -24,6 +24,8 @@ const INVALID_CREDENTIALS =
 // Mensagens do formulário: ficam entre a Senha e o botão, com role="alert".
 const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
   failure: "Não foi possível entrar agora. Confira sua conexão e tente de novo.",
+  too_many_attempts:
+    "Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo.",
 };
 
 const INITIAL_STATE: LoginState = { status: "idle" };
@@ -58,8 +60,8 @@ export function LoginForm({ returnPath }: LoginFormProps) {
         input.focus();
       }
     }
-    // Falha no envio: o foco volta para onde estava.
-    if (state.status === "failure") {
+    // Mensagem do formulário (falha no envio, tentativas demais): o foco volta para onde estava.
+    if (state.status === "failure" || state.status === "too_many_attempts") {
       focusedOnSubmitRef.current?.focus();
     }
   }, [state]);

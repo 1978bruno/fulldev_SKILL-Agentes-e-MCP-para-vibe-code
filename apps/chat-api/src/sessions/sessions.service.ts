@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
+import { LoginAttemptsService } from '../login-attempts/login-attempts.service';
+import { normalizeEmail } from '../people/normalize-email';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
 import { InvalidCredentialsError } from './invalid-credentials.error';
@@ -31,14 +33,21 @@ export class SessionsService {
   constructor(
     @InjectRepository(Session) private readonly sessions: Repository<Session>,
     private readonly people: PeopleService,
+    private readonly loginAttempts: LoginAttemptsService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
+  // Ordem do limite de tentativas (LLD, "Sessão e login"): e-mail normalizado, bloqueio,
+  // senha, e então a falha conta ou o acerto apaga a contagem.
   async login(email: string, password: string): Promise<LoginResult> {
-    const person = await this.people.verifyCredentials(email, password);
+    const normalized = normalizeEmail(email);
+    await this.loginAttempts.assertNotBlocked(normalized);
+    const person = await this.people.verifyCredentials(normalized, password);
     if (!person) {
+      await this.loginAttempts.recordFailure(normalized);
       throw new InvalidCredentialsError();
     }
+    await this.loginAttempts.clear(normalized);
 
     const token = generateSessionToken();
     const now = new Date();
