@@ -48,3 +48,20 @@ export async function routeSendMessage(
   });
   return () => page.unroute(matcher);
 }
+
+// Leva a lista para longe do fim (e longe do topo, para não pedir as anteriores) e devolve a
+// posição da rolagem.
+export async function scrollAwayFromEnd(history: Locator): Promise<number> {
+  return history.evaluate((element) => {
+    element.scrollTop = element.scrollHeight - element.clientHeight - 600;
+    element.dispatchEvent(new Event("scroll"));
+    return element.scrollTop;
+  });
+}
+
+// A distância da rolagem até o fim da lista.
+export function distanceToEnd(history: Locator): Promise<number> {
+  return history.evaluate(
+    (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
+  );
+}

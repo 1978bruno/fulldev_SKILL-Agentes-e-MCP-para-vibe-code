@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SWRConfig } from "swr";
 import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
@@ -22,6 +22,7 @@ import { dayKey, labelForDay } from "@/app/utils/day-label";
 import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
+import { NewMessagesPill } from "./new-messages-pill";
 
 type MessageHistoryProps = {
   conversation: Conversation;
@@ -36,6 +37,9 @@ type MessageHistoryProps = {
 
 // Distância do topo em que o sentinela pede a página anterior (spec da F02, "Lista de Mensagens").
 const LOAD_OLDER_MARGIN_PX = 300;
+
+// Distância do fim da lista até a qual a Pessoa está "no fim" (LLD, "Valores e configuração").
+const END_OF_LIST_PX = 100;
 
 // Lista de Mensagens e caixa de mensagem de uma Conversa. O cache do SWR é desta montagem: abrir
 // a Conversa de novo começa da página que o servidor acabou de ler.
@@ -102,13 +106,39 @@ function History({
   const firstId = messages[0]?.id;
   const lastId = messages.at(-1)?.id;
 
-  // Ao abrir e a cada Mensagem nova no fim, a lista rola até a última. A posição guardada antes de
-  // uma carga de anteriores deixa de valer: a Pessoa agora está no fim.
-  useLayoutEffect(() => {
+  // Se a Pessoa está no fim da lista, medido a cada rolagem, antes de uma Mensagem nova entrar.
+  const isAtEnd = useRef(true);
+  const [hasNewBelow, setHasNewBelow] = useState(false);
+  const opened = useRef(false);
+
+  function scrollToEnd() {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
     anchor.current = null;
-  }, [lastId]);
+  }
+
+  function onScroll() {
+    const element = scrollRef.current;
+    if (!element) return;
+    isAtEnd.current =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= END_OF_LIST_PX;
+    if (isAtEnd.current) setHasNewBelow(false);
+  }
+
+  // Ao abrir, a lista rola até a última Mensagem. Depois, uma Mensagem nova no fim só rola a lista
+  // quando a Pessoa estava no fim ou quando é dela; lendo mais acima, a lista fica parada e aparece
+  // a pílula (spec da F03, "Rolagem e pílula"). A posição guardada antes de uma carga de anteriores
+  // deixa de valer quando a lista vai ao fim.
+  const lastAuthorId = messages.at(-1)?.author.id;
+  useLayoutEffect(() => {
+    if (!opened.current || isAtEnd.current || lastAuthorId === currentPerson.id) {
+      opened.current = true;
+      scrollToEnd();
+      setHasNewBelow(false);
+      return;
+    }
+    setHasNewBelow(true);
+  }, [lastId, lastAuthorId, currentPerson.id]);
 
   // Quando a página anterior entra no começo, a Mensagem que a Pessoa lia fica no mesmo lugar: a
   // rolagem é devolvida pela posição da âncora, sem depender do overflow-anchor do navegador.
@@ -164,8 +194,10 @@ function History({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div
         ref={scrollRef}
+        onScroll={onScroll}
         role="region"
         aria-label={`Histórico de #${conversation.name}`}
         // Marca o histórico em dia com o tempo real, que os testes esperam antes de agir.
@@ -213,6 +245,14 @@ function History({
             />
           ))}
         </ol>
+      </div>
+      {hasNewBelow ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+          <div className="pointer-events-auto">
+            <NewMessagesPill onClick={scrollToEnd} />
+          </div>
+        </div>
+      ) : null}
       </div>
       {/* Lugar do "digitando", que entra na F03. */}
       <div className="h-5 shrink-0" />
