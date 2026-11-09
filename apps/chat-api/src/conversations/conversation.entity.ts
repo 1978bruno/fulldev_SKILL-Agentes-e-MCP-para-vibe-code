@@ -1,5 +1,6 @@
 import { Check, Column, Entity, Index } from 'typeorm';
 import { BaseEntity } from '../database/base.entity';
+import { CHANNEL_NAME_MAX_LENGTH, TOPIC_MAX_LENGTH } from './channel-name';
 
 // Canais e Conversas diretas numa tabela só (ADR 0024). A F02 cria só o Canal público; a F04 e a
 // F05 acrescentam os outros tipos ao CHECK.
@@ -13,9 +14,12 @@ export type ConversationKind = 'public_channel';
 )
 @Check(
   'conversations_name_length_check',
-  `char_length("name") BETWEEN 1 AND 80`,
+  `char_length("name") BETWEEN 1 AND ${CHANNEL_NAME_MAX_LENGTH}`,
 )
-@Check('conversations_topic_length_check', `char_length("topic") <= 250`)
+@Check(
+  'conversations_topic_length_check',
+  `char_length("topic") <= ${TOPIC_MAX_LENGTH}`,
+)
 @Index('conversations_name_key', ['name'], {
   unique: true,
   where: '"name" IS NOT NULL',

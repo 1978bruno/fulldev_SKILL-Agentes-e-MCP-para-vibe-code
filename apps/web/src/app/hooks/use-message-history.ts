@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { Message, MessagePage } from "@/app/services/chat-api";
 import { appendToLatestPage, flattenPages } from "@/app/utils/message-pages";
@@ -21,7 +21,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
       revalidateOnReconnect: false,
     },
   );
-  const pages = data ?? [initialPage];
+  const messages = useMemo(() => flattenPages(data ?? [initialPage]), [data, initialPage]);
 
   const appendSent = useCallback(
     (message: Message) => {
@@ -32,5 +32,5 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     [mutate, initialPage],
   );
 
-  return { messages: flattenPages(pages), appendSent };
+  return { messages, appendSent };
 }

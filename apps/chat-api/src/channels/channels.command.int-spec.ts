@@ -4,7 +4,7 @@ import { ClsService } from 'nestjs-cls';
 import { DataSource } from 'typeorm';
 import { uniqueChannelName } from '../../test/support/unique-channel-name';
 import { uniqueEmail } from '../../test/support/unique-email';
-import { CommandOutput } from '../accounts/accounts.command';
+import { CommandOutput } from '../common/cli/command';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
 import { ChannelsCommand } from './channels.command';

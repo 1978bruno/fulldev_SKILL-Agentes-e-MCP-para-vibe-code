@@ -52,12 +52,11 @@ export async function insertChannel(
     "INSERT INTO conversations (id, kind, name, topic) VALUES ($1, 'public_channel', $2, $3)",
     [id, name, topic],
   );
-  for (const member of members) {
-    await pool.query(
-      "INSERT INTO conversation_members (id, conversation_id, person_id) VALUES ($1, $2, $3)",
-      [randomUUIDv7(), id, member.id],
-    );
-  }
+  await pool.query(
+    `INSERT INTO conversation_members (id, conversation_id, person_id)
+     SELECT member_id, $1, person_id FROM unnest($2::uuid[], $3::uuid[]) AS rows(member_id, person_id)`,
+    [id, members.map(() => randomUUIDv7()), members.map((member) => member.id)],
+  );
   return { id, name, topic };
 }
 
@@ -66,8 +65,8 @@ function uuidV7At(milliseconds: number): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   let time = BigInt(milliseconds);
   for (let index = 5; index >= 0; index -= 1) {
-    bytes[index] = Number(time & 0xffn);
-    time >>= 8n;
+    bytes[index] = Number(time & BigInt(0xff));
+    time >>= BigInt(8);
   }
   bytes[6] = (bytes[6] & 0x0f) | 0x70;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
@@ -82,15 +81,24 @@ export async function insertMessages(
   channel: TestChannel,
   messages: { author: TestPerson; body: string; at: Date }[],
 ): Promise<TestMessage[]> {
-  const inserted: TestMessage[] = [];
-  for (const message of messages) {
-    const id = uuidV7At(message.at.getTime());
-    await pool.query(
-      `INSERT INTO messages (id, conversation_id, author_id, client_id, body, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $6)`,
-      [id, channel.id, message.author.id, randomUUIDv7(), message.body, message.at],
-    );
-    inserted.push({ id, body: message.body, createdAt: message.at });
-  }
+  const inserted = messages.map((message) => ({
+    id: uuidV7At(message.at.getTime()),
+    body: message.body,
+    createdAt: message.at,
+  }));
+  await pool.query(
+    `INSERT INTO messages (id, conversation_id, author_id, client_id, body, created_at, updated_at)
+     SELECT id, $1, author_id, client_id, body, at, at
+     FROM unnest($2::uuid[], $3::uuid[], $4::uuid[], $5::text[], $6::timestamptz[])
+       AS rows(id, author_id, client_id, body, at)`,
+    [
+      channel.id,
+      inserted.map((message) => message.id),
+      messages.map((message) => message.author.id),
+      messages.map(() => randomUUIDv7()),
+      messages.map((message) => message.body),
+      messages.map((message) => message.at),
+    ],
+  );
   return inserted;
 }

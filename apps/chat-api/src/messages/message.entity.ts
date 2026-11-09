@@ -10,12 +10,16 @@ import {
 import { Conversation } from '../conversations/conversation.entity';
 import { BaseEntity } from '../database/base.entity';
 import { Person } from '../people/person.entity';
+import { MESSAGE_MAX_LENGTH } from './message-values';
 
 // O id (UUID v7) dá a ordem da Conversa; created_at é a hora mostrada na tela.
 @Entity('messages')
 @Index('messages_conversation_id_id_idx', ['conversationId', 'id'])
 @Unique('messages_author_client_key', ['authorId', 'clientId'])
-@Check('messages_body_length_check', `char_length("body") BETWEEN 1 AND 4000`)
+@Check(
+  'messages_body_length_check',
+  `char_length("body") BETWEEN 1 AND ${MESSAGE_MAX_LENGTH}`,
+)
 export class Message extends BaseEntity {
   @Column({ type: 'uuid' })
   conversationId!: string;

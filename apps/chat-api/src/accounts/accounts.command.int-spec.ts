@@ -6,7 +6,8 @@ import { DataSource } from 'typeorm';
 import { uniqueEmail } from '../../test/support/unique-email';
 import { PeopleService } from '../people/people.service';
 import { SessionsService } from '../sessions/sessions.service';
-import { AccountsCommand, CommandOutput } from './accounts.command';
+import { CommandOutput } from '../common/cli/command';
+import { AccountsCommand } from './accounts.command';
 import { AccountsModule } from './accounts.module';
 
 function givenPassword(password: string) {

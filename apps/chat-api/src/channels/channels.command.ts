@@ -1,6 +1,6 @@
+import { Command, CommandOutput } from '../common/cli/command';
 import { DomainError } from '../common/errors/domain.error';
 import { ConversationsService } from '../conversations/conversations.service';
-import { CommandOutput } from '../accounts/accounts.command';
 
 const USAGE = `Uso: pnpm channels <operação> [argumentos]
 
@@ -9,7 +9,7 @@ Operações:
 
 // Comando de canais de quem opera a instalação (spec da F02, "Comando de canais").
 // Devolve o código de saída do processo.
-export class ChannelsCommand {
+export class ChannelsCommand implements Command {
   constructor(
     private readonly conversations: ConversationsService,
     private readonly output: CommandOutput,

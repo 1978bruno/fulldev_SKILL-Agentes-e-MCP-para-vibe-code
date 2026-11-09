@@ -1,5 +1,4 @@
 import { INestApplication } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { ConversationsService } from '../../src/conversations/conversations.service';
 import { Conversation } from '../../src/conversations/conversation.entity';
@@ -32,7 +31,7 @@ export const conversationRoutes = {
   },
 
   // Direto no banco, com o id UUID v7 no instante de cada Mensagem: a primeira em `startAt` e as
-  // seguintes a cada `stepMs`. Devolve os ids na ordem cronológica.
+  // seguintes a cada `stepMs`, numa inserção só. Devolve os ids na ordem cronológica.
   async insertMessages(
     app: INestApplication,
     options: {
@@ -47,24 +46,22 @@ export const conversationRoutes = {
       options.startAt ?? new Date(Date.now() - 86_400_000)
     ).getTime();
     const step = options.stepMs ?? 1000;
-    const ids: string[] = [];
-    for (let index = 0; index < options.count; index += 1) {
-      const at = start + index * step;
-      const id = uuidV7At(at);
-      ids.push(id);
-      await app.get(DataSource).query(
-        `INSERT INTO messages (id, conversation_id, author_id, client_id, body, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $6)`,
-        [
-          id,
-          options.conversationId,
-          options.authorId,
-          randomUUID(),
-          `Mensagem ${index + 1}`,
-          new Date(at),
-        ],
-      );
-    }
+    const instants = Array.from(
+      { length: options.count },
+      (_, index) => start + index * step,
+    );
+    const ids = instants.map((at) => uuidV7At(at));
+    await app.get(DataSource).query(
+      `INSERT INTO messages (id, conversation_id, author_id, client_id, body, created_at, updated_at)
+       SELECT id, $1, $2, gen_random_uuid(), 'Mensagem ' || position, at, at
+       FROM unnest($3::uuid[], $4::timestamptz[]) WITH ORDINALITY AS rows(id, at, position)`,
+      [
+        options.conversationId,
+        options.authorId,
+        ids,
+        instants.map((at) => new Date(at)),
+      ],
+    );
     return ids;
   },
 };

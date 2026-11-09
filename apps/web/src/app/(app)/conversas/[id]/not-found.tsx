@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buttonVariants } from "@/app/components/ui/button";
 import { EmptyState } from "@/app/components/ui/empty-state";
 
 // "Conversa / Estrutura / Conversa não encontrada": a mesma tela para a Conversa que não existe e
@@ -11,7 +12,7 @@ export default function ConversationNotFound() {
         title="Conversa não encontrada"
         description="Ela não existe ou você não participa dela."
         action={
-          <Link href="/" className="text-body text-link hover:text-link-hover hover:underline">
+          <Link href="/" className={buttonVariants({ variant: "link" })}>
             Voltar ao início
           </Link>
         }

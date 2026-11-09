@@ -4,7 +4,6 @@ import { Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { randomUUIDv7 } from 'node:crypto';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { isUniqueViolation } from '../database/unique-violation';
 import { PeopleService } from '../people/people.service';
 import { ChannelNameTakenError } from './channel-name-taken.error';
 import { parseChannelName, parseTopic } from './channel-name';
@@ -62,23 +61,18 @@ export class ConversationsService {
     const topic = parseTopic(rawTopic);
     if (!topic.ok) throw new InvalidChannelError(topic.error);
 
+    // A trava serializa as criações de Canal: a conferência do nome não corre contra outra.
     await lockPublicMembership(this.txHost.tx);
     if (await this.conversations.existsBy({ name: name.value })) {
       throw new ChannelNameTakenError(name.value);
     }
-    let channel: Conversation;
-    try {
-      channel = await this.conversations.save(
-        this.conversations.create({
-          kind: 'public_channel',
-          name: name.value,
-          topic: topic.value,
-        }),
-      );
-    } catch (error) {
-      if (isUniqueViolation(error)) throw new ChannelNameTakenError(name.value);
-      throw error;
-    }
+    const channel = await this.conversations.save(
+      this.conversations.create({
+        kind: 'public_channel',
+        name: name.value,
+        topic: topic.value,
+      }),
+    );
     const personIds = await this.people.listIds();
     if (personIds.length > 0) {
       await this.members
@@ -91,7 +85,6 @@ export class ConversationsService {
             personId,
           })),
         )
-        .orIgnore()
         .execute();
     }
     return channel;
