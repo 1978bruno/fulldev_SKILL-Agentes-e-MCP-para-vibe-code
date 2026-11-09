@@ -123,3 +123,11 @@ lista levada a 600 px do fim, longe do topo, para não pedir as anteriores.
 #### 4.6. pilula-sem-violacoes
   1. Com a pílula na tela, rodar o axe
     - expect: nenhuma violação
+
+#### 4.7. descartar a própria Mensagem com falha não mostra a pílula
+  1. Um envio que falha (Server Action abortado) fica no fim; ler mais acima e descartá-lo
+    - expect: a Mensagem some e não há pílula
+
+#### 4.8. a Mensagem da própria Pessoa enviada por outra aba mostra a pílula
+  1. Ler mais acima numa aba e enviar pela outra aba da mesma Pessoa
+    - expect: a pílula aparece
