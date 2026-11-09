@@ -27,7 +27,9 @@ Referências:
   ou a primeira página falham, ela mostra "Não foi possível carregar as mensagens desta conversa."
   com "Tentar de novo" (21:4642), e o cabeçalho mostra o nome quando a Conversa carregou.
 - [ ] **CA5** · O Playwright prova a seção recolhida e expandida e a linha ativa.
-- [ ] **CA6** · A verificação do agente com o `playwright-cli`, com a API do chat parada, confere
-  os erros da barra lateral e da Conversa e o "Tentar de novo" depois de subir a API. Ela fica
+- [ ] **CA6** · A verificação do agente com o `playwright-cli`, com a falha provocada só nas rotas
+  de Conversas e de Mensagens e a verificação da Sessão funcionando, como a spec descreve
+  ("Verificações do agente"), confere os erros da barra lateral e da Conversa e o "Tentar de novo"
+  depois de desfazer a falha. Ela fica
   registrada na pasta desta tarefa, com a validação visual do esqueleto, do erro da barra lateral,
   da seção recolhida, do "Histórico carregando" e do "Erro ao carregar", nos dois temas.

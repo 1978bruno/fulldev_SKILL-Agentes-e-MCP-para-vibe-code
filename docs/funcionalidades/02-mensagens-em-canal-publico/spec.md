@@ -168,11 +168,12 @@ sobe o contexto do Nest sem HTTP e chama o service de Conversas.
   `fallbackData`, e é o cache que a F03 atualiza pelos eventos (LLD, seção "Cliente"). O SWR entra
   como dependência na F02.
 - **Envio:** um Server Action, como o LLD prevê, que valida o texto como a API e chama o service. A
-  caixa de mensagem gera o `client_id` com `crypto.randomUUID()` e guarda a Mensagem no cache como
-  "enviando". O cliente manda uma Mensagem por vez, numa fila, para a ordem gravada ser a do envio. Na
-  falha, a Mensagem fica como "falhou"; "Tentar de novo" reenvia com o mesmo `client_id`, e
-  "Descartar" tira a Mensagem do cache. As Mensagens "enviando" e "falhou" ficam sempre no fim da
-  lista, depois das gravadas.
+  caixa de mensagem gera o `client_id` com `crypto.randomUUID()` e mostra a Mensagem como
+  "enviando", num estado do cliente fora do cache do SWR, que guarda só as Mensagens gravadas. O
+  cliente manda uma Mensagem por vez, numa fila, para a ordem gravada ser a do envio. Confirmada pela
+  API, a Mensagem sai do estado do cliente e entra no cache. Na falha, ela fica como "falhou";
+  "Tentar de novo" reenvia com o mesmo `client_id`, e "Descartar" a tira do estado do cliente. As
+  Mensagens "enviando" e "falhou" ficam sempre no fim da lista, depois das gravadas.
 - **401** na rota do BFF ou no Server Action leva a `GET /api/session/expired` com o `?para=` da
   Conversa, como na F01 (LLD, "Cliente", "Sessão no cliente").
 
@@ -305,8 +306,11 @@ permite testar a Home vazia. É um desvio de propósito da regra "toda Pessoa em
 que vale só para os dados de teste.
 
 **Verificações do agente com o `playwright-cli`**, registradas na pasta da tarefa da tela:
-- **Erro da lista e do histórico:** o agente para o processo da API do chat, abre a Home e um Canal,
-  confere as telas de erro, sobe a API e confere o "Tentar de novo".
+- **Erro da lista e do histórico:** com a API do chat parada, a verificação da Sessão também
+  falha, e o layout mostra "Não foi possível verificar sua sessão" em vez das telas de erro. Por
+  isso o agente provoca a falha só nas rotas de Conversas e de Mensagens, com a verificação da
+  Sessão funcionando: renomeia a tabela `conversations` no banco de desenvolvimento, abre a Home e
+  um Canal, confere as telas de erro, desfaz o nome e confere o "Tentar de novo".
 - **Validação visual:** capturas em 1440 × 900, nos dois temas, comparadas com o `get_screenshot`
   dos frames citados (`docs/design-system.md`, "Validação visual"), e a gaveta em 767.
 

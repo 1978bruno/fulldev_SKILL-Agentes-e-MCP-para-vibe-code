@@ -24,6 +24,8 @@ não carrega, aparece o erro. Referências:
 - [ ] **CA4** · O Playwright prova a volta à última Conversa, a primeira da lista na primeira
   visita e com um cookie de Conversa que não está na lista, e a Home vazia de uma Pessoa sem
   Canais. A checagem com `@axe-core/playwright` na Home vazia passa sem violações.
-- [ ] **CA5** · A verificação do agente com o `playwright-cli`, com a API do chat parada, confere o
-  erro da Home e o "Tentar de novo" depois de subir a API, e fica registrada na pasta desta
+- [ ] **CA5** · A verificação do agente com o `playwright-cli`, com a falha provocada só nas rotas
+  de Conversas e a verificação da Sessão funcionando, como a spec descreve ("Verificações do
+  agente"), confere o erro da Home e o "Tentar de novo" depois de desfazer a falha, e fica
+  registrada na pasta desta
   tarefa, com a validação visual de "Home / Carregando" e do erro nos dois temas.
