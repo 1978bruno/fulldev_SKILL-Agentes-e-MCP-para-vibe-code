@@ -36,11 +36,12 @@ export function parseChannelName(raw: string): Parsed<string> {
 const TOPIC_FORBIDDEN = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 
 export function parseTopic(raw: string | undefined): Parsed<string | null> {
-  const topic = (raw ?? '').trim().normalize('NFC');
-  if (topic === '') return { ok: true, value: null };
-  if (TOPIC_FORBIDDEN.test(topic)) {
+  // Confere o texto bruto: o trim tiraria uma quebra de linha das pontas sem avisar.
+  if (TOPIC_FORBIDDEN.test(raw ?? '')) {
     return { ok: false, error: 'O tópico precisa caber numa linha só.' };
   }
+  const topic = (raw ?? '').trim().normalize('NFC');
+  if (topic === '') return { ok: true, value: null };
   if (codePointLength(topic) > TOPIC_MAX_LENGTH) {
     return {
       ok: false,

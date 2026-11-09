@@ -66,6 +66,9 @@ describe('parseTopic', () => {
     ['com tabulação', 'coluna\tcoluna'],
     ['com separador de linha', 'linha um\u2028linha dois'],
     ['com o caractere nulo', 'a\u0000b'],
+    ['só com uma quebra de linha', '\n'],
+    ['com quebra de linha na ponta', '\ntítulo'],
+    ['com separador de linha na ponta', 'título\u2029'],
   ])('recusa um Tópico %s', (_caso, raw) => {
     expect(parseTopic(raw)).toMatchObject({ ok: false });
   });
