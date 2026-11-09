@@ -40,6 +40,7 @@ async function Channels() {
           key={conversation.id}
           href={`/conversas/${conversation.id}`}
           name={conversation.name}
+          kind={conversation.kind}
         />
       ))}
       <AddChannelAction />

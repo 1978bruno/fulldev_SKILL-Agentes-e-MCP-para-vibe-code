@@ -21,8 +21,8 @@ import { InvalidChannelError } from './invalid-channel.error';
 import { compareNames } from './name-order';
 import { lockPublicMembership } from './public-membership-lock';
 
-// Tipos de Canal que a Pessoa cria pelo produto. A 02 acrescenta o Canal privado.
-export type ChannelKind = 'public_channel';
+// Tipos de Canal que a Pessoa cria pelo produto.
+export type ChannelKind = 'public_channel' | 'private_channel';
 
 export interface NewChannel {
   kind: ChannelKind;
@@ -165,7 +165,8 @@ export class ConversationsService {
   }
 
   // Só sob a trava de participação: valida, confere o nome entre todos os Canais e grava o Canal
-  // com a participação de todas as Pessoas, cuja quantidade já se sabe sem contar de novo.
+  // com a participação de todas as Pessoas, no público, ou só de quem o criou, no privado. A
+  // quantidade de Membros já se sabe sem contar de novo.
   private async insertChannel(
     kind: ChannelKind,
     rawName: string,
@@ -187,7 +188,10 @@ export class ConversationsService {
         ...origin,
       }),
     );
-    const personIds = await this.people.listIds();
+    const personIds =
+      kind === 'public_channel'
+        ? await this.people.listIds()
+        : [origin.createdBy!];
     await this.insertMembers(
       personIds.map((personId) => [channel.id, personId]),
     );

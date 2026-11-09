@@ -8,6 +8,7 @@ import { Button } from "@/app/components/ui/button";
 import { DialogBody, DialogClose, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
 import { Field } from "@/app/components/ui/field";
 import { Input } from "@/app/components/ui/input";
+import { Switch } from "@/app/components/ui/switch";
 import { isValidChannelName, normalizeChannelNameInput, normalizeTopicInput } from "@/app/utils/channel-name";
 import { newClientId } from "@/app/utils/client-id";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
@@ -26,9 +27,17 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
   const [clientId] = useState(newClientId);
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const created = useRef(false);
-  const ids = { name: useId(), topic: useId(), hint: useId(), error: useId() };
+  const ids = {
+    name: useId(),
+    topic: useId(),
+    hint: useId(),
+    error: useId(),
+    private: useId(),
+    privateHint: useId(),
+  };
 
   const canSubmit = isValidChannelName(name) && status !== "sending";
 
@@ -37,7 +46,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
     if (!canSubmit) return;
     setStatus("sending");
     // O Server Action rejeita quando a rede cai no caminho: é a mesma falha da API fora do ar.
-    const result = await createChannel(name, topic, clientId).catch(() => ({ kind: "failure" }) as const);
+    const result = await createChannel(name, topic, isPrivate, clientId).catch(() => ({ kind: "failure" }) as const);
     switch (result.kind) {
       case "ok":
         created.current = true;
@@ -114,6 +123,26 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
               }}
             />
           </Field>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <label htmlFor={ids.private} className="text-body font-bold text-fg">
+                Tornar privado
+              </label>
+              <p id={ids.privateHint} className="text-small text-fg-muted">
+                Só pessoas convidadas veem e participam de um canal privado.
+              </p>
+            </div>
+            <Switch
+              id={ids.private}
+              checked={isPrivate}
+              disabled={status === "sending"}
+              aria-describedby={ids.privateHint}
+              onCheckedChange={(checked) => {
+                setIsPrivate(checked);
+                if (status === "failure") setStatus("idle");
+              }}
+            />
+          </div>
           {status === "failure" && (
             <p role="alert" className="text-small text-danger-fg">
               Não foi possível criar o canal. Tente de novo.

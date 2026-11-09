@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { verify } from '@node-rs/argon2';
@@ -121,6 +122,33 @@ describe('comando de contas', () => {
         [person!.id, channels.map((channel) => channel.id)],
       );
       expect(memberships).toHaveLength(2);
+    });
+
+    it('a conta nova não entra nos Canais privados', async () => {
+      const owner = await people.create({
+        email: uniqueEmail(),
+        name: 'Bruno Lima',
+        password: 'senha',
+      });
+      const { conversation: channel } = await conversations.createChannel(
+        owner.id,
+        {
+          kind: 'private_channel',
+          name: uniqueChannelName(),
+          clientId: randomUUID(),
+        },
+      );
+      const email = uniqueEmail();
+
+      const exitCode = await command().run(['create', email, 'Ana Souza']);
+
+      expect(exitCode).toBe(0);
+      const person = await people.findByEmail(email);
+      const memberships = await dataSource.query<unknown[]>(
+        'SELECT 1 FROM conversation_members WHERE person_id = $1 AND conversation_id = $2',
+        [person!.id, channel.id],
+      );
+      expect(memberships).toHaveLength(0);
     });
 
     it('desfaz a Pessoa quando a participação falha', async () => {

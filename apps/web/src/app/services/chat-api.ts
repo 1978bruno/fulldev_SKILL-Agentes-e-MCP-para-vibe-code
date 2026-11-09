@@ -130,7 +130,7 @@ export async function logout(token: string): Promise<void> {
 
 // Conversas e Mensagens (spec da F02, "Rotas").
 
-export type ConversationKind = "public_channel";
+export type ConversationKind = "public_channel" | "private_channel";
 
 export type Conversation = {
   id: string;
@@ -257,13 +257,13 @@ export async function getConversation(
 // Cria o Canal (spec da F04, "Rotas"). O mesmo clientId devolve o Canal já criado.
 export async function createChannel(
   token: string,
-  channel: { name: string; topic: string; clientId: string },
+  channel: { kind: ConversationKind; name: string; topic: string; clientId: string },
 ): Promise<CreateChannelResult> {
   const response = await request("/v1/conversations", {
     method: "POST",
     headers: { ...authenticated(token), "content-type": "application/json" },
     body: JSON.stringify({
-      kind: "public_channel",
+      kind: channel.kind,
       name: channel.name,
       topic: channel.topic,
       client_id: channel.clientId,

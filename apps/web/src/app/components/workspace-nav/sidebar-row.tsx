@@ -1,18 +1,20 @@
 "use client";
 
-import { Hash } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChannelIcon } from "@/app/components/conversation/channel-icon";
+import type { ConversationKind } from "@/app/services/chat-api";
 import { cn } from "@/app/utils/cn";
 
 type SidebarRowProps = {
   href: string;
   name: string;
+  kind: ConversationKind;
 };
 
 // Linha de Conversa da barra lateral (SidebarRow): h-7, ou 44 px abaixo de md, raio item. A da Conversa aberta fica
 // ativa, com o fundo de seleção e aria-current.
-export function SidebarRow({ href, name }: SidebarRowProps) {
+export function SidebarRow({ href, name, kind }: SidebarRowProps) {
   const isActive = usePathname() === href;
   return (
     <li>
@@ -26,7 +28,7 @@ export function SidebarRow({ href, name }: SidebarRowProps) {
             : "text-sidebar-fg hover:bg-sidebar-hover",
         )}
       >
-        <Hash size={16} aria-hidden className="shrink-0" />
+        <ChannelIcon kind={kind} size={16} className="shrink-0" />
         <span className="truncate">{name}</span>
       </Link>
     </li>

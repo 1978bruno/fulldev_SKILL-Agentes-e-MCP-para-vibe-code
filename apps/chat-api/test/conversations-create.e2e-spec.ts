@@ -152,7 +152,6 @@ describe('criar Canal', () => {
     ['nome ausente', { name: undefined }],
     ['Tópico com quebra de linha', { topic: 'linha 1\nlinha 2' }],
     ['Tópico com 251 caracteres', { topic: 'a'.repeat(251) }],
-    ['kind de Canal privado', { kind: 'private_channel' }],
     ['kind desconhecido', { kind: 'direct' }],
     ['client_id que não é uuid', { client_id: 'abc' }],
   ])('%s responde 400', async (_case, override) => {
@@ -167,6 +166,124 @@ describe('criar Canal', () => {
 
     expect(response.status).toBe(400);
     expect((response.body as { code: string }).code).toBe('validation_failed');
+  });
+
+  it('cria o Canal privado só com quem o criou', async () => {
+    const { person, cookie } = await loggedIn();
+    await authRoutes.createPerson(app);
+    const name = uniqueChannelName();
+
+    const response = await create(cookie, {
+      kind: 'private_channel',
+      name,
+      client_id: randomUUID(),
+    });
+
+    expect(response.status).toBe(201);
+    const { conversation } = response.body as {
+      conversation: ConversationBody;
+    };
+    expect(conversation).toMatchObject({
+      kind: 'private_channel',
+      name,
+      member_count: 1,
+    });
+    const members = await dataSource.query<{ person_id: string }[]>(
+      'SELECT person_id FROM conversation_members WHERE conversation_id = $1',
+      [conversation.id],
+    );
+    expect(members).toEqual([{ person_id: person.id }]);
+  });
+
+  it('o reenvio do Canal privado devolve o mesmo Canal', async () => {
+    const { cookie } = await loggedIn();
+    const body = {
+      kind: 'private_channel',
+      name: uniqueChannelName(),
+      client_id: randomUUID(),
+    };
+    const first = await create(cookie, body);
+
+    const response = await create(cookie, body);
+
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual(first.body);
+  });
+
+  it('o nome de um Canal privado de que a Pessoa não é Membro responde 409', async () => {
+    const owner = await loggedIn();
+    const name = uniqueChannelName();
+    await create(owner.cookie, {
+      kind: 'private_channel',
+      name,
+      client_id: randomUUID(),
+    });
+    const { cookie } = await loggedIn();
+
+    const response = await create(cookie, {
+      kind: 'public_channel',
+      name,
+      client_id: randomUUID(),
+    });
+
+    expect(response.status).toBe(409);
+    expect((response.body as { code: string }).code).toBe('channel_name_taken');
+  });
+
+  it('o Canal privado com o nome de um público responde 409', async () => {
+    const { cookie } = await loggedIn();
+    const existing = await conversationRoutes.createChannel(app);
+
+    const response = await create(cookie, {
+      kind: 'private_channel',
+      name: existing.name,
+      client_id: randomUUID(),
+    });
+
+    expect(response.status).toBe(409);
+  });
+
+  it('quem não é Membro não vê o Canal privado em lista nem rota', async () => {
+    const owner = await loggedIn();
+    const created = await create(owner.cookie, {
+      kind: 'private_channel',
+      name: uniqueChannelName(),
+      client_id: randomUUID(),
+    });
+    const { id } = (created.body as { conversation: ConversationBody })
+      .conversation;
+    const { cookie } = await loggedIn();
+
+    const responses = await Promise.all([
+      request(server).get(`/v1/conversations/${id}`).set('Cookie', cookie),
+      request(server)
+        .get(`/v1/conversations/${id}/messages`)
+        .set('Cookie', cookie),
+      request(server)
+        .post(`/v1/conversations/${id}/messages`)
+        .set('Cookie', cookie)
+        .send({ client_id: randomUUID(), body: 'Oi' }),
+      request(server).get('/v1/conversations').set('Cookie', cookie),
+    ]);
+
+    for (const response of responses.slice(0, 3)) {
+      expect(response.status).toBe(404);
+      expect((response.body as { code: string }).code).toBe(
+        'conversation_not_found',
+      );
+    }
+    const listed = (
+      responses[3].body as { conversations: ConversationBody[] }
+    ).conversations.map((conversation) => conversation.id);
+    expect(listed).not.toContain(id);
+  });
+
+  it('o banco recusa Canal privado sem nome', async () => {
+    const insert = dataSource.query(
+      "INSERT INTO conversations (id, kind) VALUES (gen_random_uuid(), 'private_channel')",
+    );
+
+    await expect(insert).rejects.toThrow(/conversations_channel_name_check/);
   });
 
   it('responde 401 sem Sessão', async () => {
