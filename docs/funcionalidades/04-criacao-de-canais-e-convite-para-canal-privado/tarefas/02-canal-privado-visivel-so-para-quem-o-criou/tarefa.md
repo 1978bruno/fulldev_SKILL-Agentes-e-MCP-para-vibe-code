@@ -1,6 +1,6 @@
 # 02: Canal privado visível só para quem o criou
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** com "Tornar privado" ligado, a Pessoa cria um Canal privado, que abre só com
 ela como Membro e aparece com o cadeado na barra lateral e no cabeçalho. Quem não é Membro não o vê
