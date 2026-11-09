@@ -1,6 +1,6 @@
 # 03: Pílula de novas mensagens
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa que está lendo Mensagens antigas não é tirada do lugar quando chega
 uma nova: aparece a pílula "Novas mensagens", que leva ao fim. No fim da lista, a Mensagem nova rola
