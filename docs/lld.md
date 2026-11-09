@@ -269,6 +269,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/sessions/current` | planejada | Verificar e renovar a Sessão: mesma seção |
 | API do chat: `DELETE /v1/sessions/current` | planejada | Sair: mesma seção |
 | BFF: Server Actions entrar e sair | planejada | Gravam e apagam o cookie: "Conceitos transversais de implementação", seção "Segurança" |
+| BFF: `GET /api/session/expired` | planejada | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
 | Envio de mensagem no BFF (Server Action) | a detalhar | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
@@ -382,7 +383,9 @@ atualiza esse cache direto, sem nova requisição.
 - O proxy do Next confere só se o cookie de sessão existe; sem ele, manda para "Entrar". A
   validação de verdade é da API do chat.
 - O layout das telas logadas verifica a Sessão na API do chat a cada renderização:
-  - Com 401, apaga o cookie e manda para "Entrar".
+  - Com 401, apaga o cookie e manda para "Entrar". Como um Server Component não grava cookie,
+    o layout redireciona à rota do BFF `GET /api/session/expired`, que confere a Sessão de novo
+    na API e só apaga o cookie se ela ainda responder 401; com 200, volta para a Home.
   - Com falha de rede, 5xx ou tempo esgotado, mostra "Não foi possível verificar sua sessão",
     com "Tentar de novo", e não manda para "Entrar".
 - "Entrar", aberta com cookie, faz a mesma verificação:
@@ -439,6 +442,7 @@ O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos
 | API do chat | `WEB_ORIGIN` | Origem aceita no handshake do WebSocket |
 | API do chat | `SESSION_TTL_DAYS` | `Duração da Sessão` |
 | API do chat | `PORT` | Porta HTTP em que a API escuta |
+| API do chat | `SESSION_COOKIE_NAME` | Nome do cookie de sessão que o BFF repassa; o mesmo valor da Web |
 | Web | `CHAT_API_URL` | Endereço interno da API do chat |
 | Web | `SESSION_COOKIE_NAME` | Nome do cookie de sessão |
 | Web | `SESSION_COOKIE_DOMAIN` | `Domain` do cookie; vazio no local |
