@@ -25,14 +25,37 @@ export function safeReturnPath(value: unknown): string {
   return path;
 }
 
-function withReturnPath(base: string, returnPath: unknown): string {
+// Marca em "Entrar" que a verificação da Sessão acabou de falhar: a página mostra o formulário
+// sem verificar o cookie de novo, e a nova tentativa fica para a Pessoa.
+export const VERIFICATION_FAILED_PARAM = "verificacao";
+const VERIFICATION_FAILED_VALUE = "falhou";
+
+function withReturnPath(
+  base: string,
+  returnPath: unknown,
+  extra: Record<string, string> = {},
+): string {
+  const params = new URLSearchParams(extra);
   const path = safeReturnPath(returnPath);
-  return path === "/" ? base : `${base}?para=${encodeURIComponent(path)}`;
+  if (path !== "/") params.set("para", path);
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 // Endereço de "Entrar" levando o caminho pedido, quando ele é seguro e não é a Home.
 export function loginPath(returnPath: unknown): string {
   return withReturnPath("/entrar", returnPath);
+}
+
+// "Entrar" depois de uma verificação que falhou por rede ou servidor (o cookie fica).
+export function loginPathAfterFailedVerification(returnPath: unknown): string {
+  return withReturnPath("/entrar", returnPath, {
+    [VERIFICATION_FAILED_PARAM]: VERIFICATION_FAILED_VALUE,
+  });
+}
+
+export function isVerificationFailed(value: unknown): boolean {
+  return value === VERIFICATION_FAILED_VALUE;
 }
 
 // Rota do BFF que apaga o cookie de uma Sessão recusada, levando o caminho pedido.

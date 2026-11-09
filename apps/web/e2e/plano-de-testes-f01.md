@@ -164,6 +164,14 @@ F01-T04 (`falha-no-envio.md`).
     - expect: a URL continua `/entrar`, com o formulário
     - expect: o cookie de sessão deixa de existir
 
+#### 5.5. verificacao-falhou-mostra-o-formulario
+
+**File:** `e2e/login/verificacao-falhou-mostra-o-formulario.spec.ts`
+
+**Steps:**
+  1. Logada, abrir `/entrar?verificacao=falhou` (a marca que a rota do BFF põe quando a reconferência falha)
+    - expect: a URL continua a mesma e o formulário aparece, sem verificar o cookie de novo
+
 ### 6. Continuar logada e Sessão que acaba
 
 **Seed:** `e2e/seed.spec.ts`
