@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f04.md
 // seed: e2e/seed.spec.ts
 import { randomUUIDv7 } from "node:crypto";
-import { expect, test } from "../fixtures";
+import { expect, logIn, test } from "../fixtures";
 import { insertChannel } from "../support/database";
 
 test.describe("Canal privado", () => {
@@ -14,7 +14,6 @@ test.describe("Canal privado", () => {
     await insertChannel([person], { name: `e2e-c-${suffix}` });
     await insertChannel([person], { name: `e2e-b-${suffix}`, kind: "private_channel" });
     await insertChannel([person], { name: `e2e-a-${suffix}` });
-    const { logIn } = await import("../fixtures");
     await logIn(page, person);
 
     // 2. A barra lateral mostra os três juntos, em ordem, e só o privado com o cadeado

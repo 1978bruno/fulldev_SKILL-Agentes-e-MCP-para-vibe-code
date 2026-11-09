@@ -16,13 +16,16 @@ import {
 } from './channel-name';
 import { ConversationMember } from './conversation-member.entity';
 import { ConversationNotFoundError } from './conversation-not-found.error';
-import { Conversation } from './conversation.entity';
+import { Conversation, ConversationKind } from './conversation.entity';
 import { InvalidChannelError } from './invalid-channel.error';
 import { compareNames } from './name-order';
 import { lockPublicMembership } from './public-membership-lock';
 
 // Tipos de Canal que a Pessoa cria pelo produto.
-export type ChannelKind = 'public_channel' | 'private_channel';
+export type ChannelKind = Extract<
+  ConversationKind,
+  'public_channel' | 'private_channel'
+>;
 
 export interface NewChannel {
   kind: ChannelKind;
@@ -141,7 +144,10 @@ export class ConversationsService {
       const [summary] = await this.withMemberCounts([existing]);
       return { ...summary, created: false };
     }
-    const summary = await this.insertChannel(kind, name, topic, {
+    // O público inclui todas as Pessoas; o privado, só quem o criou.
+    const memberIds =
+      kind === 'public_channel' ? await this.people.listIds() : [creatorId];
+    const summary = await this.insertChannel(kind, name, topic, memberIds, {
       createdBy: creatorId,
       clientId,
     });
@@ -159,18 +165,20 @@ export class ConversationsService {
       'public_channel',
       rawName,
       rawTopic,
+      await this.people.listIds(),
       { createdBy: null, clientId: null },
     );
     return conversation;
   }
 
   // Só sob a trava de participação: valida, confere o nome entre todos os Canais e grava o Canal
-  // com a participação de todas as Pessoas, no público, ou só de quem o criou, no privado. A
-  // quantidade de Membros já se sabe sem contar de novo.
+  // com a participação das Pessoas que quem chama decide. A quantidade de Membros já se sabe sem
+  // contar de novo.
   private async insertChannel(
     kind: ChannelKind,
     rawName: string,
     rawTopic: string | undefined,
+    memberIds: string[],
     origin: { createdBy: string | null; clientId: string | null },
   ): Promise<ConversationSummary> {
     const name = parseChannelName(rawName);
@@ -188,14 +196,10 @@ export class ConversationsService {
         ...origin,
       }),
     );
-    const personIds =
-      kind === 'public_channel'
-        ? await this.people.listIds()
-        : [origin.createdBy!];
     await this.insertMembers(
-      personIds.map((personId) => [channel.id, personId]),
+      memberIds.map((personId) => [channel.id, personId]),
     );
-    return { conversation: channel, memberCount: personIds.length };
+    return { conversation: channel, memberCount: memberIds.length };
   }
 
   // Troca o Tópico de um Canal público pela regra do create; vazio apaga. Devolve o nome

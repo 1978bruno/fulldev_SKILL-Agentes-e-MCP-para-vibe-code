@@ -24,7 +24,7 @@ type CreateChannelDialogProps = {
 // enquanto o diálogo está aberto (spec da F04, "BFF").
 export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
   const router = useRouter();
-  const [clientId] = useState(newClientId);
+  const [clientId, setClientId] = useState(newClientId);
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
@@ -40,6 +40,11 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
   };
 
   const canSubmit = isValidChannelName(name) && status !== "sending";
+
+  // Mudar o que foi preenchido tira o erro anterior; durante o envio, os campos não mudam.
+  function clearError() {
+    if (status !== "sending") setStatus("idle");
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -105,7 +110,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
                 aria-describedby={nameError ? ids.error : ids.hint}
                 onChange={(event) => {
                   setName(normalizeChannelNameInput(event.target.value));
-                  if (status !== "sending") setStatus("idle");
+                  clearError();
                 }}
                 className="pl-9"
               />
@@ -119,7 +124,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
               autoComplete="off"
               onChange={(event) => {
                 setTopic(normalizeTopicInput(event.target.value));
-                if (status === "failure") setStatus("idle");
+                clearError();
               }}
             />
           </Field>
@@ -139,7 +144,10 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
               aria-describedby={ids.privateHint}
               onCheckedChange={(checked) => {
                 setIsPrivate(checked);
-                if (status === "failure") setStatus("idle");
+                // Outro tipo é outro Canal: a nova tentativa não pode devolver o do tipo anterior,
+                // criado por um envio cuja resposta se perdeu.
+                setClientId(newClientId());
+                clearError();
               }}
             />
           </div>

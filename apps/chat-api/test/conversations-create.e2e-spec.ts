@@ -254,7 +254,7 @@ describe('criar Canal', () => {
       .conversation;
     const { cookie } = await loggedIn();
 
-    const responses = await Promise.all([
+    const [detail, messages, send, list] = await Promise.all([
       request(server).get(`/v1/conversations/${id}`).set('Cookie', cookie),
       request(server)
         .get(`/v1/conversations/${id}/messages`)
@@ -266,14 +266,14 @@ describe('criar Canal', () => {
       request(server).get('/v1/conversations').set('Cookie', cookie),
     ]);
 
-    for (const response of responses.slice(0, 3)) {
+    for (const response of [detail, messages, send]) {
       expect(response.status).toBe(404);
       expect((response.body as { code: string }).code).toBe(
         'conversation_not_found',
       );
     }
     const listed = (
-      responses[3].body as { conversations: ConversationBody[] }
+      list.body as { conversations: ConversationBody[] }
     ).conversations.map((conversation) => conversation.id);
     expect(listed).not.toContain(id);
   });
