@@ -1,0 +1,205 @@
+import { INestApplication } from '@nestjs/common';
+import type { ConversationMemberAddedEvent } from 'chat-events';
+import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { authRoutes } from './support/auth-routes';
+import {
+  collectEvents,
+  listenTestApp,
+  realtimeRoutes,
+  settle,
+  testRedis,
+  TestSocket,
+  waitForCount,
+} from './support/realtime-routes';
+import { uniqueChannelName } from './support/unique-channel-name';
+
+type ConversationBody = ConversationMemberAddedEvent['conversation'];
+
+function createChannel(
+  app: INestApplication,
+  cookie: string,
+  body: { kind?: string; name?: string; clientId?: string } = {},
+) {
+  return request(app.getHttpServer() as App)
+    .post('/v1/conversations')
+    .set('Cookie', cookie)
+    .send({
+      kind: body.kind ?? 'public_channel',
+      name: body.name ?? uniqueChannelName(),
+      client_id: body.clientId ?? randomUUID(),
+    });
+}
+
+// Os eventos de um Canal: outros testes criam Canais públicos ao mesmo tempo.
+function eventsOf(
+  events: ConversationMemberAddedEvent[],
+  conversationId: string,
+): ConversationMemberAddedEvent[] {
+  return events.filter((event) => event.conversation.id === conversationId);
+}
+
+async function waitForConversation(
+  events: ConversationMemberAddedEvent[],
+  conversationId: string,
+): Promise<ConversationMemberAddedEvent> {
+  const deadline = Date.now() + 2000;
+  for (;;) {
+    const [event] = eventsOf(events, conversationId);
+    if (event) return event;
+    if (Date.now() > deadline) throw new Error('O evento do Canal não chegou');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+describe('Canais novos em tempo real', () => {
+  let app: INestApplication;
+  let url: string;
+  const sockets: TestSocket[] = [];
+
+  beforeAll(async () => {
+    ({ app, url } = await listenTestApp());
+  });
+
+  afterEach(() => {
+    sockets.splice(0).forEach((socket) => socket.disconnect());
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  async function listening(token: string) {
+    const socket = await realtimeRoutes.connected(url, { token });
+    sockets.push(socket);
+    return collectEvents(socket, 'conversation.member_added');
+  }
+
+  it('o Canal público novo chega a todas as Pessoas conectadas', async () => {
+    const creator = await authRoutes.loggedIn(app);
+    const other = await authRoutes.loggedIn(app);
+    const creatorEvents = await listening(creator.token);
+    const otherEvents = await listening(other.token);
+
+    const response = await createChannel(app, creator.cookie);
+
+    const { conversation } = response.body as {
+      conversation: ConversationBody;
+    };
+    const event = await waitForConversation(otherEvents, conversation.id);
+    // Todas entraram agora: cada uma recebe person_ids só com ela mesma.
+    expect(event).toEqual({
+      event_id: expect.stringMatching(/^[^:]+:\d+-\d+$/) as string,
+      conversation,
+      person_ids: [other.person.id],
+    });
+    const creatorEvent = await waitForConversation(
+      creatorEvents,
+      conversation.id,
+    );
+    expect(creatorEvent.person_ids).toEqual([creator.person.id]);
+  });
+
+  it('o reenvio da criação não gera outro evento', async () => {
+    const creator = await authRoutes.loggedIn(app);
+    const events = await listening(creator.token);
+    const clientId = randomUUID();
+    const first = await createChannel(app, creator.cookie, { clientId });
+    const { id } = (first.body as { conversation: ConversationBody })
+      .conversation;
+    await waitForConversation(events, id);
+
+    await createChannel(app, creator.cookie, { clientId });
+
+    await settle();
+    expect(eventsOf(events, id)).toHaveLength(1);
+  });
+
+  it('o Canal privado novo chega só às abas de quem o criou', async () => {
+    const creator = await authRoutes.loggedIn(app);
+    const other = await authRoutes.loggedIn(app);
+    const firstTab = await listening(creator.token);
+    const secondTab = await listening(creator.token);
+    const otherEvents = await listening(other.token);
+
+    const response = await createChannel(app, creator.cookie, {
+      kind: 'private_channel',
+    });
+
+    const { conversation } = response.body as {
+      conversation: ConversationBody;
+    };
+    const event = await waitForConversation(firstTab, conversation.id);
+    expect(event.person_ids).toEqual([creator.person.id]);
+    await waitForConversation(secondTab, conversation.id);
+    await settle();
+    expect(eventsOf(otherEvents, conversation.id)).toHaveLength(0);
+  });
+
+  it('o evento volta na reconexão com cursor', async () => {
+    const reader = await authRoutes.loggedIn(app);
+    const creator = await authRoutes.loggedIn(app);
+    // Um evento antes da conexão: sem stream, o cursor 0-0 conta como perdido (spec da F03).
+    await createChannel(app, reader.cookie, { kind: 'private_channel' });
+    const first = realtimeRoutes.socket(url, { token: reader.token });
+    sockets.push(first);
+    const syncs = collectEvents(first, 'sync');
+    first.connect();
+    const [{ cursor }] = await waitForCount(syncs, 1);
+    first.disconnect();
+    const response = await createChannel(app, creator.cookie);
+    const { id } = (response.body as { conversation: ConversationBody })
+      .conversation;
+
+    const second = realtimeRoutes.socket(url, {
+      token: reader.token,
+      cursor: cursor!,
+    });
+    sockets.push(second);
+    const replayed = collectEvents(second, 'conversation.member_added');
+    const secondSyncs = collectEvents(second, 'sync');
+    second.connect();
+
+    const [sync] = await waitForCount(secondSyncs, 1);
+    expect(sync.reset).toBe(false);
+    // A publicação, fora da resposta, pode estar em andamento na reconexão: o mesmo evento chega
+    // então pelo reenvio e ao vivo, com o mesmo cursor, que a aba descarta (spec da F03).
+    const cursors = new Set(
+      eventsOf(replayed, id).map((event) => event.event_id),
+    );
+    expect(cursors.size).toBe(1);
+  });
+});
+
+describe('Canais novos com o Redis fora', () => {
+  let app: INestApplication;
+  let url: string;
+  let socket: TestSocket;
+
+  beforeAll(async () => {
+    ({ app, url } = await listenTestApp());
+    testRedis(app).destroy();
+  });
+
+  afterAll(async () => {
+    socket?.disconnect();
+    await app.close();
+  });
+
+  it('com o Redis fora, o evento sai sem event_id', async () => {
+    const creator = await authRoutes.loggedIn(app);
+    socket = await realtimeRoutes.connected(url, { token: creator.token });
+    const events = collectEvents(socket, 'conversation.member_added');
+
+    const response = await createChannel(app, creator.cookie, {
+      kind: 'private_channel',
+    });
+
+    expect(response.status).toBe(201);
+    const { id } = (response.body as { conversation: ConversationBody })
+      .conversation;
+    const event = await waitForConversation(events, id);
+    expect(event.event_id).toBeUndefined();
+  });
+});

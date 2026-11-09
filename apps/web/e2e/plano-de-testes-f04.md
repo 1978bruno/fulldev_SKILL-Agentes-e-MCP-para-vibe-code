@@ -106,3 +106,27 @@ só tem quem o criou e não mexe nas outras Pessoas.
     - expect: a Home vazia, sem o Canal na barra lateral
   2. A segunda abre o endereço do Canal
     - expect: "Conversa não encontrada"
+
+### 4. Canais novos na barra lateral
+
+Ficam em `e2e/canais-publicos/`, porque criam Canal público pela tela.
+
+#### 4.1. o Canal público criado por outra Pessoa aparece na barra lateral sem recarregar
+
+**File:** `e2e/canais-publicos/canal-novo-sem-recarregar.spec.ts`
+
+**Steps:**
+  1. As duas Pessoas no mesmo Canal; a segunda com um rascunho na caixa de mensagem
+  2. A primeira cria um Canal público
+    - expect: o Canal aparece na barra lateral da segunda, em ordem, sem recarregar a página,
+      sem abrir o Canal e com o foco e o rascunho na caixa de mensagem
+
+#### 4.2. o reset recarrega a lista e traz o Canal criado durante a queda
+
+**File:** `e2e/canais-publicos/canal-novo-depois-da-queda.spec.ts`
+
+**Steps:**
+  1. A segunda Pessoa fica offline, e a época dos eventos é apagada
+  2. A primeira cria um Canal público
+  3. A rede volta
+    - expect: o `sync` com `reset` busca a lista de novo, e o Canal aparece

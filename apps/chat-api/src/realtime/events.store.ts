@@ -95,15 +95,18 @@ export class EventsStore {
   }
 
   // Grava o evento no stream de cada Pessoa e devolve o cursor de cada uma: a época vai no mesmo
-  // pipeline das gravações.
+  // pipeline das gravações. O evento pode ser o mesmo para todas ou montado para cada uma.
   async append(
     personIds: string[],
-    event: StoredEvent,
+    event: StoredEvent | ((personId: string) => StoredEvent),
   ): Promise<Map<string, string>> {
     const minId = `${Date.now() - EVENTS_RETENTION_MS}-0`;
-    const data = JSON.stringify(event);
+    const shared = typeof event === 'function' ? null : JSON.stringify(event);
     const pipeline = this.redis.multi().get(EPOCH_KEY);
     for (const personId of personIds) {
+      const data =
+        shared ??
+        JSON.stringify((event as (id: string) => StoredEvent)(personId));
       pipeline.addCommand([
         'XADD',
         streamKey(personId),

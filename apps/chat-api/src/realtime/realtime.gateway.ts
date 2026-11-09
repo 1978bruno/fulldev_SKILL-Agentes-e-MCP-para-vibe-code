@@ -97,9 +97,10 @@ export class RealtimeGateway
         socket.emit('sync', { cursor: result.cursor, reset: true });
         return;
       }
+      // Todos os eventos guardados voltam, na ordem do stream (message.created e
+      // conversation.member_added).
       for (const event of result.events) {
-        if (event.name !== 'message.created') continue;
-        socket.emit('message.created', {
+        socket.emit(event.name as 'message.created', {
           ...(event.payload as MessageCreatedEvent),
           event_id: event.cursor,
         });
