@@ -21,7 +21,7 @@ export function safeReturnPath(value: unknown): string {
   // A normalização pode criar "//" de novo ("/a/..//site" vira "//site"): o resultado passa
   // pela mesma regra do segundo caractere.
   const path = url.pathname + url.search + url.hash;
-  if (url.origin !== BASE || path.startsWith("//") || path.startsWith("/\\")) return "/";
+  if (url.origin !== BASE || path.startsWith("//")) return "/";
   return path;
 }
 
