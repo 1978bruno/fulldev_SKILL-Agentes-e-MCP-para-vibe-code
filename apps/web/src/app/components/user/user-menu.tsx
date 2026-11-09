@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { useTransition } from "react";
 import { logout } from "@/app/actions/logout";
 import { Avatar } from "@/app/components/ui/avatar";
+import { Spinner } from "@/app/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,8 @@ export function UserMenu({ person }: UserMenuProps) {
             startTransition(() => logout());
           }}
         >
-          <LogOut size={16} aria-hidden />
+          {/* Carregando: spinner no lugar do ícone, texto mantido (design system). */}
+          {isPending ? <Spinner size="sm" /> : <LogOut size={16} aria-hidden />}
           Sair do Full Cycle
         </DropdownMenuItem>
       </DropdownMenuContent>
