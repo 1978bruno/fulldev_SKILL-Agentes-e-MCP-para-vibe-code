@@ -61,7 +61,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     @MessageBody() event: ConversationRef,
   ): Promise<ConversationOpenResult> {
     const conversationId = conversationIdOf(event) ?? '';
-    socket.data.requestedConversationId = conversationId;
+    const request = nextRoomRequest(socket);
+    const isStale = () => socket.data.roomRequest !== request;
     try {
       await this.conversations.getForMember(
         socket.data.person.id,
@@ -74,14 +75,17 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       throw error;
     }
     // Outra abertura, ou o fechamento, chegou enquanto esta conferia a participação.
-    if (socket.data.requestedConversationId !== conversationId) {
-      return { ok: true };
-    }
+    if (isStale()) return { ok: true };
     if (socket.data.conversationId !== conversationId) {
       await this.leaveConversation(socket);
+      if (isStale()) return { ok: true };
     }
     socket.data.conversationId = conversationId;
     await socket.join(conversationRoom(conversationId));
+    // Uma operação mais nova chegou durante a entrada: ela vale, e esta sai da sala que ocupou.
+    if (isStale() && socket.data.conversationId !== conversationId) {
+      await socket.leave(conversationRoom(conversationId));
+    }
     return { ok: true };
   }
 
@@ -92,9 +96,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   ): Promise<void> {
     const conversationId = conversationIdOf(event);
     if (!conversationId) return;
-    if (socket.data.requestedConversationId === conversationId) {
-      socket.data.requestedConversationId = undefined;
-    }
+    nextRoomRequest(socket);
     if (socket.data.conversationId === conversationId) {
       await this.leaveConversation(socket);
     }
@@ -186,4 +188,9 @@ function conversationIdOf(
 ): string | undefined {
   const conversationId = event?.conversation_id;
   return typeof conversationId === 'string' ? conversationId : undefined;
+}
+
+function nextRoomRequest(socket: RealtimeSocket): number {
+  socket.data.roomRequest = (socket.data.roomRequest ?? 0) + 1;
+  return socket.data.roomRequest;
 }

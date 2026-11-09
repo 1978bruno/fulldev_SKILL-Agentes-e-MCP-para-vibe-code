@@ -8,9 +8,9 @@ export interface RealtimeSocketData {
   sessionId: string;
   // A Conversa aberta na aba, cuja sala o socket ocupa (spec da F03, "Digitando").
   conversationId?: string;
-  // A última Conversa pedida pela aba: uma abertura que termina depois de outra mais nova, ou
-  // depois do fechamento, não entra na sala.
-  requestedConversationId?: string;
+  // Conta as aberturas e os fechamentos da aba: uma abertura que retoma depois de outra operação
+  // mais nova desiste, e desfaz o que fez.
+  roomRequest?: number;
 }
 
 export type RealtimeServer = Server<

@@ -1,8 +1,8 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { composer, typingNotice } from "../support/conversation-page";
-import { openSharedChannel } from "../support/realtime";
+import { composer, readyHistory, typingNotice } from "../support/conversation-page";
+import { openSharedChannel, waitForRealtime } from "../support/realtime";
 
 test.describe("Digitando", () => {
   test("mostra quem digita e some ao enviar", async ({
@@ -52,6 +52,8 @@ test.describe("Digitando", () => {
     await openSharedChannel(page, otherPage, sharedChannel, person, { history: 0 });
     const secondTab = await page.context().newPage();
     await secondTab.goto(`/conversas/${sharedChannel.id}`);
+    await waitForRealtime(secondTab);
+    await readyHistory(secondTab, sharedChannel.name);
     await composer(page, sharedChannel.name).pressSequentially("Só eu");
 
     await expect(typingNotice(otherPage, person.name)).toBeVisible();
