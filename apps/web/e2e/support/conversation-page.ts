@@ -54,7 +54,6 @@ export async function routeSendMessage(
 export async function scrollAwayFromEnd(history: Locator): Promise<number> {
   return history.evaluate((element) => {
     element.scrollTop = element.scrollHeight - element.clientHeight - 600;
-    element.dispatchEvent(new Event("scroll"));
     return element.scrollTop;
   });
 }
@@ -64,4 +63,14 @@ export function distanceToEnd(history: Locator): Promise<number> {
   return history.evaluate(
     (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
   );
+}
+
+export async function scrollHistoryToEnd(history: Locator): Promise<void> {
+  await history.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+}
+
+export function newMessagesPill(page: Page): Locator {
+  return page.getByRole("button", { name: "Novas mensagens" });
 }

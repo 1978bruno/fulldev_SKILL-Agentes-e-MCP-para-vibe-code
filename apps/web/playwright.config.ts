@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Os testes do tempo real abrem dois navegadores cada um, e o next dev renderiza tudo sob
+  // demanda: com o padrão (metade dos núcleos), a máquina satura e os testes estouram o tempo.
+  workers: 6,
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],

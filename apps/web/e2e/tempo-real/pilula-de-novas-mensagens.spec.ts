@@ -1,30 +1,15 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
-import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import {
+  composer,
   distanceToEnd,
   messageItem,
-  readyHistory,
+  newMessagesPill,
   scrollAwayFromEnd,
+  scrollHistoryToEnd,
 } from "../support/conversation-page";
-import { insertHistory, type TestChannel, type TestPerson } from "../support/database";
-import { sendFromComposer, waitForRealtime } from "../support/realtime";
-
-// As duas Pessoas no Canal em comum, com histórico para rolar.
-async function openBoth(
-  page: Page,
-  otherPage: Page,
-  channel: TestChannel,
-  person: TestPerson,
-) {
-  await insertHistory(channel, person, 40);
-  await page.goto(`/conversas/${channel.id}`);
-  await otherPage.goto(`/conversas/${channel.id}`);
-  await waitForRealtime(page);
-  await waitForRealtime(otherPage);
-  return readyHistory(page, channel.name);
-}
+import { openSharedChannel as openBoth, sendFromComposer } from "../support/realtime";
 
 test.describe("Pílula de novas mensagens", () => {
   test("no fim, a Mensagem que chega rola a lista", async ({
@@ -39,7 +24,7 @@ test.describe("Pílula de novas mensagens", () => {
 
     await expect(messageItem(page, sharedChannel.name, "Chegou no fim")).toBeInViewport();
     expect(await distanceToEnd(history)).toBeLessThanOrEqual(100);
-    await expect(page.getByRole("button", { name: "Novas mensagens" })).toHaveCount(0);
+    await expect(newMessagesPill(page)).toHaveCount(0);
   });
 
   test("lendo mais acima, a lista não se move e aparece a pílula", async ({
@@ -52,7 +37,7 @@ test.describe("Pílula de novas mensagens", () => {
     const history = await openBoth(page, otherPage, sharedChannel, person);
     const position = await scrollAwayFromEnd(history);
     await sendFromComposer(otherPage, sharedChannel.name, "Chegou lá embaixo");
-    const pill = page.getByRole("button", { name: "Novas mensagens" });
+    const pill = newMessagesPill(page);
 
     await expect(pill).toBeVisible();
     expect(await history.evaluate((element) => element.scrollTop)).toBe(position);
@@ -74,11 +59,9 @@ test.describe("Pílula de novas mensagens", () => {
     const history = await openBoth(page, otherPage, sharedChannel, person);
     await scrollAwayFromEnd(history);
     await sendFromComposer(otherPage, sharedChannel.name, "Outra chegada");
-    const pill = page.getByRole("button", { name: "Novas mensagens" });
+    const pill = newMessagesPill(page);
     await expect(pill).toBeVisible();
-    await history.evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
-    });
+    await scrollHistoryToEnd(history);
 
     await expect(pill).toHaveCount(0);
   });
@@ -89,19 +72,20 @@ test.describe("Pílula de novas mensagens", () => {
     person,
     sharedChannel,
   }) => {
-    // 1. Com a pílula na tela, chegar a ela pelo Tab e apertar Enter
+    // 1. Com a pílula na tela, chegar a ela pelo Shift+Tab a partir da caixa e apertar Enter
     const history = await openBoth(page, otherPage, sharedChannel, person);
     await scrollAwayFromEnd(history);
     await sendFromComposer(otherPage, sharedChannel.name, "Pelo teclado");
-    const pill = page.getByRole("button", { name: "Novas mensagens" });
+    const pill = newMessagesPill(page);
     await expect(pill).toBeVisible();
-    await history.focus();
-    await page.keyboard.press("Tab");
+    await composer(page, sharedChannel.name).focus();
+    await page.keyboard.press("Shift+Tab");
     await expect(pill).toBeFocused();
     await page.keyboard.press("Enter");
 
     await expect(messageItem(page, sharedChannel.name, "Pelo teclado")).toBeInViewport();
     await expect(pill).toHaveCount(0);
+    await expect(history).toBeFocused();
   });
 
   test("a Mensagem da própria Pessoa sempre rola até o fim", async ({
@@ -116,6 +100,47 @@ test.describe("Pílula de novas mensagens", () => {
     await sendFromComposer(page, sharedChannel.name, "Minha, lá do alto");
 
     await expect(messageItem(page, sharedChannel.name, "Minha, lá do alto")).toBeInViewport();
-    await expect(page.getByRole("button", { name: "Novas mensagens" })).toHaveCount(0);
+    await expect(newMessagesPill(page)).toHaveCount(0);
+  });
+
+  test("descartar a própria Mensagem com falha não mostra a pílula", async ({
+    loggedInPage: page,
+    otherPage,
+    person,
+    sharedChannel,
+  }) => {
+    // 1. Um envio que falha fica no fim; ler mais acima e descartá-lo
+    const history = await openBoth(page, otherPage, sharedChannel, person);
+    await page.route(
+      (url) => url.pathname.startsWith("/conversas/"),
+      async (route, request) =>
+        request.method() === "POST" && (await request.headerValue("next-action"))
+          ? route.abort()
+          : route.fallback(),
+    );
+    await sendFromComposer(page, sharedChannel.name, "Vai falhar");
+    await expect(page.getByText("Não foi possível enviar.")).toBeVisible();
+    await scrollAwayFromEnd(history);
+    await page.getByRole("button", { name: "Descartar" }).click();
+
+    await expect(messageItem(page, sharedChannel.name, "Vai falhar")).toHaveCount(0);
+    await expect(newMessagesPill(page)).toHaveCount(0);
+  });
+
+  test("a Mensagem da própria Pessoa enviada por outra aba mostra a pílula", async ({
+    loggedInPage: page,
+    otherPage,
+    person,
+    sharedChannel,
+  }) => {
+    // 1. Ler mais acima numa aba e enviar pela outra aba da mesma Pessoa
+    const history = await openBoth(page, otherPage, sharedChannel, person);
+    const secondTab = await page.context().newPage();
+    await secondTab.goto(`/conversas/${sharedChannel.id}`);
+    await scrollAwayFromEnd(history);
+    await sendFromComposer(secondTab, sharedChannel.name, "Da outra aba, lá embaixo");
+
+    await expect(newMessagesPill(page)).toBeVisible();
   });
 });
+

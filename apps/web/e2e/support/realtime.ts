@@ -1,5 +1,6 @@
 import { expect, type Page } from "@playwright/test";
-import { composer } from "./conversation-page";
+import { composer, readyHistory } from "./conversation-page";
+import { insertHistory, type TestChannel, type TestPerson } from "./database";
 
 // Espera o socket da aba conectado: o provedor do tempo real marca o estado em data-realtime.
 export async function waitForRealtime(page: Page): Promise<void> {
@@ -28,4 +29,20 @@ export async function sendFromComposer(page: Page, channelName: string, text: st
   const box = composer(page, channelName);
   await box.fill(text);
   await box.press("Enter");
+}
+
+// As duas Pessoas no Canal em comum, com histórico para rolar, conectadas; devolve o histórico da
+// primeira.
+export async function openSharedChannel(
+  page: Page,
+  otherPage: Page,
+  channel: TestChannel,
+  person: TestPerson,
+) {
+  await insertHistory(channel, person, 40);
+  await page.goto(`/conversas/${channel.id}`);
+  await otherPage.goto(`/conversas/${channel.id}`);
+  await waitForRealtime(page);
+  await waitForRealtime(otherPage);
+  return readyHistory(page, channel.name);
 }

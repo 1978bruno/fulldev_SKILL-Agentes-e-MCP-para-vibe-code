@@ -1,6 +1,5 @@
-"use client";
-
 import { ArrowDown } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
 
 type NewMessagesPillProps = {
   onClick: () => void;
@@ -10,13 +9,13 @@ type NewMessagesPillProps = {
 // o fim da lista quando chega uma Mensagem enquanto a Pessoa lê mais acima, e leva ao fim.
 export function NewMessagesPill({ onClick }: NewMessagesPillProps) {
   return (
-    <button
-      type="button"
+    <Button
+      size="sm"
+      icon={ArrowDown}
       onClick={onClick}
-      className="inline-flex h-7 animate-pop-in items-center gap-2 rounded-pill bg-primary px-3 text-small font-bold text-on-primary shadow-2 hover:bg-primary-hover active:bg-primary-active"
+      className="animate-pop-in rounded-pill shadow-2"
     >
-      <ArrowDown aria-hidden size={16} />
       Novas mensagens
-    </button>
+    </Button>
   );
 }
