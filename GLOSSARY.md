@@ -14,6 +14,26 @@ _Avoid_: usuário, conta, membro
 Uma Pessoa enquanto participante de um canal. Fora de um canal, é só Pessoa.
 _Avoid_: participante
 
+**Conversa**:
+Onde as Mensagens acontecem: um Canal ou uma Conversa direta.
+_Avoid_: chat, sala
+
+**Canal**:
+Conversa com nome e Tópico, pública, com todo o workspace como Membro, ou privada, só com os
+convidados.
+_Avoid_: grupo
+
+**Conversa direta**:
+Conversa entre duas Pessoas, sem nome.
+_Avoid_: DM, exceto como rótulo da aba em Atividade
+
+**Tópico**:
+A frase que descreve um Canal, mostrada no cabeçalho dele.
+_Avoid_: descrição
+
+**Mensagem**:
+Texto que uma Pessoa ou um agente envia numa Conversa.
+
 **Sessão**:
 O acesso de uma Pessoa ao chat num navegador, do momento em que ela entra até sair, a Sessão
 vencer por falta de uso ou ser revogada. Vale para todas as abas daquele navegador.
