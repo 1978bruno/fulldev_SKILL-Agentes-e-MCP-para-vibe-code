@@ -6,6 +6,7 @@ import {
   type TestPerson,
 } from "./support/database";
 import { waitForLoginForm } from "./support/login-page";
+import { waitForRealtime } from "./support/realtime";
 
 type Fixtures = {
   person: TestPerson;
@@ -64,6 +65,9 @@ export async function logIn(page: Page, person: TestPerson): Promise<void> {
   // Mais folga que o padrão: o login confere a senha com Argon2id e, com Canais, a Home leva à
   // Conversa, o que pesa no next dev com vários testes em paralelo.
   await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible({ timeout: 15_000 });
+  // O socket conectado: um teste que revoga a Sessão logo depois não vê o handshake recusado
+  // levando a aba a "Entrar" antes da ação dele.
+  await waitForRealtime(page);
 }
 
 export { expect };

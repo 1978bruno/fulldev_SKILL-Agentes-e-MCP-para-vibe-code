@@ -3,6 +3,7 @@
 import { expect, test } from "../fixtures";
 import { messageList, readyHistory, scrollHistoryToTop } from "../support/conversation-page";
 import { deleteSessionsOf, insertHistory } from "../support/database";
+import { waitForRealtime } from "../support/realtime";
 
 test.describe("Histórico até a primeira Mensagem", () => {
   test("anteriores-com-sessao-revogada", async ({
@@ -17,6 +18,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     await expect(
       messageList(page, channel.name).getByRole("listitem"),
     ).toHaveCount(50);
+    await waitForRealtime(page);
 
     // 1. Revogar a Sessão e rolar até o topo
     await deleteSessionsOf(person.id);
