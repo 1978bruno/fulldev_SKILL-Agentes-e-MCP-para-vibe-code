@@ -72,3 +72,37 @@ roda depois do projeto principal; cada teste apaga no fim os Canais que criou. O
     - expect: o axe não acha violações
   2. Provocar o erro no nome
     - expect: o axe não acha violações
+
+### 3. Canal privado
+
+Os testes do Canal privado ficam em `e2e/canais-privados/`, no projeto principal: o Canal privado
+só tem quem o criou e não mexe nas outras Pessoas.
+
+#### 3.1. cria o Canal privado pelo Switch e cai nele
+
+**File:** `e2e/canais-privados/criar-canal-privado.spec.ts`
+
+**Steps:**
+  1. Abrir o diálogo, preencher o nome e ligar "Tornar privado" pelo Espaço
+    - expect: o Switch fica ligado
+  2. Criar
+    - expect: a Conversa abre, com o cadeado no cabeçalho e na linha da barra lateral, e só quem
+      criou é Membro
+
+#### 3.2. o Canal privado fica em ordem alfabética junto dos públicos, com o cadeado
+
+**File:** `e2e/canais-privados/privado-junto-dos-publicos.spec.ts`
+
+**Steps:**
+  1. Com um Canal privado entre dois públicos, entrar
+    - expect: a barra lateral mostra os três em ordem, só o privado com o cadeado
+
+#### 3.3. quem não é Membro não vê o Canal privado na barra lateral nem pelo endereço
+
+**File:** `e2e/canais-privados/quem-nao-e-membro-nao-ve.spec.ts`
+
+**Steps:**
+  1. Com um Canal privado só da primeira Pessoa, a segunda entra
+    - expect: a Home vazia, sem o Canal na barra lateral
+  2. A segunda abre o endereço do Canal
+    - expect: "Conversa não encontrada"
