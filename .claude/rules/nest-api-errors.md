@@ -1,10 +1,10 @@
 ---
 paths:
-  - "apps/api/src/**/*.service.ts"
-  - "apps/api/src/**/*.repository.ts"
-  - "apps/api/src/**/*.guard.ts"
-  - "apps/api/src/**/*.error.ts"
-  - "apps/api/src/common/errors/**"
+  - "apps/chat-api/src/**/*.service.ts"
+  - "apps/chat-api/src/**/*.repository.ts"
+  - "apps/chat-api/src/**/*.guard.ts"
+  - "apps/chat-api/src/**/*.error.ts"
+  - "apps/chat-api/src/common/errors/**"
 ---
 
 # Erros da API

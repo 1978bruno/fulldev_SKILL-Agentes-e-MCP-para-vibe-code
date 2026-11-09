@@ -1,6 +1,6 @@
 ## Arquitetura
 
-O projeto segue uma arquitetura em camadas, com separação clara entre a interface de usuário (HTTP), a lógica de negócio (services) e a infraestrutura (repositories, banco de dados, e-mail, etc.).
+O projeto segue uma arquitetura em camadas, com separação clara entre a interface de usuário (HTTP), a lógica de negócio (services) e a infraestrutura (repositories, banco de dados, armazenamento de arquivos etc.).
 
 ## Design
 
@@ -26,18 +26,20 @@ docker compose -f compose.yaml exec chat-api <comando>
 | --- | --- |
 | `pnpm start:dev` | Sobe a API em modo watch (`http://localhost:3001` na máquina) |
 | `pnpm test` | Suíte de unidade (`*.spec.ts`) |
-| `pnpm test:watch` | Roda os testes em modo watch |
-| `pnpm test:cov` | Roda os testes e gera relatório de cobertura |
-| `pnpm lint` | oxlint com regras que usam tipos |
+| `pnpm test:int` | Suíte de integração (`*.int-spec.ts`) |
+| `pnpm test:e2e` | Suíte de ponta a ponta (`test/*.e2e-spec.ts`) |
+| `pnpm test:watch` | Roda os testes de unidade em modo watch |
+| `pnpm test:cov` | Roda os testes de unidade e gera relatório de cobertura |
+| `pnpm lint` | ESLint com as regras do `typescript-eslint` que usam tipos e o Prettier como regra |
 | `pnpm format` | Prettier em `src/` e `test/` |
 | `pnpm exec tsc --noEmit` | Checagem de tipos |
 | `pnpm build` | Compila para `dist/` |
 
-O `pnpm lint` só aponta os problemas, sem corrigir. A formatação é conferida à parte, pelo `pnpm format`.
+O `pnpm lint` roda com `--fix`: corrige o que dá e aponta o resto. O `pnpm format` reescreve os arquivos com o Prettier.
 
 ## Verificação completa
 
-O termo está definido no `AGENTS.md` da raiz, seção "Planejamento". Na API, rode no contêiner `chat-api`, nesta ordem:
+Antes de dar uma tarefa por concluída, rode no contêiner `chat-api`, nesta ordem:
 
 1. `pnpm lint`
 2. `pnpm exec tsc --noEmit`
@@ -54,15 +56,15 @@ O arquivo de teste leva o nome do arquivo testado. O sufixo define o nível do t
 | --- | --- | --- | --- |
 | Unidade | `.spec.ts` | Ao lado do código, em `src/` | Testes de unidade testam uma classe isolada |
 | Integração | `.int-spec.ts` | Ao lado do código, em `src/` | Testes de integração exercitam uma peça com suas dependências reais |
-| Ponta a ponta | `.e2e-spec.ts` | Em `test/` | A aplicação inteira por HTTP
+| Ponta a ponta | `.e2e-spec.ts` | Em `test/` | A aplicação inteira por HTTP |
 
-**Onde cada regra é provada:** as regras de negócio são provadas pelos testes de ponta a ponta, pelas rotas, com banco e e-mail reais. O teste de unidade de um service é opcional, e vale quando a regra tem muitos casos que seriam lentos ou repetitivos pelas rotas. Funções puras têm teste de unidade. A spec da funcionalidade pode restringir isso, e ela prevalece.
+**Onde cada regra é provada:** as regras de negócio são provadas pelos testes de ponta a ponta, pelas rotas, com banco real. O teste de unidade de um service é opcional, e vale quando a regra tem muitos casos que seriam lentos ou repetitivos pelas rotas. Funções puras têm teste de unidade. A spec da funcionalidade pode restringir isso, e ela prevalece.
 
 ## Aplicação HTTP
 
 - **Filtro de erros e validação:** O filtro de erros e a validação de entrada são registrados no `AppModule` (`APP_FILTER` e `APP_PIPE`), e não no `main.ts`, para valerem também nos testes.
 
-# A camada de serviços
+## A camada de serviços
 
 Um service recebe e devolve dados simples e tipos do domínio. Ele tem de poder ser chamado de um controller, de uma tarefa do worker ou de um teste unitário sem nenhuma adaptação.
 
