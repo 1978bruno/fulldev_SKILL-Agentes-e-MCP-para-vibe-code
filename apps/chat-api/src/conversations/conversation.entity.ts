@@ -8,6 +8,8 @@ import { CHANNEL_NAME_MAX_LENGTH, TOPIC_MAX_LENGTH } from './channel-name';
 export type ConversationKind = 'public_channel' | 'private_channel';
 
 @Entity('conversations')
+// O TypeORM não percebe a mudança na expressão de um CHECK: mudar um destes exige escrever a
+// migração à mão (como a AddPrivateChannel), porque o migration:generate não a gera.
 @Check(
   'conversations_kind_check',
   `"kind" IN ('public_channel', 'private_channel')`,

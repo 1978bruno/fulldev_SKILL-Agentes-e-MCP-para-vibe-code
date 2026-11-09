@@ -26,6 +26,9 @@ test.describe("Canal privado", () => {
       // 2. Criar: a Conversa abre com o cadeado no cabeçalho, no começo e na barra lateral
       await dialog.getByRole("button", { name: "Criar canal" }).click();
       await expect(conversationIntro(page, name)).toBeVisible();
+      await expect(
+        conversationIntro(page, name).locator("xpath=..").locator("svg.lucide-lock"),
+      ).toBeVisible();
       await expect(page.getByRole("heading", { level: 1, name }).locator("svg.lucide-lock")).toBeVisible();
       await expect(
         page
