@@ -1,6 +1,6 @@
 # 06: Sessão que acabou encerra o tempo real
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** quando a Pessoa sai em outra aba, ou a Sessão vence ou é revogada, a aba para de
 receber Mensagens e "digitando" e vai para "Entrar". Uma aba aberta com a Sessão válida conta como
