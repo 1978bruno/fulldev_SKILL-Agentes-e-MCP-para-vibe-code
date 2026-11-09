@@ -1,6 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { RealtimeGateway } from '../src/realtime/realtime.gateway';
 import { personRoom, sessionRoom } from '../src/realtime/realtime-socket';
+import {
+  PING_INTERVAL_MS,
+  PING_TIMEOUT_MS,
+} from '../src/realtime/realtime-values';
 import { agingRoutes, minutesAgo } from './support/aging-routes';
 import { authRoutes } from './support/auth-routes';
 import {
@@ -99,5 +103,12 @@ describe('conexão do WebSocket', () => {
 
     expect(error).toBeDefined();
     expect(socket.connected).toBe(false);
+  });
+
+  it('o servidor usa o ping do WebSocket', () => {
+    const { opts } = app.get(RealtimeGateway).server.engine;
+
+    expect(opts.pingInterval).toBe(PING_INTERVAL_MS);
+    expect(opts.pingTimeout).toBe(PING_TIMEOUT_MS);
   });
 });
