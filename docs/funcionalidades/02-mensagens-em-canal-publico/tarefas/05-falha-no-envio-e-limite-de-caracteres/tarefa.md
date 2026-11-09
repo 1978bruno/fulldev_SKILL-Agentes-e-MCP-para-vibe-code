@@ -1,6 +1,6 @@
 # 05: Falha no envio e limite de caracteres
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa vê a Mensagem "enviando" logo que envia. Se o envio falha, ela tenta
 de novo sem a Mensagem aparecer duas vezes, ou a descarta. A caixa não deixa enviar uma Mensagem
