@@ -31,6 +31,8 @@ services:
       - .:/home/node/app
     environment:
       BASE_URL: http://web:3000
+      # As fixtures gravam as Pessoas de teste direto no banco chat (LLD, "Ambiente de desenvolvimento").
+      DATABASE_URL: postgres://chat:chat@postgres:5432/chat
       PLAYWRIGHT_HTML_OPEN: never
       HOME: /tmp
     command: ["tail", "-f", "/dev/null"]
@@ -48,6 +50,8 @@ services:
       DATABASE_URL: postgres://chat:chat@postgres:5432/chat
       TEST_DATABASE_URL: postgres://chat:chat@postgres:5432/chat_test
       TEST_DATABASE_ADMIN_URL: postgres://postgres:postgres@postgres:5432/postgres
+      SESSION_COOKIE_NAME: fc_session
+      SESSION_TTL_DAYS: "30"
     ports:
       - "3001:3000"
     depends_on:

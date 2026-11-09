@@ -17,12 +17,13 @@
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:int": "NODE_OPTIONS=--experimental-vm-modules jest --testRegex '\\.int-spec\\.ts$' --passWithNoTests",
+    "test:int": "NODE_OPTIONS=--experimental-vm-modules jest --testRegex '\\.int-spec\\.ts$' --globalSetup '<rootDir>/../test/support/global-setup.ts' --setupFiles '<rootDir>/../test/support/test-env.ts' --passWithNoTests",
     "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
     "migration:generate": "pnpm typeorm migration:generate",
     "migration:run": "pnpm typeorm migration:run",
-    "migration:revert": "pnpm typeorm migration:revert"
+    "migration:revert": "pnpm typeorm migration:revert",
+    "accounts": "ts-node src/accounts/cli.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -30,8 +31,10 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^12.0.3",
+    "@node-rs/argon2": "2.2.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cookie": "2.0.2",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

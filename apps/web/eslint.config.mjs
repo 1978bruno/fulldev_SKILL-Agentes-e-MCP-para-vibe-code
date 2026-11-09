@@ -17,6 +17,11 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
   ]),
   {
+    // As fixtures do Playwright chamam `use`, que não é o hook do React.
+    files: ["e2e/**/*.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
+  },
+  {
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/app/config/**"],
     rules: {

@@ -1,0 +1,50 @@
+import { cva } from "class-variance-authority";
+import { cn } from "@/app/utils/cn";
+import { initials } from "@/app/utils/initials";
+
+const COLORS = [
+  "bg-avatar-1",
+  "bg-avatar-2",
+  "bg-avatar-3",
+  "bg-avatar-4",
+  "bg-avatar-5",
+  "bg-avatar-6",
+] as const;
+
+const avatarVariants = cva(
+  "inline-flex shrink-0 items-center justify-center font-black text-on-primary",
+  {
+    variants: {
+      size: {
+        sm: "size-6 rounded-control text-micro",
+        md: "size-9 rounded-item text-small",
+      },
+    },
+    defaultVariants: { size: "md" },
+  },
+);
+
+// A cor sai do id, para a mesma Pessoa ter sempre a mesma cor.
+function colorFor(seed: string): string {
+  let sum = 0;
+  for (const char of seed) sum += char.charCodeAt(0);
+  return COLORS[sum % COLORS.length];
+}
+
+type AvatarProps = {
+  name: string;
+  seed: string;
+  size?: "sm" | "md";
+  className?: string;
+};
+
+export function Avatar({ name, seed, size, className }: AvatarProps) {
+  return (
+    <span
+      className={cn(avatarVariants({ size }), colorFor(seed), className)}
+      aria-hidden
+    >
+      {initials(name)}
+    </span>
+  );
+}
