@@ -150,16 +150,23 @@ export class SessionsService {
   private async renewIfDue(session: Session, now: Date): Promise<void> {
     const dueBefore = new Date(now.getTime() - RENEWAL_INTERVAL_MS);
     if (session.lastUsedAt > dueBefore) return;
-    // Só renova uma Sessão que ainda não venceu: a condição no UPDATE impede que uma Sessão
-    // vencida entre a leitura e a escrita ganhe mais uma duração inteira.
-    await this.sessions.update(
-      {
-        id: session.id,
-        lastUsedAt: LessThanOrEqual(dueBefore),
-        expiresAt: MoreThan(now),
-      },
-      { lastUsedAt: now, expiresAt: this.expiresFrom(now) },
-    );
+    // A condição e os valores novos saem do mesmo relógio, o do banco na hora da escrita: uma
+    // Sessão que vence enquanto o UPDATE espera não ganha mais uma duração inteira.
+    await this.sessions
+      .createQueryBuilder()
+      .update()
+      .set({
+        lastUsedAt: () => 'clock_timestamp()',
+        expiresAt: () => 'clock_timestamp() + make_interval(days => :ttlDays)',
+      })
+      .where('id = :id', { id: session.id })
+      .andWhere('last_used_at <= :dueBefore', { dueBefore })
+      .andWhere('expires_at > clock_timestamp()')
+      .setParameter(
+        'ttlDays',
+        this.config.get('SESSION_TTL_DAYS', { infer: true }),
+      )
+      .execute();
   }
 
   private expiresFrom(now: Date): Date {
