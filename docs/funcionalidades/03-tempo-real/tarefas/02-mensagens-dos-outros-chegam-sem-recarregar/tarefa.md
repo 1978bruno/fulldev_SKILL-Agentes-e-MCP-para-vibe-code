@@ -1,6 +1,6 @@
 # 02: Mensagens dos outros chegam sem recarregar
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** com o Canal aberto, a Pessoa vê as Mensagens dos outros, e as que ela mesma
 enviou por outra aba, aparecerem em até 1 s, na ordem da gravação e sem duplicar. Ao abrir outra
