@@ -88,11 +88,11 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   return { kind: "failure" };
 }
 
-// Sair: apaga na API a Sessão apresentada. Devolve se a API confirmou.
-export async function logout(token: string): Promise<boolean> {
-  const response = await request("/v1/sessions/current", {
+// Sair: apaga na API a Sessão apresentada. O resultado não muda nada para quem chama: o BFF
+// apaga o cookie de qualquer jeito (spec da F01, "Menu do avatar").
+export async function logout(token: string): Promise<void> {
+  await request("/v1/sessions/current", {
     method: "DELETE",
     headers: { cookie: sessionCookieHeader(token) },
   });
-  return response?.status === 204;
 }

@@ -21,7 +21,7 @@ export function UserMenu({ person }: UserMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="rounded-item">
+      <DropdownMenuTrigger className="rounded-item" title={person.name}>
         <Avatar name={person.name} seed={person.id} />
         <span className="sr-only">Menu de {person.name}</span>
       </DropdownMenuTrigger>
@@ -35,7 +35,12 @@ export function UserMenu({ person }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={isPending}
-          onSelect={() => startTransition(() => logout())}
+          onSelect={(event) => {
+            // O menu fica aberto, com o item desabilitado, até a saída terminar: sem um segundo
+            // clique enquanto a API responde.
+            event.preventDefault();
+            startTransition(() => logout());
+          }}
         >
           <LogOut size={16} aria-hidden />
           Sair do Full Cycle
