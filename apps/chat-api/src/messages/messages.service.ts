@@ -99,7 +99,10 @@ export class MessagesService {
       try {
         const memberIds =
           await this.conversations.listMemberIds(conversationId);
-        this.publisher.messageCreated(memberIds, toMessageResponse(message));
+        await this.publisher.messageCreated(
+          memberIds,
+          toMessageResponse(message),
+        );
       } catch (error) {
         this.logger.error('Falha ao publicar a Mensagem gravada', error);
       }

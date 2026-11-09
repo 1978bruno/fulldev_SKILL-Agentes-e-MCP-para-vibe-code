@@ -3,6 +3,8 @@ import { RENEWAL_INTERVAL_DAYS } from './session-values';
 
 export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  // Redis dos eventos por Pessoa para a reconexão (LLD, "Integrações externas").
+  REDIS_URL: z.url({ protocol: /^rediss?$/ }),
   PORT: z.coerce.number().int().positive().default(3000),
   SESSION_COOKIE_NAME: z.string().min(1),
   // Origem da web, a única aceita no handshake do WebSocket (LLD, "Segurança").

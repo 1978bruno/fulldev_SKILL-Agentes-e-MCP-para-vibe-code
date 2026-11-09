@@ -3,12 +3,14 @@
 import type {
   ClientToServerEvents,
   HandshakeErrorCode,
+  MessageCreatedEvent,
   ServerToClientEvents,
   SyncEvent,
 } from "chat-events";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { Message } from "@/app/services/chat-api";
+import { laterCursor, orderForSync } from "@/app/utils/event-cursor";
 import { messageFromEvent } from "@/app/utils/message-event";
 import { rememberMessage } from "@/app/utils/recent-messages";
 import { clearLeaving, hasAskedToLeave } from "@/app/utils/leaving";
@@ -79,10 +81,18 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
   useEffect(() => {
     // Uma conexão nova é de uma Sessão nova: a marca de quem saiu na anterior não vale mais.
     clearLeaving();
+    // O cursor do último evento recebido, mandado a cada handshake (spec da F03, "Conexão por aba"):
+    // a API reenvia o que veio depois dele.
+    let cursor: string | null = null;
     const socket: RealtimeSocket = io(url, {
       transports: ["websocket"],
       withCredentials: true,
+      auth: (send) => send(cursor ? { cursor } : {}),
     });
+    // Até o sync de cada conexão, os eventos ficam guardados: a sala da Pessoa já recebe os novos
+    // enquanto a API reenvia os perdidos, e a ordem é a do cursor.
+    let isSyncing = true;
+    let pendingEvents: MessageCreatedEvent[] = [];
     let retryDelay = RETRY_MIN_MS;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const setStatus = (status: RealtimeStatus) =>
@@ -96,6 +106,8 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
 
     socket.on("connect", () => {
       retryDelay = RETRY_MIN_MS;
+      isSyncing = true;
+      pendingEvents = [];
       setStatus("connected");
     });
     // A Sessão acabou (LLD, "Cliente", "Sessão no cliente"): o session.ended ou a desconexão pelo
@@ -126,15 +138,24 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
         retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
       }
     });
-    socket.on("message.created", ({ message: payload }) => {
-      const message = messageFromEvent(payload);
+    const applyMessage = (event: MessageCreatedEvent) => {
+      cursor = laterCursor(cursor, event.event_id);
+      const message = messageFromEvent(event.message);
       received.set(
         message.conversationId,
         rememberMessage(received.get(message.conversationId) ?? [], message),
       );
       listeners.current.forEach((listener) => listener.onMessage?.(message));
+    };
+    socket.on("message.created", (event) => {
+      if (isSyncing) pendingEvents.push(event);
+      else applyMessage(event);
     });
     socket.on("sync", (event) => {
+      orderForSync(pendingEvents).forEach(applyMessage);
+      pendingEvents = [];
+      isSyncing = false;
+      cursor = laterCursor(cursor, event.cursor);
       lastSync.current = event;
       const syncListeners = [...listeners.current].filter((listener) => listener.onSync);
       pendingReset.current = event.reset && syncListeners.length === 0 ? event : null;

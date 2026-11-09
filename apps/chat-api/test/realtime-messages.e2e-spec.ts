@@ -55,10 +55,10 @@ describe('Mensagens em tempo real', () => {
     const [event] = await waitForCount(received, 1);
     expect(response.status).toBe(201);
     expect(event).toEqual<MessageCreatedEvent>({
+      event_id: expect.stringMatching(/^[^:]+:\d+-\d+$/) as string,
       message: (response.body as { message: MessageCreatedEvent['message'] })
         .message,
     });
-    expect(event.event_id).toBeUndefined();
   });
 
   it('o evento chega à outra aba do autor', async () => {
@@ -123,6 +123,9 @@ describe('Mensagens em tempo real', () => {
     socket.connect();
 
     const [event] = await waitForCount(received, 1);
-    expect(event).toEqual({ cursor: null, reset: true });
+    expect(event).toEqual({
+      cursor: expect.stringMatching(/^[^:]+:\d+-\d+$/) as string,
+      reset: true,
+    });
   });
 });

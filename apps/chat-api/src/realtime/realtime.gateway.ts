@@ -12,7 +12,9 @@ import {
 import type {
   ConversationOpenResult,
   ConversationRef,
+  HandshakeAuth,
   HandshakeErrorCode,
+  MessageCreatedEvent,
 } from 'chat-events';
 import { ConversationNotFoundError } from '../conversations/conversation-not-found.error';
 import { ConversationsService } from '../conversations/conversations.service';
@@ -21,6 +23,7 @@ import { readSessionCookie } from '../sessions/session-cookie';
 import { SessionsService } from '../sessions/sessions.service';
 import { UnauthenticatedError } from '../sessions/unauthenticated.error';
 import { conversationRoom, personRoom, sessionRoom } from './realtime-socket';
+import { EventsStore } from './events.store';
 import { SESSION_RECHECK_INTERVAL_MS } from './realtime-values';
 import type { RealtimeServer, RealtimeSocket } from './realtime-socket';
 
@@ -41,6 +44,7 @@ export class RealtimeGateway
     private readonly sessions: SessionsService,
     private readonly config: ConfigService<Env, true>,
     private readonly conversations: ConversationsService,
+    private readonly events: EventsStore,
   ) {}
 
   private recheckTimer?: ReturnType<typeof setInterval>;
@@ -71,10 +75,40 @@ export class RealtimeGateway
     });
   }
 
-  // Sem o registro de eventos por Pessoa (tarefa 07), toda conexão pede à aba que recarregue a
-  // página mais recente: nada se perde entre a leitura do histórico e a entrada nas salas.
-  handleConnection(socket: RealtimeSocket): void {
-    socket.emit('sync', { cursor: null, reset: true });
+  // Na conexão, a aba recebe os eventos que perdeu desde o cursor que mandou e então o sync (spec
+  // da F03, "Eventos por Pessoa e reconexão"). As salas já entraram no handshake, então um evento
+  // novo pode chegar no meio do reenvio: a aba guarda tudo até o sync e aplica em ordem. Sem
+  // cursor, com o cursor perdido ou com o Redis fora, o sync pede que a aba recarregue a página
+  // mais recente.
+  async handleConnection(socket: RealtimeSocket): Promise<void> {
+    const personId = socket.data.person.id;
+    const auth = socket.handshake.auth as HandshakeAuth | undefined;
+    const cursor = typeof auth?.cursor === 'string' ? auth.cursor : undefined;
+    try {
+      if (!cursor) {
+        socket.emit('sync', {
+          cursor: await this.events.currentCursor(personId),
+          reset: true,
+        });
+        return;
+      }
+      const result = await this.events.readSince(personId, cursor);
+      if (result.kind === 'lost') {
+        socket.emit('sync', { cursor: result.cursor, reset: true });
+        return;
+      }
+      for (const event of result.events) {
+        if (event.name !== 'message.created') continue;
+        socket.emit('message.created', {
+          ...(event.payload as MessageCreatedEvent),
+          event_id: event.cursor,
+        });
+      }
+      socket.emit('sync', { cursor: result.cursor, reset: false });
+    } catch (error) {
+      this.logger.error('Falha ao ler os eventos da reconexão', error);
+      socket.emit('sync', { cursor: null, reset: true });
+    }
   }
 
   // A aba abre uma Conversa: confere a participação, como o REST, e põe o socket na sala dela, saindo

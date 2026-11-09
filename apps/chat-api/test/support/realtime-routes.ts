@@ -6,6 +6,7 @@ import type {
 } from 'chat-events';
 import { AddressInfo, Server } from 'node:net';
 import { io, Socket } from 'socket.io-client';
+import { REDIS_CLIENT, type RedisClient } from '../../src/redis/redis.module';
 import { createTestApp } from './create-test-app';
 import { authRoutes } from './auth-routes';
 
@@ -133,4 +134,9 @@ export function openConversation(
 // O motivo da próxima desconexão do socket.
 export function nextDisconnection(socket: TestSocket): Promise<string> {
   return new Promise((resolve) => socket.once('disconnect', resolve));
+}
+
+// O Redis de testes, para os testes da reconexão mexerem nos streams e na época.
+export function testRedis(app: INestApplication): RedisClient {
+  return app.get<RedisClient>(REDIS_CLIENT);
 }
