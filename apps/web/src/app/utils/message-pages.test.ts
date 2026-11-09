@@ -65,6 +65,29 @@ describe("appendToLatestPage", () => {
     expect(appendToLatestPage(pages, message("1"))).toBe(pages);
   });
 
+  it.each([
+    ["com uma página e mais histórico atrás", [{ messages: [message("5"), message("6")], hasMore: true }]],
+    [
+      "com páginas anteriores carregadas",
+      [
+        { messages: [message("5"), message("6")], hasMore: true },
+        { messages: [message("3"), message("4")], hasMore: false },
+      ],
+    ],
+  ])("deixa de fora uma Mensagem mais antiga que o começo de pages[0] %s", (_caso, pages) => {
+    expect(appendToLatestPage(pages, message("4a"))).toBe(pages);
+  });
+
+  it("encaixa uma Mensagem mais antiga quando o histórico inteiro está carregado", () => {
+    const pages = [{ messages: [message("5"), message("6")], hasMore: false }];
+
+    expect(appendToLatestPage(pages, message("4"))[0].messages.map((item) => item.id)).toEqual([
+      "4",
+      "5",
+      "6",
+    ]);
+  });
+
   it("cria a página mais recente quando não há nenhuma", () => {
     expect(appendToLatestPage([], message("1"))).toEqual([
       { messages: [message("1")], hasMore: false },

@@ -15,6 +15,12 @@ export function appendToLatestPage(pages: MessagePage[], message: Message): Mess
   if (pages.some((page) => page.messages.some((existing) => existing.id === message.id))) {
     return pages;
   }
+  // Mais antiga que o começo de pages[0], com mais histórico atrás: entrar ali mudaria o cursor
+  // da página seguinte (que sai do começo de pages[0]) e esconderia Mensagens. Ela fica de fora e
+  // chega com a página do servidor que a contém.
+  const hasOlder = pages.length > 1 || latest.hasMore;
+  const start = latest.messages[0];
+  if (hasOlder && start && message.id < start.id) return pages;
   const position = latest.messages.findLastIndex((existing) => existing.id < message.id) + 1;
   const messages = latest.messages.toSpliced(position, 0, message);
   return [{ ...latest, messages }, ...older];
