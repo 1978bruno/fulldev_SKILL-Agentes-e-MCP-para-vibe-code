@@ -1,6 +1,6 @@
 # 04: Erros de preenchimento e falha no envio ao entrar
 
-**Status:** em andamento (falta só a medição do Lighthouse no roteiro manual, CA7, feita por uma pessoa)
+**Status:** concluída
 
 **O que construir:** a Pessoa que preenche errado o login descobre o que corrigir antes de
 qualquer envio. Quando a rede ou o servidor falha no envio, ela vê um erro diferente da mensagem
@@ -30,6 +30,6 @@ tela atinge a nota 100 de acessibilidade. Referências:
 - [x] **CA6** · O Playwright prova o CA1, o foco do CA2, o fluxo só pelo teclado do CA5 e a
   checagem do axe sem violações nas telas Entrar e Home. A falha no envio do CA3 é provada pelo
   `playwright-cli`, com a API do chat parada, e registrada na pasta desta tarefa.
-- [ ] **CA7** · O roteiro manual com a nota 100 de Acessibilidade do Lighthouse na tela Entrar,
+- [x] **CA7** · O roteiro manual com a nota 100 de Acessibilidade do Lighthouse na tela Entrar,
   feita por uma pessoa, e a validação visual dos estados "Erro de validação" e "Falha no envio",
   nos dois temas, estão registrados na pasta desta tarefa.

@@ -16,8 +16,8 @@ Feito por uma pessoa, no Chrome do computador (spec da F01, "Roteiro manual").
 
 | Medição | Nota | Quem mediu | Data |
 | --- | --- | --- | --- |
-| Entrar, carregamento (Navigation) | _a preencher_ | _a preencher_ | _a preencher_ |
-| Entrar, erro de validação (Snapshot) | _a preencher_ | _a preencher_ | _a preencher_ |
+| Entrar, carregamento (Navigation) | 100 | Luiz Carlos | 2026-11-09 |
+| Entrar, erro de validação (Snapshot) | não medida (passo opcional) | — | — |
 
 O esperado é 100 nas duas. Uma nota menor vira correção nesta tarefa ou uma tarefa nova.
 
