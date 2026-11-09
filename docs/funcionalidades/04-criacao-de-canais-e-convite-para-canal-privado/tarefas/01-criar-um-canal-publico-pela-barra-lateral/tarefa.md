@@ -1,6 +1,6 @@
 # 01: Criar um Canal público pela barra lateral
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa clica em "Adicionar canal", preenche o nome e o Tópico e cria um Canal
 público, que abre vazio, com "Este é o começo do canal #nome" e o foco na caixa de mensagem. O nome
