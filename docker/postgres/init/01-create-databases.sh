@@ -11,12 +11,14 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-'SQL'
 	CREATE ROLE business_readonly LOGIN PASSWORD 'business_readonly';
 
 	CREATE DATABASE chat OWNER chat;
+	CREATE DATABASE chat_test OWNER chat;
 	CREATE DATABASE agents OWNER agents;
 	CREATE DATABASE business OWNER business;
 
 	-- Ninguém conecta num banco sem permissão explícita: o só leitura não alcança chat nem agents.
-	REVOKE CONNECT ON DATABASE chat, agents, business, postgres FROM PUBLIC;
+	REVOKE CONNECT ON DATABASE chat, chat_test, agents, business, postgres FROM PUBLIC;
 	GRANT CONNECT ON DATABASE chat TO chat;
+	GRANT CONNECT ON DATABASE chat_test TO chat;
 	GRANT CONNECT ON DATABASE agents TO agents;
 	GRANT CONNECT ON DATABASE business TO business, business_readonly;
 SQL
