@@ -74,3 +74,8 @@ export async function scrollHistoryToEnd(history: Locator): Promise<void> {
 export function newMessagesPill(page: Page): Locator {
   return page.getByRole("button", { name: "Novas mensagens" });
 }
+
+// O aviso de "digitando" de uma Pessoa na Conversa aberta.
+export function typingNotice(page: Page, name: string): Locator {
+  return page.getByText(`${name} está digitando…`);
+}
