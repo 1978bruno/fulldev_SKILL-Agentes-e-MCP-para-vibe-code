@@ -37,17 +37,6 @@ docker compose -f compose.yaml exec chat-api <comando>
 
 O `pnpm lint` roda com `--fix`: corrige o que dá e aponta o resto. O `pnpm format` reescreve os arquivos com o Prettier.
 
-## Verificação completa
-
-Antes de dar uma tarefa por concluída, rode no contêiner `chat-api`, nesta ordem:
-
-1. `pnpm lint`
-2. `pnpm exec tsc --noEmit`
-3. `pnpm test`
-4. `pnpm test:int`
-5. `pnpm test:e2e`
-6. `pnpm build`
-
 ## Testes
 
 O arquivo de teste leva o nome do arquivo testado. O sufixo define o nível do teste e a suíte que o executa:
