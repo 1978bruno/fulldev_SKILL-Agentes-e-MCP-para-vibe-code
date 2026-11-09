@@ -1,6 +1,6 @@
 # 07: Carregamento e erros da barra lateral e da Conversa
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa sempre sabe o que está acontecendo:
 - a barra lateral mostra o esqueleto enquanto carrega e um erro com "Tentar de novo" quando falha;
