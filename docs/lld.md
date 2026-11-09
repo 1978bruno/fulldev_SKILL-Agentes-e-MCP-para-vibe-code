@@ -1,6 +1,6 @@
 # LLD — Full Cycle Chat
 
-2026-11-06 · Luiz Carlos · Status: rascunho · HLD: [hld.md](hld.md)
+2026-11-09 · Luiz Carlos · Status: rascunho · HLD: [hld.md](hld.md)
 
 **Onde mora cada fato**
 
@@ -9,7 +9,7 @@
 | Arquitetura, contêineres, integrações e motivos | [HLD](hld.md) |
 | Decisões com porquê | `docs/adr/`, com o índice na seção "Decisões" deste documento e do HLD |
 | Escopo e público | [Product brief](product-brief.md) |
-| Vocabulário | `GLOSSARY.md` na raiz (planejado) |
+| Vocabulário | `GLOSSARY.md` na raiz |
 | Linguagem visual (cores, componentes, microtexto) | [Figma](https://www.figma.com/design/plW17JDOoRHydUJIIi2u87/slack) |
 | Contrato REST da API do chat | `apps/chat-api/openapi.json`, gerado pelo `@nestjs/swagger` (planejado) |
 | Contrato REST do Serviço de agentes | `apps/agents/openapi.json`, gerado pelo FastAPI (planejado) |
@@ -91,8 +91,8 @@ Situação de todas: `planejada`.
 
 | Operação | Recebe | Devolve | Garante |
 | --- | --- | --- | --- |
-| Enfileirar | Identificador de pedido e consulta já conferida | Nada | Enfileirar duas vezes o mesmo identificador gera uma tarefa só |
-| Consumir | — | Uma tarefa ao Worker | Se o Worker falha, a tarefa volta à fila até `tentativas do Worker` |
+| Enfileirar | Identificador de pedido e consulta já conferida | Nada | Enfileirar duas vezes o mesmo identificador gera um job só |
+| Consumir | — | Um job ao Worker | Se o Worker falha, o job volta à fila até `tentativas do Worker` |
 
 **Eventos por pessoa (Redis)** — usado pela API do chat para a reconexão (HLD 6.2).
 
@@ -268,11 +268,11 @@ Dois estados: aberta e concluída (HLD 6.6).
 
 ## 7. Processos de segundo plano
 
-| Tarefa | Disparo | O que faz | Na falha | Situação |
+| Job | Disparo | O que faz | Na falha | Situação |
 | --- | --- | --- | --- | --- |
 | Relatório em PDF (Worker) | Pedido na fila (HLD 6.5) | HLD 6.5 | Nova tentativa até `tentativas do Worker`; esgotadas, grava "não consegui" (HLD 6.5) | a detalhar |
 
-A idempotência da tarefa (chave no S3 e entrega única) e outras rotinas (retenção dos PDFs,
+A idempotência do job (chave no S3 e entrega única) e outras rotinas (retenção dos PDFs,
 sessões vencidas, perguntas pendentes vencidas) estão a definir.
 
 ## 8. Cliente
@@ -452,7 +452,7 @@ As decisões que mudam o desenho estão no HLD, seção 10.
       a dados de negócio (comparação do lastro), limite de pedidos e teto de custo, presença e
       "digitando".
 - [ ] Tarefa: concluir uma já concluída, ou reabrir uma aberta.
-- [ ] Idempotência da tarefa do PDF (chave no S3, entrega única) e outras rotinas (retenção dos
+- [ ] Idempotência do job do PDF (chave no S3, entrega única) e outras rotinas (retenção dos
       PDFs, sessões vencidas, perguntas pendentes vencidas).
 
 **Valores, configuração e ambiente**

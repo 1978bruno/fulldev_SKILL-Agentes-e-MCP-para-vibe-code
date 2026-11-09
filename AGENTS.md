@@ -8,7 +8,8 @@ Em `docs/` estão os documentos que definem o produto, a arquitetura e os detalh
 2. `docs/hld.md`: High-level design, documento de arquitetura de alto nível. Aqui ficam as decisões de arquitetura, os fluxos principais e a visão geral do sistema.
 3. `docs/lld.md`: Low-level design, documento de arquitetura de baixo nível. Aqui ficam os detalhes de implementação.
 4. `docs/design-system.md`: linguagem visual da interface. Aqui ficam os tokens de cor, tipografia, espaçamento, raio e sombra, os estados de interação, os componentes, o comportamento responsivo e o fluxo de trabalho com o Figma.
-5. `GLOSSARY.md`, na raiz: o vocabulário do domínio do produto. Use esses termos nos documentos e no planejamento.
+5. `docs/roadmap.md`: as funcionalidades a desenvolver, as dependências entre elas e o status de cada uma.
+6. `GLOSSARY.md`, na raiz: o vocabulário do domínio do produto. Use esses termos nos documentos e no planejamento.
 
 Cada projeto tem o próprio `AGENTS.md`, com os comandos, as particularidades da stack e as práticas de código dele:
 
@@ -84,6 +85,39 @@ O Figma é a ferramenta de design do projeto, acessada pelo servidor MCP do plug
 **Arquivo do Figma:** <https://www.figma.com/design/plW17JDOoRHydUJIIi2u87/slack>
 
 **Sempre que a tarefa envolver design ou interface, leia antes o `docs/design-system.md`**, seja para desenhar no Figma, seja para implementar uma tela ou um componente no código. Ele define os tokens, os componentes e o fluxo de trabalho com o Figma (sincronia, passos do Figma para o código, assets e validação visual), e as regras dele são obrigatórias.
+
+## Planejamento
+
+O planejamento e a documentação das funcionalidades ficam em arquivos markdown locais, que são o issue tracker do projeto. As skills que publicam num tracker gravam nesses arquivos, nos caminhos abaixo e sem rótulos de triagem.
+
+A hierarquia é funcionalidade → tarefa, e cada funcionalidade tem dois documentos, o PRD e a spec:
+
+- **Funcionalidade:** uma entrega demonstrável no produto, descrita só pelo que a pessoa consegue fazer, sem detalhes técnicos. Não é a Fase do `docs/product-brief.md`, que é uma fase do produto (MVP, operar como produto). O número da funcionalidade é global, sequencial e não muda depois de atribuído. Nos documentos de planejamento, "funcionalidade" é sempre este termo; para o sentido comum da palavra, use outra (recurso, comportamento).
+- **PRD:** os requisitos de produto de uma funcionalidade (problema, fluxos, histórias, critérios de aceite, fora de escopo), feito pela skill `/prd`. Aponta para o `docs/product-brief.md`, que cobre o produto inteiro, em vez de repetir métricas e requisitos não funcionais.
+- **Spec:** como a funcionalidade será construída (decisões de implementação e de teste). Segue o HLD, o LLD e as ADRs, apontando para eles.
+- **Tarefa:** uma parte entregável de uma funcionalidade, a partir da spec. É nas tarefas que entra o trabalho técnico. Antes do código, cada tarefa ganha um **plano**, feito pela skill `/plan-task`, que é aprovado e commitado sozinho, no **commit de plano**. Depois disso o plano fica congelado, como registro do que foi aprovado: só o usuário o descongela, e uma decisão dele que se mostrar errada é corrigida na spec, no LLD ou numa tarefa nova. Fora da pasta da funcionalidade, a tarefa é identificada como `F<NN>-T<NN>`, como `F01-T02`.
+
+**Estrutura de pastas**
+
+```
+docs/funcionalidades/<num-funcionalidade>-<titulo>/
+  prd.md
+  spec.md
+  tarefas/
+    <NN>-<titulo>/      ← uma pasta por tarefa
+      tarefa.md         ← a tarefa
+      plano.md          ← o plano da tarefa
+      …                 ← registros da tarefa, se necessário
+```
+
+Os números têm dois dígitos e os títulos ficam em kebab-case sem acento (`01-entrar-e-sair`). As tarefas são numeradas a partir de `01` dentro de cada funcionalidade, na ordem de dependência.
+
+A pasta da tarefa só recebe, além da tarefa e do plano, registros da própria tarefa, como o roteiro de um teste manual, o resultado de uma medição ou as capturas de uma validação visual. Eles ficam em Markdown ou imagem, com nome em kebab-case (`roteiro-manual.md`, `medicao-p95.md`). Código, fixtures de teste e configuração nunca vão para essa pasta: ficam no projeto a que pertencem. Só o `plano.md` congela no commit de plano; os outros registros são escritos durante a implementação e entram no PR da tarefa.
+
+**Status**
+
+- O status de cada funcionalidade (planejada → PRD pronto → spec pronta → em andamento → concluída) mora no roadmap, `docs/roadmap.md`, que também é dono da lista de funcionalidades.
+- O status da tarefa (a fazer → em andamento → concluída) fica num campo Status no topo do `tarefa.md` dela. Ela passa a "em andamento" no commit de plano, e a "concluída" no PR que a entrega. Uma funcionalidade passa a "em andamento" no primeiro commit de plano de uma tarefa dela, e a "concluída" no PR da última tarefa dela.
 
 ## Convenções de Git
 

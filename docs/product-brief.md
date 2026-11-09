@@ -172,6 +172,9 @@ tem permissão: qualquer um dos dois destrói a confiança no produto.
 
 ## Roadmap
 
+As funcionalidades de cada fase, a ordem entre elas e o status estão no
+[roadmap](roadmap.md).
+
 - **Fase 1, fechar o MVP.** Objetivo: completar a aposta.
 - **Fase 2, operar como produto.** Objetivo: uma empresa conseguir usar sem depender de script para criar contas e permissões.
   Entram cadastro e convite de pessoas, tela de papéis e permissões, remoção de membros de canal
