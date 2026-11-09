@@ -6,6 +6,8 @@ import type { Person } from '../people/person.entity';
 export interface RealtimeSocketData {
   person: Person;
   sessionId: string;
+  // A Conversa aberta na aba, cuja sala o socket ocupa (spec da F03, "Digitando").
+  conversationId?: string;
 }
 
 export type RealtimeServer = Server<
@@ -28,4 +30,8 @@ export function personRoom(personId: string): string {
 
 export function sessionRoom(sessionId: string): string {
   return `session:${sessionId}`;
+}
+
+export function conversationRoom(conversationId: string): string {
+  return `conversation:${conversationId}`;
 }

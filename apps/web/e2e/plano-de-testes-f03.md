@@ -131,3 +131,28 @@ lista levada a 600 px do fim, longe do topo, para não pedir as anteriores.
 #### 4.8. a Mensagem da própria Pessoa enviada por outra aba mostra a pílula
   1. Ler mais acima numa aba e enviar pela outra aba da mesma Pessoa
     - expect: a pílula aparece
+
+### 5. "Digitando"
+
+**File:** `e2e/tempo-real/digitando.spec.ts` e `e2e/acessibilidade/digitando-sem-violacoes.spec.ts`
+
+As duas Pessoas abrem o Canal em comum (`openSharedChannel`); a outra digita tecla a tecla
+(`pressSequentially`), como uma pessoa.
+
+#### 5.1. mostra quem digita e some ao enviar
+  1. A outra Pessoa escreve sem enviar
+    - expect: "Bruno Lima está digitando…" aparece para a primeira
+  2. Ela envia
+    - expect: o aviso some
+
+#### 5.2. some depois de 5 s sem digitar
+  1. A outra Pessoa escreve e para
+    - expect: o aviso aparece e some em até 8 s
+
+#### 5.3. não mostra a própria Pessoa
+  1. A Pessoa escreve numa aba, com outra aba dela aberta no Canal
+    - expect: a outra Pessoa vê o aviso; as abas da própria Pessoa não
+
+#### 5.4. digitando-sem-violacoes
+  1. Com o aviso na tela, rodar o axe
+    - expect: nenhuma violação

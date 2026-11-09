@@ -1,5 +1,9 @@
 import { INestApplication } from '@nestjs/common';
-import type { ClientToServerEvents, ServerToClientEvents } from 'chat-events';
+import type {
+  ClientToServerEvents,
+  ConversationOpenResult,
+  ServerToClientEvents,
+} from 'chat-events';
 import { AddressInfo, Server } from 'node:net';
 import { io, Socket } from 'socket.io-client';
 import { createTestApp } from './create-test-app';
@@ -114,4 +118,18 @@ export async function waitForCount<T>(
 // Dá tempo para um evento que não deveria chegar aparecer.
 export function settle(ms = 300): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Abre a Conversa no socket e devolve a confirmação.
+export function openConversation(
+  socket: TestSocket,
+  conversationId: string,
+): Promise<ConversationOpenResult> {
+  return new Promise((resolve) => {
+    socket.emit(
+      'conversation.open',
+      { conversation_id: conversationId },
+      resolve,
+    );
+  });
 }

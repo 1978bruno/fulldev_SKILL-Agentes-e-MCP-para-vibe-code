@@ -15,6 +15,7 @@ import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
 import { useRealtimeMessages } from "@/app/hooks/use-realtime-messages";
+import { useOpenConversation, useTypingAnnouncer, useTypingPeople } from "@/app/hooks/use-typing";
 import {
   type PendingMessage,
   type PendingStatus,
@@ -31,6 +32,7 @@ import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
 import { NewMessagesPill } from "./new-messages-pill";
+import { TypingIndicator } from "./typing-indicator";
 
 type MessageHistoryProps = {
   conversation: Conversation;
@@ -79,6 +81,9 @@ function History({
     dropDelivered,
     reloadLatest,
   });
+  useOpenConversation(conversation.id);
+  const typing = useTypingAnnouncer(conversation.id);
+  const typers = useTypingPeople(conversation.id);
   // As pendentes vêm sempre depois das gravadas, e passam pelo mesmo agrupamento.
   const messages = useMemo<(Message & { status?: PendingStatus })[]>(
     () => [...saved, ...pending],
@@ -297,10 +302,10 @@ function History({
           </div>
         ) : null}
       </div>
-      {/* Lugar do "digitando", que entra na F03. */}
-      <div className="h-5 shrink-0" />
+      <TypingIndicator typers={typers} />
       <MessageComposer
         conversationName={conversation.name}
+        onTextChange={typing.onTextChange}
         onSend={send}
       />
     </div>

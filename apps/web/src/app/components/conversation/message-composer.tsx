@@ -9,6 +9,8 @@ import { codePointLength, MESSAGE_MAX_LENGTH } from "@/app/utils/message-text";
 type MessageComposerProps = {
   // Sem o nome (Conversa ainda carregando), o rótulo é só "Mensagem".
   conversationName?: string;
+  // A cada mudança do texto, inclusive o esvaziamento depois do envio: o aviso de "digitando".
+  onTextChange?: (text: string) => void;
 } & (
   | {
       // Recebe o texto já sem as pontas; a lista mostra a Mensagem como "enviando" e a fila a
@@ -22,7 +24,12 @@ type MessageComposerProps = {
 
 // Caixa de mensagem (MessageComposer): Enter envia e Shift+Enter quebra a linha. Acima do limite,
 // o contador toma o lugar da dica e o envio fica bloqueado. O botão de menções entra na F06.
-export function MessageComposer({ conversationName, onSend, disabled }: MessageComposerProps) {
+export function MessageComposer({
+  conversationName,
+  onTextChange,
+  onSend,
+  disabled,
+}: MessageComposerProps) {
   const [text, setText] = useState("");
   const body = text.trim();
   const overLimit = codePointLength(body) - MESSAGE_MAX_LENGTH;
@@ -31,10 +38,15 @@ export function MessageComposer({ conversationName, onSend, disabled }: MessageC
   // O contador fica ligado à caixa: o leitor de tela o lê com ela, sem anunciar cada tecla.
   const counterId = useId();
 
+  function changeText(value: string) {
+    setText(value);
+    onTextChange?.(value);
+  }
+
   function submit() {
     if (!canSend) return;
     onSend?.(body);
-    setText("");
+    changeText("");
   }
 
   return (
@@ -56,7 +68,7 @@ export function MessageComposer({ conversationName, onSend, disabled }: MessageC
             autoFocus={!disabled}
             disabled={disabled}
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => changeText(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
