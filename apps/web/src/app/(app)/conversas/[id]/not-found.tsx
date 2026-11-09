@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { buttonVariants } from "@/app/components/ui/button";
 import { EmptyState } from "@/app/components/ui/empty-state";
+import { HeaderlessScreen } from "@/app/components/workspace-nav/headerless-screen";
 
 // "Conversa / Estrutura / Conversa não encontrada": a mesma tela para a Conversa que não existe e
 // para a de que a Pessoa não participa.
 export default function ConversationNotFound() {
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <HeaderlessScreen className="items-center justify-center">
       <EmptyState
         titleAs="h1"
         title="Conversa não encontrada"
@@ -17,6 +18,6 @@ export default function ConversationNotFound() {
           </Link>
         }
       />
-    </div>
+    </HeaderlessScreen>
   );
 }

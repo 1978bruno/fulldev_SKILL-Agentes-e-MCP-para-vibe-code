@@ -330,7 +330,7 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
   4. Abrir e clicar fora
     - expect: a gaveta fecha
   5. Abrir e escolher outro Canal
-    - expect: a URL muda e a gaveta fecha
+    - expect: a URL muda, a gaveta fecha e o foco vai para a caixa de mensagem
 
 #### 8.2. sem-gaveta-em-tela-larga
 
@@ -339,6 +339,14 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
 **Steps:**
   1. Em 1440, abrir a Conversa
     - expect: sem o botão, com o Rail e a barra lateral
+
+#### 8.2.1. gaveta-fecha-ao-alargar
+
+**File:** `e2e/conversa/gaveta-em-tela-estreita.spec.ts`
+
+**Steps:**
+  1. Em 767, abrir a gaveta e alargar a janela para 1440
+    - expect: a gaveta fecha, e a caixa de mensagem recebe o clique e o foco
 
 #### 8.3. gaveta-na-home-vazia
 

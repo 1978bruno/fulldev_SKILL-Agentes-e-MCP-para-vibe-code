@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ConversationListError } from "@/app/components/conversation/conversation-list-error";
 import { EmptyState } from "@/app/components/ui/empty-state";
-import { NarrowTopBar } from "@/app/components/workspace-nav/narrow-top-bar";
+import { HeaderlessScreen } from "@/app/components/workspace-nav/headerless-screen";
 import { listConversations } from "@/app/services/chat-api";
 import { readLastConversation } from "@/app/services/last-conversation-cookie";
 import { readSessionToken } from "@/app/services/session-cookie";
@@ -22,15 +22,12 @@ export default async function HomePage() {
   if (target) redirect(`/conversas/${target.id}`);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <NarrowTopBar />
-      <div className="flex flex-1 items-center justify-center">
-        <EmptyState
-          titleAs="h1"
-          title="Nenhuma conversa ainda"
-          description="Crie um canal ou comece uma conversa pela barra lateral."
-        />
-      </div>
-    </div>
+    <HeaderlessScreen className="items-center justify-center">
+      <EmptyState
+        titleAs="h1"
+        title="Nenhuma conversa ainda"
+        description="Crie um canal ou comece uma conversa pela barra lateral."
+      />
+    </HeaderlessScreen>
   );
 }

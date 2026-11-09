@@ -36,12 +36,13 @@ test.describe("Gaveta", () => {
     await page.mouse.click(700, 450);
     await expect(drawer).toBeHidden();
 
-    // 5. Escolher outro Canal fecha a gaveta
+    // 5. Escolher outro Canal fecha a gaveta, e o foco vai para a caixa de mensagem
     await button.click();
     await drawer.getByRole("link", { name: second.name }).click();
     await expect(page).toHaveURL(`/conversas/${second.id}`);
     await expect(drawer).toBeHidden();
     await expect(page.getByRole("heading", { level: 1, name: second.name })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: `Mensagem para #${second.name}` })).toBeFocused();
   });
 
   test("sem-gaveta-em-tela-larga", async ({ page, memberChannel: channel, loggedInPage }) => {
@@ -52,5 +53,24 @@ test.describe("Gaveta", () => {
     await expect(page.getByRole("button", { name: "Abrir navegação" })).toBeHidden();
     await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Barra lateral" })).toBeVisible();
+  });
+});
+
+test.describe("Gaveta", () => {
+  test("gaveta-fecha-ao-alargar", async ({ page, memberChannel: channel, loggedInPage }) => {
+    void loggedInPage;
+    await page.setViewportSize({ width: 767, height: 900 });
+    await page.goto(`/conversas/${channel.id}`);
+    await readyHistory(page, channel.name);
+    await page.getByRole("button", { name: "Abrir navegação" }).click();
+    await expect(page.getByRole("dialog", { name: "Navegação" })).toBeVisible();
+
+    // 1. Alargar a janela com a gaveta aberta: ela fecha, e a página segue usável
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await expect(page.getByRole("dialog", { name: "Navegação" })).toBeHidden();
+    const composer = page.getByRole("textbox", { name: `Mensagem para #${channel.name}` });
+    await composer.click();
+    await expect(composer).toBeFocused();
   });
 });

@@ -1,8 +1,9 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Dialog } from "radix-ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconButton } from "@/app/components/ui/icon-button";
 
 type NavigationDrawerProps = {
@@ -14,20 +15,48 @@ type NavigationDrawerProps = {
 // Navegação do shell (design system, "Layout e responsividade"): em md ou mais, o Rail e a barra
 // lateral ficam em linha; abaixo de md, entram numa gaveta (Dialog do Radix) aberta pelo
 // OpenNavigationButton. O Root envolve o shell, para os botões da página serem o gatilho dela e o
-// foco voltar a eles quando a gaveta fecha.
+// foco voltar a eles quando a gaveta fecha pelo Esc ou pelo clique fora.
 export function NavigationDrawer({ navigation, children }: NavigationDrawerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+  // A gaveta fica presa à rota em que abriu: qualquer navegação a fecha (escolher um Canal, voltar
+  // no navegador), e um Ctrl+clique, que abre outra aba, não.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const [closedByNavigation, setClosedByNavigation] = useState(false);
+  if (openedAt !== null && openedAt !== pathname) {
+    setOpenedAt(null);
+    setClosedByNavigation(true);
+  }
+
+  // Em md ou mais, a navegação está em linha: a gaveta fecha, para o modal não travar a página.
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 768px)");
+    const close = () => {
+      if (wide.matches) setOpenedAt(null);
+    };
+    wide.addEventListener("change", close);
+    return () => wide.removeEventListener("change", close);
+  }, []);
+
   return (
-    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog.Root
+      open={openedAt === pathname}
+      onOpenChange={(open) => {
+        setClosedByNavigation(false);
+        setOpenedAt(open ? pathname : null);
+      }}
+    >
       <div className="hidden md:flex">{navigation}</div>
       {children}
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-30 animate-fade-in bg-surface-overlay md:hidden" />
         <Dialog.Content
           aria-describedby={undefined}
-          // Escolher um Canal (ou qualquer link da navegação) fecha a gaveta.
-          onClick={(event) => {
-            if (event.target instanceof Element && event.target.closest("a[href]")) setIsOpen(false);
+          // Fechada por uma navegação, o botão que a abriu já saiu com a página antiga: o foco vai
+          // para a caixa de mensagem da página nova, se houver.
+          onCloseAutoFocus={(event) => {
+            if (!closedByNavigation) return;
+            event.preventDefault();
+            document.querySelector<HTMLElement>("main textarea:not([disabled])")?.focus();
           }}
           className="fixed inset-y-0 left-0 z-40 flex max-w-full animate-fade-in shadow-3 outline-none md:hidden"
         >
