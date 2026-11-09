@@ -167,14 +167,16 @@ provedor derruba o socket na hora.
 
 #### 6.1. a faixa aparece depois de 3 s offline e some ao voltar
   1. Com o Canal aberto, a rede cai
-    - expect: `data-realtime` fica `disconnected`, a faixa ainda não aparece, e aparece em até 6 s,
-      sem receber o foco
+    - expect: `data-realtime` fica `disconnected`; depois de 2,5 s a faixa ainda não aparece, e
+      aparece até 2 s depois, sem receber o foco
   2. A rede volta
     - expect: `connected` e a faixa some
 
 #### 6.2. uma queda curta não mostra a faixa
-  1. A rede cai e volta em menos de 3 s
-    - expect: depois de 3,5 s conectada, nenhuma faixa
+  1. A rede cai e fica fora 2,5 s
+    - expect: nenhuma faixa enquanto está fora
+  2. A rede volta
+    - expect: conectada, sem faixa
 
 #### 6.3. a faixa aparece quando a primeira conexão não acontece
   1. Entrar com o WebSocket preso no `routeWebSocket`, sem chegar ao servidor

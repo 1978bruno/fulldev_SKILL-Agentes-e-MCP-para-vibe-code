@@ -17,8 +17,10 @@ test.describe("Faixa de conexão", () => {
     const banner = connectionBanner(page);
 
     await waitForRealtime(page, "disconnected");
+    // Quase o atraso inteiro sem conexão, e ainda sem faixa.
+    await page.waitForTimeout(2_500);
     await expect(banner).toHaveCount(0);
-    await expect(banner).toBeVisible({ timeout: 6_000 });
+    await expect(banner).toBeVisible({ timeout: 2_000 });
     await expect(banner).not.toBeFocused();
 
     // 2. A rede volta
@@ -33,15 +35,16 @@ test.describe("Faixa de conexão", () => {
     context,
     memberChannel,
   }) => {
-    // 1. A rede cai e volta em menos de 3 s
+    // 1. A rede cai e fica fora quase o atraso inteiro, sem faixa; depois volta
     await page.goto(`/conversas/${memberChannel.id}`);
     await waitForRealtime(page);
     await context.setOffline(true);
     await waitForRealtime(page, "disconnected");
+    await page.waitForTimeout(2_500);
+    await expect(connectionBanner(page)).toHaveCount(0);
     await context.setOffline(false);
 
     await waitForRealtime(page);
-    await page.waitForTimeout(3_500);
     await expect(connectionBanner(page)).toHaveCount(0);
   });
 
