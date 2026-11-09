@@ -11,6 +11,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL ?? "http://web:3000",
     trace: "retain-on-failure",
+    // As horas esperadas nos testes ficam no fuso padrão (LLD, "Valores e configuração"); o teste
+    // do cookie de fuso troca o fuso só para ele.
+    timezoneId: "America/Sao_Paulo",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
 });

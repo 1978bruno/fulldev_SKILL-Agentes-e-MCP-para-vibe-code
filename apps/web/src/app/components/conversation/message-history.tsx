@@ -7,12 +7,18 @@ import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
 import type { Conversation, MessagePage } from "@/app/services/chat-api";
+import { dayKey, dayLabel } from "@/app/utils/day-label";
+import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
 
 type MessageHistoryProps = {
   conversation: Conversation;
   initialPage: MessagePage;
+  // Fuso das horas e dos dias, e o instante da renderização no servidor, que é o "agora" de
+  // "Hoje" e "Ontem" dos dois lados, para a hidratação não divergir.
+  timeZone: string;
+  renderedAt: string;
 };
 
 // Distância do topo em que o sentinela pede a página anterior (spec da F02, "Lista de Mensagens").
@@ -28,7 +34,7 @@ export function MessageHistory(props: MessageHistoryProps) {
   );
 }
 
-function History({ conversation, initialPage }: MessageHistoryProps) {
+function History({ conversation, initialPage, timeZone, renderedAt }: MessageHistoryProps) {
   const { messages, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
     useMessageHistory(conversation.id, initialPage);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,9 +141,23 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
           <ConversationIntro name={conversation.name} topic={conversation.topic} />
         )}
         <ol aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
-          {messages.map((message) => (
-            <MessageItem key={message.id} message={message} />
-          ))}
+          {messages.map((message, index) => {
+            const previous = messages[index - 1];
+            const startsDay =
+              !previous ||
+              dayKey(previous.createdAt, timeZone) !== dayKey(message.createdAt, timeZone);
+            return (
+              <MessageItem
+                key={message.id}
+                message={message}
+                timeZone={timeZone}
+                compact={isCompact(previous, message, timeZone)}
+                dayLabel={
+                  startsDay ? dayLabel(message.createdAt, renderedAt, timeZone) : undefined
+                }
+              />
+            );
+          })}
         </ol>
       </div>
       {/* Lugar do "digitando", que entra na F03. */}

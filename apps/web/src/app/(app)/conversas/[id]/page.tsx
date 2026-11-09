@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { MessageHistory } from "@/app/components/conversation/message-history";
 import { getConversation, listMessages } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
 import { expiredSessionPath } from "@/app/utils/return-path";
+import { resolveTimeZone, TIME_ZONE_COOKIE } from "@/app/utils/time-zone";
 
 // Uma Conversa: o cabeçalho e a página mais recente do histórico, lidos no servidor (spec da F02,
 // "Leituras"). O carregamento e o erro desta tela entram na F02-T07.
@@ -26,6 +28,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
+  const timeZone = resolveTimeZone((await cookies()).get(TIME_ZONE_COOKIE)?.value);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ConversationHeader name={conversation.name} topic={conversation.topic} />
@@ -33,6 +36,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         key={conversation.id}
         conversation={conversation}
         initialPage={pageResult.page}
+        timeZone={timeZone}
+        renderedAt={new Date().toISOString()}
       />
     </div>
   );

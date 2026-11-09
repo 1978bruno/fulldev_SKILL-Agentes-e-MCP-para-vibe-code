@@ -21,14 +21,15 @@ test.describe("Histórico até a primeira Mensagem", () => {
         response.url().includes(`/api/conversations/${channel.id}/messages?before=`) &&
         response.status() === 200,
     );
-    const lida = mensagens.getByRole("listitem").filter({ hasText: /^.*Mensagem 26$/ });
+    // A "Mensagem 27" já é compacta; a 26, que abre a página, vira compacta quando a anterior chega.
+    const lida = mensagens.getByRole("listitem").filter({ hasText: /^.*Mensagem 27$/ });
     await scrollHistoryToTop(historico);
     const antes = (await lida.boundingBox())!.y;
     await anterior;
 
     await expect(mensagens.getByRole("listitem")).toHaveCount(75);
     await expect(mensagens.getByRole("listitem").first()).toContainText("Mensagem 1");
-    // A Mensagem que estava no topo continua no mesmo lugar da tela.
+    // A Mensagem que a Pessoa lia continua no mesmo lugar da tela.
     await expect.poll(async () => Math.abs((await lida.boundingBox())!.y - antes)).toBeLessThan(4);
 
     // 3. Rolar até o topo de novo: o começo do Canal
