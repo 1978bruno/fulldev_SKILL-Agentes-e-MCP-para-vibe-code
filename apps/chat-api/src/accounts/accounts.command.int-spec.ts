@@ -102,6 +102,21 @@ describe('comando de contas', () => {
         name: 'Ana Souza',
       });
     });
+
+    it('recusa uma senha acima de 256 caracteres', async () => {
+      const email = uniqueEmail();
+      const output = recordingOutput();
+
+      const exitCode = await command('a'.repeat(257), output).run([
+        'create',
+        email,
+        'Ana Souza',
+      ]);
+
+      expect(exitCode).toBe(1);
+      expect(output.errors.join('\n')).toContain('no máximo 256');
+      expect(await people.findByEmail(email)).toBeNull();
+    });
   });
 
   describe('revoke-sessions', () => {
@@ -128,6 +143,34 @@ describe('comando de contas', () => {
   });
 
   describe('reset-password', () => {
+    it('recusa uma senha nova acima de 256 caracteres e não revoga nada', async () => {
+      const person = await personWithSessions(1);
+      const output = recordingOutput();
+
+      const exitCode = await command('a'.repeat(257), output).run([
+        'reset-password',
+        person.email,
+      ]);
+
+      expect(exitCode).toBe(1);
+      expect(output.errors.join('\n')).toContain('no máximo 256');
+      expect(await sessionCount(person.id)).toBe(1);
+    });
+
+    it('não cria a Sessão de um login que conferiu a senha antiga antes da redefinição', async () => {
+      const person = await personWithSessions(0);
+      const checkedWithOldPassword = await people.verifyCredentials(
+        person.email,
+        'senha-antiga',
+      );
+      await command('senha-nova').run(['reset-password', person.email]);
+
+      const attempt = sessions.startSession(checkedWithOldPassword!);
+
+      await expect(attempt).rejects.toThrow('E-mail ou senha incorretos.');
+      expect(await sessionCount(person.id)).toBe(0);
+    });
+
     it('troca a senha e revoga todas as Sessões', async () => {
       const person = await personWithSessions(1);
 

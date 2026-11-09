@@ -4,7 +4,7 @@ import { expect, test } from "../fixtures";
 import { waitForLoginForm } from "../support/login-page";
 
 test.describe("Voltar para onde ia", () => {
-  for (const para of ["//outro-site", "https://outro-site", "/\\outro-site", "/\t/outro-site"]) {
+  for (const para of ["//outro-site", "https://outro-site", "/\\outro-site", "/\t/outro-site", "/a/..//outro-site"]) {
     test(`para-externo-cai-na-home: ${para}`, async ({ page, person }) => {
       // 1. Abrir "Entrar" com um para que não é do próprio chat
       await page.goto(`/entrar?para=${encodeURIComponent(para)}`);
