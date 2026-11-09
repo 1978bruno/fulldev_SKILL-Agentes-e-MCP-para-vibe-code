@@ -285,3 +285,30 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
 **Steps:**
   1. Abrir um Canal com Mensagens de duas Pessoas e analisar com o axe
     - expect: nenhuma violação
+
+### 7. Barra lateral
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 7.1. secao-canais-recolhe
+
+**File:** `e2e/conversa/secao-canais-recolhe.spec.ts`
+
+**Steps:**
+  1. Clicar no título "Canais"
+    - expect: `aria-expanded="false"` e o Canal some
+  2. Enter no título, pelo teclado
+    - expect: `aria-expanded="true"` e o Canal volta
+
+#### 7.2. linha-ativa
+
+**File:** `e2e/conversa/linha-ativa.spec.ts`
+
+**Steps:**
+  1. Com dois Canais, abrir o primeiro
+    - expect: só a linha dele com `aria-current="page"`
+  2. Trocar para o segundo pela barra lateral
+    - expect: a linha ativa passa a ser a do segundo
+  3. Voltar no navegador
+    - expect: a linha ativa volta a ser a do primeiro
+

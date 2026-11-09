@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { listConversations } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
+import { SidebarError } from "./sidebar-error";
 import { SidebarRow } from "./sidebar-row";
 import { SidebarSection } from "./sidebar-section";
+import { SidebarSkeleton } from "./sidebar-skeleton";
 
 // Lista de Conversas. Na F02, só a seção "Canais"; as outras entram com as funcionalidades delas
 // (F04, F05, F10). Abaixo de md ela some, para o Main não transbordar; a gaveta é da F02-T08.
@@ -16,8 +18,7 @@ export function Sidebar() {
         <p className="text-title font-black text-sidebar-fg-strong">Full Cycle</p>
       </div>
       <nav aria-label="Conversas" className="flex flex-col overflow-y-auto py-3">
-        {/* O esqueleto e o erro da lista entram na F02-T07. */}
-        <Suspense fallback={null}>
+        <Suspense fallback={<SidebarSkeleton />}>
           <Channels />
         </Suspense>
       </nav>
@@ -28,6 +29,8 @@ export function Sidebar() {
 async function Channels() {
   const token = await readSessionToken();
   const result = token ? await listConversations(token) : null;
+  // Sem Sessão, o layout já leva a Pessoa para "Entrar"; aqui a lista só fica vazia.
+  if (result?.kind === "failure") return <SidebarError />;
   const conversations = result?.kind === "ok" ? result.conversations : [];
   return (
     <SidebarSection title="Canais">

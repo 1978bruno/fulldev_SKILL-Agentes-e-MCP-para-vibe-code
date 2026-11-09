@@ -7,9 +7,11 @@ import { Kbd } from "@/app/components/ui/kbd";
 import { codePointLength, MESSAGE_MAX_LENGTH } from "@/app/utils/message-text";
 
 type MessageComposerProps = {
-  conversationName: string;
+  // Sem o nome (Conversa ainda carregando), o rótulo é só "Mensagem".
+  conversationName?: string;
   // Recebe o texto já sem as pontas; a lista mostra a Mensagem como "enviando" e a fila a grava.
-  onSend: (body: string) => void;
+  // Sem ele, a caixa fica desabilitada: o histórico ainda carrega, ou falhou.
+  onSend?: (body: string) => void;
 };
 
 // Caixa de mensagem (MessageComposer): Enter envia e Shift+Enter quebra a linha. Acima do limite,
@@ -18,14 +20,15 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
   const [text, setText] = useState("");
   const body = text.trim();
   const overLimit = codePointLength(body) - MESSAGE_MAX_LENGTH;
-  const canSend = body !== "" && overLimit <= 0;
-  const label = `Mensagem para #${conversationName}`;
+  const disabled = !onSend;
+  const canSend = !disabled && body !== "" && overLimit <= 0;
+  const label = conversationName ? `Mensagem para #${conversationName}` : "Mensagem";
   // O contador fica ligado à caixa: o leitor de tela o lê com ela, sem anunciar cada tecla.
   const counterId = useId();
 
   function submit() {
     if (!canSend) return;
-    onSend(body);
+    onSend?.(body);
     setText("");
   }
 
@@ -45,7 +48,8 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
             aria-describedby={overLimit > 0 ? counterId : undefined}
             placeholder={label}
             rows={1}
-            autoFocus
+            autoFocus={!disabled}
+            disabled={disabled}
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
@@ -54,7 +58,7 @@ export function MessageComposer({ conversationName, onSend }: MessageComposerPro
                 submit();
               }
             }}
-            className="field-sizing-content max-h-60 min-h-[22px] flex-1 resize-none bg-transparent text-body text-fg outline-none placeholder:text-fg-subtle"
+            className="field-sizing-content max-h-60 min-h-[22px] flex-1 resize-none bg-transparent text-body text-fg outline-none placeholder:text-fg-subtle disabled:cursor-not-allowed"
           />
         </div>
         <div className="flex items-center justify-end gap-3 p-1.5">
