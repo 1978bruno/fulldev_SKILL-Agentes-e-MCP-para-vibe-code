@@ -1,4 +1,4 @@
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BfcacheReload } from "@/app/components/bfcache-reload";
@@ -9,11 +9,11 @@ import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
 import { getCurrentPerson } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
+import { readTimeZone } from "@/app/services/time-zone-cookie";
 import {
   expiredSessionPath,
   REQUESTED_PATH_HEADER,
 } from "@/app/utils/return-path";
-import { resolveTimeZone, TIME_ZONE_COOKIE } from "@/app/utils/time-zone";
 
 // Layout das telas logadas: verifica a Sessão na API do chat a cada renderização
 // (LLD, "Cliente", "Sessão no cliente").
@@ -47,7 +47,7 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen">
       <BfcacheReload />
       <TimeZoneSync
-        serverTimeZone={resolveTimeZone((await cookies()).get(TIME_ZONE_COOKIE)?.value)}
+        serverTimeZone={await readTimeZone()}
       />
       <Rail person={result.person} />
       <Sidebar />

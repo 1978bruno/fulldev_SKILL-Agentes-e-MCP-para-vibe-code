@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { dayKey } from "./day-label";
 import { COMPACT_INTERVAL_MS, isCompact } from "./message-grouping";
 
 const SP = "America/Sao_Paulo";
 
 function message(authorId: string, createdAt: string) {
-  return { author: { id: authorId }, createdAt };
+  return { author: { id: authorId }, createdAt, day: dayKey(createdAt, SP) };
 }
 
 function plus(iso: string, ms: number): string {
@@ -15,29 +16,29 @@ describe("isCompact", () => {
   const first = message("ana", "2026-11-09T12:00:00.000Z");
 
   it("é compacta com o mesmo autor, no mesmo dia e dentro do intervalo", () => {
-    expect(isCompact(first, message("ana", plus(first.createdAt, 2 * 60_000)), SP)).toBe(true);
+    expect(isCompact(first, message("ana", plus(first.createdAt, 2 * 60_000)))).toBe(true);
   });
 
   it("é completa com outro autor", () => {
-    expect(isCompact(first, message("bruno", plus(first.createdAt, 60_000)), SP)).toBe(false);
+    expect(isCompact(first, message("bruno", plus(first.createdAt, 60_000)))).toBe(false);
   });
 
   it("é compacta exatamente no limite do intervalo e completa um milissegundo depois", () => {
-    expect(isCompact(first, message("ana", plus(first.createdAt, COMPACT_INTERVAL_MS)), SP)).toBe(
+    expect(isCompact(first, message("ana", plus(first.createdAt, COMPACT_INTERVAL_MS)))).toBe(
       true,
     );
     expect(
-      isCompact(first, message("ana", plus(first.createdAt, COMPACT_INTERVAL_MS + 1)), SP),
+      isCompact(first, message("ana", plus(first.createdAt, COMPACT_INTERVAL_MS + 1))),
     ).toBe(false);
   });
 
   it("é completa no dia seguinte do fuso, mesmo dentro do intervalo", () => {
     // 23:58 e 00:01 em São Paulo: 3 minutos, mas dias diferentes.
     const late = message("ana", "2026-11-10T02:58:00.000Z");
-    expect(isCompact(late, message("ana", "2026-11-10T03:01:00.000Z"), SP)).toBe(false);
+    expect(isCompact(late, message("ana", "2026-11-10T03:01:00.000Z"))).toBe(false);
   });
 
   it("a primeira Mensagem é sempre completa", () => {
-    expect(isCompact(undefined, first, SP)).toBe(false);
+    expect(isCompact(undefined, first)).toBe(false);
   });
 });

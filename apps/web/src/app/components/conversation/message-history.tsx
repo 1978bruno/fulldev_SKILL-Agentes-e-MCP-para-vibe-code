@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
 import { SWRConfig } from "swr";
 import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
 import type { Conversation, MessagePage } from "@/app/services/chat-api";
-import { dayKey, dayLabel } from "@/app/utils/day-label";
+import { dayKey, labelForDay } from "@/app/utils/day-label";
 import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
@@ -46,6 +46,22 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
   const sentinelRef = useRef<HTMLDivElement>(null);
   // Distância até o fim da área de rolagem, guardada antes de a página anterior entrar no começo.
   const distanceFromBottom = useRef<number | null>(null);
+  // A forma e o divisor de cada Mensagem, com o dia de cada uma calculado uma vez por lista.
+  const rows = useMemo(() => {
+    const today = dayKey(renderedAt, timeZone);
+    const withDays = messages.map((message) => ({
+      ...message,
+      day: dayKey(message.createdAt, timeZone),
+    }));
+    return withDays.map((message, index) => {
+      const previous = withDays[index - 1];
+      return {
+        message,
+        compact: isCompact(previous, message),
+        dayLabel: previous?.day === message.day ? undefined : labelForDay(message.day, today),
+      };
+    });
+  }, [messages, timeZone, renderedAt]);
   const firstId = messages[0]?.id;
   const lastId = messages.at(-1)?.id;
 
@@ -141,23 +157,15 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
           <ConversationIntro name={conversation.name} topic={conversation.topic} />
         )}
         <ol aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
-          {messages.map((message, index) => {
-            const previous = messages[index - 1];
-            const startsDay =
-              !previous ||
-              dayKey(previous.createdAt, timeZone) !== dayKey(message.createdAt, timeZone);
-            return (
-              <MessageItem
-                key={message.id}
-                message={message}
-                timeZone={timeZone}
-                compact={isCompact(previous, message, timeZone)}
-                dayLabel={
-                  startsDay ? dayLabel(message.createdAt, renderedAt, timeZone) : undefined
-                }
-              />
-            );
-          })}
+          {rows.map(({ message, compact, dayLabel }) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              timeZone={timeZone}
+              compact={compact}
+              dayLabel={dayLabel}
+            />
+          ))}
         </ol>
       </div>
       {/* Lugar do "digitando", que entra na F03. */}

@@ -1,4 +1,5 @@
 import { Avatar } from "@/app/components/ui/avatar";
+import { cn } from "@/app/utils/cn";
 import type { Message } from "@/app/services/chat-api";
 import { formatTime } from "@/app/utils/format-time";
 import { DayDivider } from "./day-divider";
@@ -34,12 +35,11 @@ function CompactRow({ message, timeZone }: RowProps) {
   return (
     <div className="group flex gap-2 px-5 py-1">
       <div className="flex w-9 shrink-0 justify-end pt-1">
-        <time
-          dateTime={message.createdAt}
-          className="text-caption text-fg-muted opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-        >
-          {formatTime(message.createdAt, timeZone)}
-        </time>
+        <MessageTime
+          message={message}
+          timeZone={timeZone}
+          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <MessageBody text={message.body} />
@@ -57,12 +57,18 @@ function FullRow({ message, timeZone }: RowProps) {
       <div className="flex min-w-0 flex-1 flex-col">
         <p className="flex items-baseline gap-2">
           <span className="text-body font-black text-fg">{message.author.name}</span>
-          <time dateTime={message.createdAt} className="text-caption text-fg-muted">
-            {formatTime(message.createdAt, timeZone)}
-          </time>
+          <MessageTime message={message} timeZone={timeZone} />
         </p>
         <MessageBody text={message.body} />
       </div>
     </div>
+  );
+}
+
+function MessageTime({ message, timeZone, className }: RowProps & { className?: string }) {
+  return (
+    <time dateTime={message.createdAt} className={cn("text-caption text-fg-muted", className)}>
+      {formatTime(message.createdAt, timeZone)}
+    </time>
   );
 }
