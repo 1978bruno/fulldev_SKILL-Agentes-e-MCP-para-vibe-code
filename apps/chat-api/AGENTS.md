@@ -12,7 +12,7 @@ O projeto segue os princípios de SOLID:
 - **I**: Interface Segregation Principle (Princípio da Segregação de Interfaces) - interfaces específicas são melhores do que uma interface genérica e inchada.
 - **D**: Dependency Inversion Principle (Princípio da Inversão de Dependência) - módulos de alto nível não devem depender de módulos de baixo nível; ambos devem depender de abstrações.
 
-Os serviços do projeto seguem os princípios do Application Layer, do Martin Fowler, mantendo a lógica de negócio isolada da infraestrutura e da interface de usuário.
+Os serviços do projeto seguem os princípios do Service Layer, do Martin Fowler, mantendo a lógica de negócio isolada da infraestrutura e da interface de usuário.
 
 ## Comandos
 
@@ -55,7 +55,7 @@ O arquivo de teste leva o nome do arquivo testado. O sufixo define o nível do t
 
 ## A camada de serviços
 
-Um service recebe e devolve dados simples e tipos do domínio. Ele tem de poder ser chamado de um controller, de uma tarefa do worker ou de um teste unitário sem nenhuma adaptação.
+Um service recebe e devolve dados simples e tipos do domínio. Ele tem de poder ser chamado de um controller, de um gateway de WebSocket ou de um teste unitário sem nenhuma adaptação.
 
 Antes de adicionar um import num arquivo de service, confira em qual dos dois grupos ele cai:
 
