@@ -10,9 +10,14 @@ export const TOPIC_MAX_LENGTH = 250;
 const CHANNEL_NAME_PATTERN =
   /^[\p{Ll}\p{Lo}\p{Lm}\p{Nd}_-][\p{Ll}\p{Lo}\p{Lm}\p{M}\p{Nd}_-]*$/u;
 
+// Forma em que o nome é gravado e procurado: sem espaços nas pontas, em NFC.
+export function normalizeChannelName(raw: string): string {
+  return raw.trim().normalize('NFC');
+}
+
 // Regra do nome do Canal (spec da F02, "Comando de canais"), herdada pela F04.
 export function parseChannelName(raw: string): Parsed<string> {
-  const name = raw.trim().normalize('NFC');
+  const name = normalizeChannelName(raw);
   const length = codePointLength(name);
   if (length === 0 || length > CHANNEL_NAME_MAX_LENGTH) {
     return {

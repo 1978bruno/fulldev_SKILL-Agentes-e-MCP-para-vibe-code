@@ -125,8 +125,14 @@ describe('comando de contas', () => {
 
     it('desfaz a Pessoa quando a participação falha', async () => {
       const email = uniqueEmail();
+      // O método é privado: a troca é pelo protótipo, só neste teste.
       const failure = jest
-        .spyOn(conversations, 'addToPublicChannels')
+        .spyOn(
+          ConversationsService.prototype as unknown as {
+            addToPublicChannels: (personId: string) => Promise<void>;
+          },
+          'addToPublicChannels',
+        )
         .mockRejectedValueOnce(new Error('falha ao gravar a participação'));
 
       await expect(
@@ -145,19 +151,22 @@ describe('comando de contas', () => {
       await lockPublicMembership(runner.manager);
 
       let finished = false;
-      const creation = command()
-        .run(['create', email, 'Ana Souza'])
-        .then((code) => {
-          finished = true;
-          return code;
-        });
-      // Tempo de sobra para a criação chegar à trava e ficar parada nela.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(finished).toBe(false);
-      expect(await people.findByEmail(email)).toBeNull();
-
-      await runner.commitTransaction();
-      await runner.release();
+      let creation: Promise<number>;
+      try {
+        creation = command()
+          .run(['create', email, 'Ana Souza'])
+          .then((code) => {
+            finished = true;
+            return code;
+          });
+        // Tempo de sobra para a criação chegar à trava e ficar parada nela.
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        expect(finished).toBe(false);
+      } finally {
+        // Solta a trava mesmo com a asserção falhando, para a suíte não travar.
+        await runner.commitTransaction();
+        await runner.release();
+      }
       expect(await creation).toBe(0);
       expect(await people.findByEmail(email)).not.toBeNull();
     });

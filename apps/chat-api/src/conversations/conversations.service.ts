@@ -9,7 +9,11 @@ import { PeopleService } from '../people/people.service';
 import type { Person } from '../people/person.entity';
 import { ChannelNameTakenError } from './channel-name-taken.error';
 import { ChannelNotFoundError } from './channel-not-found.error';
-import { parseChannelName, parseTopic } from './channel-name';
+import {
+  normalizeChannelName,
+  parseChannelName,
+  parseTopic,
+} from './channel-name';
 import { ConversationMember } from './conversation-member.entity';
 import { ConversationNotFoundError } from './conversation-not-found.error';
 import { Conversation } from './conversation.entity';
@@ -78,33 +82,28 @@ export class ConversationsService {
         topic: topic.value,
       }),
     );
-    // Dois arrays como parâmetros, e não três parâmetros por Pessoa: o número de parâmetros não
-    // cresce com o workspace.
     const personIds = await this.people.listIds();
-    await this.txHost.tx.query(
-      `INSERT INTO conversation_members (id, conversation_id, person_id)
-       SELECT id, $1, person_id FROM unnest($2::uuid[], $3::uuid[]) AS rows(id, person_id)`,
-      [channel.id, personIds.map(() => randomUUIDv7()), personIds],
+    await this.insertMembers(
+      personIds.map((personId) => [channel.id, personId]),
     );
     return channel;
   }
 
-  // Troca o Tópico de um Canal público pela regra do create; vazio apaga.
+  // Troca o Tópico de um Canal público pela regra do create; vazio apaga. Devolve o nome
+  // normalizado.
   async setPublicChannelTopic(
     rawName: string,
     rawTopic: string,
-  ): Promise<Conversation> {
+  ): Promise<{ name: string; topic: string | null }> {
     const topic = parseTopic(rawTopic);
     if (!topic.ok) throw new InvalidChannelError(topic.error);
-    // O nome passa pela mesma normalização do create (NFC, sem espaços nas pontas).
-    const name = rawName.trim().normalize('NFC');
-    const channel = await this.conversations.findOneBy({
-      kind: 'public_channel',
-      name,
-    });
-    if (!channel) throw new ChannelNotFoundError(name);
-    channel.topic = topic.value;
-    return this.conversations.save(channel);
+    const name = normalizeChannelName(rawName);
+    const result = await this.conversations.update(
+      { kind: 'public_channel', name },
+      { topic: topic.value },
+    );
+    if (!result.affected) throw new ChannelNotFoundError(name);
+    return { name, topic: topic.value };
   }
 
   // Canais públicos em ordem alfabética, com o número de Membros.
@@ -134,29 +133,38 @@ export class ConversationsService {
     }));
   }
 
-  // Cria a conta e a inclui em todos os Canais públicos, numa transação que começa tomando a trava
-  // de participação (ADR 0024): um Canal criado ao mesmo tempo espera, e a Pessoa não fica de fora.
+  // Cria a conta e a inclui em todos os Canais públicos, numa transação (ADR 0024). A Pessoa é
+  // gravada antes da trava, para o hash da senha não segurá-la: um Canal criado ao mesmo tempo não
+  // a vê (ainda não confirmada), e a leitura dos Canais, depois da trava, vê o Canal dele.
   @Transactional()
   async createPersonInPublicChannels(newPerson: NewPerson): Promise<Person> {
-    await lockPublicMembership(this.txHost.tx);
     const person = await this.people.create(newPerson);
+    await lockPublicMembership(this.txHost.tx);
     await this.addToPublicChannels(person.id);
     return person;
   }
 
-  // Participação da Pessoa em todos os Canais públicos; a que já existe fica como está.
-  // Os ids saem da aplicação, como no create de Canal.
-  async addToPublicChannels(personId: string): Promise<void> {
+  // Só sob a trava de participação, dentro de createPersonInPublicChannels.
+  private async addToPublicChannels(personId: string): Promise<void> {
     const channels = await this.conversations.find({
       select: { id: true },
       where: { kind: 'public_channel' },
     });
-    const channelIds = channels.map((channel) => channel.id);
+    await this.insertMembers(channels.map((channel) => [channel.id, personId]));
+  }
+
+  // Grava as participações (Conversa, Pessoa); a que já existe fica como está. Os ids saem da
+  // aplicação, e os pares vão como arrays: o número de parâmetros não cresce com o workspace.
+  private async insertMembers(pairs: [string, string][]): Promise<void> {
     await this.txHost.tx.query(
       `INSERT INTO conversation_members (id, conversation_id, person_id)
-       SELECT id, conversation_id, $1 FROM unnest($2::uuid[], $3::uuid[]) AS rows(id, conversation_id)
+       SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::uuid[])
        ON CONFLICT (conversation_id, person_id) DO NOTHING`,
-      [personId, channelIds.map(() => randomUUIDv7()), channelIds],
+      [
+        pairs.map(() => randomUUIDv7()),
+        pairs.map(([conversationId]) => conversationId),
+        pairs.map(([, personId]) => personId),
+      ],
     );
   }
 
