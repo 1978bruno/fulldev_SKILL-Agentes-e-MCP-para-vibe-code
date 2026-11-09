@@ -24,7 +24,7 @@ Wi-Fi nem suspender o computador, e a nota do Lighthouse é lida no Chrome DevTo
    - Esperado: nota 100.
 4. Voltar a rede a "No throttling".
 
-## 2. Queda de verdade
+## 2. Wi-Fi desligado
 
 1. Com as duas janelas no Canal, desligar o Wi-Fi da máquina (ou tirar o cabo) por 1 min.
    - Esperado: a faixa aparece em até 15 s; o envio pela primeira janela mostra "Não foi possível
@@ -32,9 +32,11 @@ Wi-Fi nem suspender o computador, e a nota do Lighthouse é lida no Chrome DevTo
 2. Religar a rede.
    - Esperado: a faixa some, o socket volta sozinho, e a Mensagem que falhou pode ser reenviada por
      "Tentar de novo" sem duplicar.
-3. Suspender o computador por 1 min, com a segunda conta enviando uma Mensagem de outro aparelho
+## 3. Computador suspenso
+
+1. Suspender o computador por 1 min, com a segunda conta enviando uma Mensagem de outro aparelho
    durante a suspensão (ou pela janela anônima antes de suspender, se for o mesmo computador).
-4. Acordar o computador.
+2. Acordar o computador.
    - Esperado: a faixa aparece enquanto reconecta e some; a Mensagem enviada durante a suspensão
      aparece uma vez, sem recarregar a página.
 
@@ -44,4 +46,4 @@ Wi-Fi nem suspender o computador, e a nota do Lighthouse é lida no Chrome DevTo
 | --- | --- | --- | --- |
 | 1. Lighthouse (nota) | A preencher | | |
 | 2. Wi-Fi desligado por 1 min | A preencher | | |
-| 2. Computador suspenso por 1 min | A preencher | | |
+| 3. Computador suspenso por 1 min | A preencher | | |

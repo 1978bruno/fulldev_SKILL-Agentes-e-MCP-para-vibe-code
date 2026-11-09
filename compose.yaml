@@ -71,8 +71,9 @@ services:
         condition: service_healthy
       s3:
         condition: service_started
+      # A API sobe mesmo com o Redis fora: a reconexão só passa a recarregar.
       redis:
-        condition: service_healthy
+        condition: service_started
 
   postgres:
     image: postgres:18

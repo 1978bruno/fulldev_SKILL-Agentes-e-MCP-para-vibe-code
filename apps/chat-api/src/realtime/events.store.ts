@@ -70,15 +70,28 @@ function textFieldsOf(reply: unknown): Map<string, string> {
 // dados. O cursor que a aba recebe é "<época>:<id do stream>".
 @Injectable()
 export class EventsStore {
-  // As Pessoas que perderam um evento porque a gravação no Redis falhou. A API roda com uma
-  // instância só (HLD 6.2), então a memória do processo basta: a reconexão seguinte de cada uma
-  // recarrega, em vez de reenviar sem o evento que não foi guardado.
-  private readonly missedEvents = new Set<string>();
+  // Quando a gravação no Redis falhou para cada Pessoa (Date.now()). A API roda com uma instância só
+  // (HLD 6.2), então a memória do processo basta. Toda aba da Pessoa com um cursor anterior à falha
+  // recarrega, em vez de reenviar sem o evento que não foi guardado; a marca vale pela retenção.
+  private readonly missedAt = new Map<string, number>();
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: RedisClient) {}
 
   markMissed(personIds: string[]): void {
-    personIds.forEach((personId) => this.missedEvents.add(personId));
+    const now = Date.now();
+    personIds.forEach((personId) => this.missedAt.set(personId, now));
+  }
+
+  // Se uma gravação falhou para a Pessoa depois do evento do cursor.
+  private missedAfter(personId: string, streamId: string): boolean {
+    const failedAt = this.missedAt.get(personId);
+    if (failedAt === undefined) return false;
+    if (Date.now() - failedAt > EVENTS_RETENTION_MS) {
+      this.missedAt.delete(personId);
+      return false;
+    }
+    const [cursorMs] = parseStreamId(streamId) ?? [0];
+    return cursorMs <= failedAt;
   }
 
   // Grava o evento no stream de cada Pessoa e devolve o cursor de cada uma: a época vai no mesmo
@@ -126,32 +139,41 @@ export class EventsStore {
   //   apagou só o próprio evento do cursor, a regra recarrega sem precisar, mas nunca esconde uma
   //   perda.
   async readSince(personId: string, cursor: string): Promise<ReadSinceResult> {
-    const { epoch, lastId, firstId } = await this.streamState(personId);
-    const current = `${epoch}:${lastId}`;
-    const hadMissed = this.missedEvents.delete(personId);
+    const key = streamKey(personId);
     const [cursorEpoch, streamId] = cursor.split(':');
+    const hasValidId = Boolean(streamId && parseStreamId(streamId));
+    // Numa transação: o primeiro evento que sobrou e os eventos depois do cursor saem do mesmo
+    // instante, sem um corte de outra gravação entre as duas leituras.
+    const [storedEpoch, exists, firstEntries, entries] = (await withTimeout(
+      this.redis
+        .multi()
+        .get(EPOCH_KEY)
+        .exists(key)
+        .addCommand(['XRANGE', key, '-', '+', 'COUNT', '1'])
+        .addCommand(['XRANGE', key, hasValidId ? `(${streamId}` : '-', '+'])
+        .exec(),
+    )) as unknown as [
+      string | null,
+      number,
+      [string, string[]][],
+      [string, string[]][],
+    ];
+    const epoch = storedEpoch ?? (await this.createEpoch());
+    const lastId = exists ? await this.lastGeneratedId(key) : '0-0';
+    const current = `${epoch}:${lastId}`;
+    const firstId = firstEntries[0]?.[0] ?? null;
     if (
-      hadMissed ||
       cursorEpoch !== epoch ||
-      !streamId ||
-      !parseStreamId(streamId) ||
+      !hasValidId ||
+      this.missedAfter(personId, streamId) ||
       compareStreamIds(streamId, lastId) > 0
     ) {
       return { kind: 'lost', cursor: current };
     }
     const hasNewer = compareStreamIds(lastId, streamId) > 0;
-    if (!hasNewer) return { kind: 'events', events: [], cursor };
-    if (!firstId || compareStreamIds(firstId, streamId) > 0) {
+    if (hasNewer && (!firstId || compareStreamIds(firstId, streamId) > 0)) {
       return { kind: 'lost', cursor: current };
     }
-    const entries = await withTimeout(
-      this.redis.sendCommand<[string, string[]][]>([
-        'XRANGE',
-        streamKey(personId),
-        `(${streamId}`,
-        '+',
-      ]),
-    );
     const events = entries.map(([id, fields]) => {
       const raw = fields[fields.indexOf('event') + 1];
       return {
@@ -175,29 +197,23 @@ export class EventsStore {
     return created;
   }
 
-  // A época, o último id gerado no stream da Pessoa e o primeiro que sobrou depois dos cortes,
-  // num pipeline; o XINFO STREAM só roda quando o stream existe.
+  // O cursor atual: a época e o último id gerado no stream da Pessoa.
   private async streamState(
     personId: string,
-  ): Promise<{ epoch: string; lastId: string; firstId: string | null }> {
+  ): Promise<{ epoch: string; lastId: string }> {
     const key = streamKey(personId);
-    const [storedEpoch, exists, firstEntries] = (await withTimeout(
-      this.redis
-        .multi()
-        .get(EPOCH_KEY)
-        .exists(key)
-        .addCommand(['XRANGE', key, '-', '+', 'COUNT', '1'])
-        .execAsPipeline(),
-    )) as unknown as [string | null, number, [string, string[]][]];
+    const [storedEpoch, exists] = (await withTimeout(
+      this.redis.multi().get(EPOCH_KEY).exists(key).execAsPipeline(),
+    )) as unknown as [string | null, number];
     const epoch = storedEpoch ?? (await this.createEpoch());
-    if (!exists) return { epoch, lastId: '0-0', firstId: null };
+    return { epoch, lastId: exists ? await this.lastGeneratedId(key) : '0-0' };
+  }
+
+  // O último id gerado no stream, que continua valendo depois dos cortes.
+  private async lastGeneratedId(key: string): Promise<string> {
     const info = await withTimeout(
       this.redis.sendCommand(['XINFO', 'STREAM', key]),
     );
-    return {
-      epoch,
-      lastId: textFieldsOf(info).get('last-generated-id') ?? '0-0',
-      firstId: firstEntries[0]?.[0] ?? null,
-    };
+    return textFieldsOf(info).get('last-generated-id') ?? '0-0';
   }
 }
