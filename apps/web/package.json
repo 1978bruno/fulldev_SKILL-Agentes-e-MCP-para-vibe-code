@@ -17,6 +17,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "tailwind-merge": "^3.7.0",
+    "validator": "13.15.35",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/validator": "^13.15.10",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "pg": "^8.23.1",
