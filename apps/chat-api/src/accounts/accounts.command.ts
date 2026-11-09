@@ -8,6 +8,9 @@ export interface CommandOutput {
   error(message: string): void;
 }
 
+// O mesmo teto da senha no login (LoginDto): acima dele, a conta nunca conseguiria entrar.
+const PASSWORD_MAX_LENGTH = 256;
+
 const USAGE = `Uso: pnpm accounts <operação> [argumentos]
 
 Operações:
@@ -54,6 +57,12 @@ export class AccountsCommand {
     const password = await this.prompt.ask('Senha: ');
     if (!password) {
       this.output.error('A senha não pode ser vazia.');
+      return 1;
+    }
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      this.output.error(
+        `A senha pode ter no máximo ${PASSWORD_MAX_LENGTH} caracteres.`,
+      );
       return 1;
     }
     const person = await this.people.create({ email, name, password });

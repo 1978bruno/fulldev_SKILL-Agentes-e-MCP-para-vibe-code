@@ -34,7 +34,8 @@ export class TtyPasswordPrompt implements PasswordPrompt {
           if (char === '\r' || char === '\n') return finish();
           if (char === '\u0003') return finish(new Error('Cancelado.'));
           if (char === '\u007f' || char === '\b')
-            password = password.slice(0, -1);
+            // Apaga o último ponto de código inteiro, e não meio par de surrogates (um emoji).
+            password = Array.from(password).slice(0, -1).join('');
           else password += char;
         }
       };
