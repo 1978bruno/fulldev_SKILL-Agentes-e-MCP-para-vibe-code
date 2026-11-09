@@ -1,0 +1,79 @@
+// Tipos dos eventos do WebSocket da API do chat (spec da F03, "Eventos"). Só tipos, sem código de
+// execução: o pacote é o contrato do tempo real, consumido pela chat-api e pela web. Campos em
+// snake_case, como no REST.
+
+/** Autor de uma Mensagem, como no REST. */
+export interface MessageAuthorPayload {
+  id: string;
+  name: string;
+}
+
+/** Uma Mensagem, no mesmo formato da resposta REST (spec da F02, "Rotas"). */
+export interface MessagePayload {
+  id: string;
+  conversation_id: string;
+  client_id: string;
+  author: MessageAuthorPayload;
+  body: string;
+  created_at: string;
+}
+
+/** Pessoa que está digitando. */
+export interface TypingPersonPayload {
+  id: string;
+  name: string;
+}
+
+export interface MessageCreatedEvent {
+  /** Cursor do evento para a reconexão; ausente quando o Redis falhou na publicação. */
+  event_id?: string;
+  message: MessagePayload;
+}
+
+export interface SyncEvent {
+  /** Cursor atual da Pessoa, que a aba manda no próximo handshake. */
+  cursor: string | null;
+  /** Verdadeiro quando a aba precisa recarregar a página mais recente da Conversa aberta. */
+  reset: boolean;
+}
+
+export interface ConversationRef {
+  conversation_id: string;
+}
+
+export interface TypingEvent {
+  conversation_id: string;
+  person: TypingPersonPayload;
+}
+
+export type ConversationOpenResult =
+  | { ok: true }
+  | { ok: false; code: "conversation_not_found" };
+
+/** Carga do handshake (`auth` do Socket.IO). */
+export interface HandshakeAuth {
+  cursor?: string;
+}
+
+/** Eventos que a API emite para a aba. */
+export interface ServerToClientEvents {
+  "message.created": (event: MessageCreatedEvent) => void;
+  sync: (event: SyncEvent) => void;
+  "session.ended": () => void;
+  "typing.start": (event: TypingEvent) => void;
+  "typing.stop": (event: TypingEvent) => void;
+}
+
+/** Eventos que a aba emite para a API. */
+export interface ClientToServerEvents {
+  "conversation.open": (
+    event: ConversationRef,
+    ack: (result: ConversationOpenResult) => void,
+  ) => void;
+  "conversation.close": (event: ConversationRef) => void;
+  "typing.start": (event: ConversationRef) => void;
+  "typing.stop": (event: ConversationRef) => void;
+}
+
+/** Código do erro de handshake quando a Sessão não vale. */
+export type HandshakeErrorCode = "unauthenticated";

@@ -5,6 +5,7 @@ import { AppConfigModule } from './config/config.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { DatabaseModule } from './database/database.module';
 import { MessagesModule } from './messages/messages.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
@@ -14,6 +15,7 @@ import { SessionsModule } from './sessions/sessions.module';
     SessionsModule,
     ConversationsModule,
     MessagesModule,
+    RealtimeModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ProblemDetailsFilter },

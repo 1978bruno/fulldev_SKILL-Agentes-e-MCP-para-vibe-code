@@ -9,7 +9,7 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.BASE_URL ?? "http://web:3000",
+    baseURL: process.env.BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
     // As horas esperadas nos testes ficam no fuso padrão (LLD, "Valores e configuração"); o teste
     // do cookie de fuso troca o fuso só para ele.

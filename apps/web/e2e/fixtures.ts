@@ -11,6 +11,11 @@ type Fixtures = {
   person: TestPerson;
   memberChannel: TestChannel;
   loggedInPage: Page;
+  // Tempo real (F03): uma segunda Pessoa, Membro do mesmo Canal que a primeira.
+  otherPerson: TestPerson;
+  sharedChannel: TestChannel;
+  // A segunda Pessoa logada num contexto novo do navegador, com os próprios cookies.
+  otherPage: Page;
 };
 
 export const test = base.extend<Fixtures>({
@@ -28,16 +33,37 @@ export const test = base.extend<Fixtures>({
   // O único lugar que entra pelo formulário da tela Entrar. Sem Canais, a Pessoa fica na Home;
   // com Canais, a Home a leva ao primeiro.
   loggedInPage: async ({ page, person }, use) => {
-    await page.goto("/entrar");
-    await waitForLoginForm(page);
-    await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
-    await page.getByLabel("Senha").fill(person.password);
-    await page.getByRole("button", { name: "Entrar" }).click();
-    // Mais folga que o padrão: o login confere a senha com Argon2id e, com Canais, a Home leva à
-    // Conversa, o que pesa no next dev com vários testes em paralelo.
-    await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible({ timeout: 15_000 });
+    await logIn(page, person);
     await use(page);
   },
+
+  otherPerson: async ({}, use) => {
+    await use(await insertPerson("Bruno Lima"));
+  },
+
+  sharedChannel: async ({ person, otherPerson }, use) => {
+    await use(await insertChannel([person, otherPerson]));
+  },
+
+  otherPage: async ({ browser, otherPerson }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await logIn(page, otherPerson);
+    await use(page);
+    await context.close();
+  },
 });
+
+// Entra pelo formulário da tela Entrar.
+async function logIn(page: Page, person: TestPerson): Promise<void> {
+  await page.goto("/entrar");
+  await waitForLoginForm(page);
+  await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
+  await page.getByLabel("Senha").fill(person.password);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  // Mais folga que o padrão: o login confere a senha com Argon2id e, com Canais, a Home leva à
+  // Conversa, o que pesa no next dev com vários testes em paralelo.
+  await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible({ timeout: 15_000 });
+}
 
 export { expect };

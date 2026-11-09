@@ -5,6 +5,10 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   PORT: z.coerce.number().int().positive().default(3000),
   SESSION_COOKIE_NAME: z.string().min(1),
+  // Origem da web, a única aceita no handshake do WebSocket (LLD, "Segurança").
+  WEB_ORIGIN: z
+    .url({ protocol: /^https?$/ })
+    .transform((value) => new URL(value).origin),
   // Maior que o intervalo de renovação: senão a Sessão vence antes de poder ser renovada.
   SESSION_TTL_DAYS: z.coerce
     .number()

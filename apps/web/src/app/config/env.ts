@@ -5,6 +5,9 @@ const emptyAsUndefined = (value: unknown) => (value === "" ? undefined : value);
 
 export const envSchema = z.object({
   CHAT_API_URL: z.url({ protocol: /^https?$/ }),
+  // Endereço público da API do chat, em que o navegador abre o WebSocket. Lido no servidor e
+  // passado ao cliente, para a mesma imagem servir a todos os ambientes (spec da F03, "Cliente").
+  CHAT_API_PUBLIC_URL: z.url({ protocol: /^https?$/ }),
   SESSION_COOKIE_NAME: z.string().min(1),
   // Só o domínio, com o ponto opcional na frente (".exemplo.com"): sem esquema, porta nem barra.
   SESSION_COOKIE_DOMAIN: z.preprocess(

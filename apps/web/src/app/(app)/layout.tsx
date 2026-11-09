@@ -2,12 +2,14 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BfcacheReload } from "@/app/components/bfcache-reload";
+import { RealtimeProvider } from "@/app/components/realtime/realtime-provider";
 import { AppLoading } from "@/app/components/session/app-loading";
 import { SessionError } from "@/app/components/session/session-error";
 import { TimeZoneSync } from "@/app/components/session/time-zone-sync";
 import { NavigationDrawer } from "@/app/components/workspace-nav/navigation-drawer";
 import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
+import { env } from "@/app/config/env";
 import { getCurrentPerson } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
 import {
@@ -44,19 +46,21 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen">
-      <BfcacheReload />
-      <TimeZoneSync />
-      <NavigationDrawer
-        navigation={
-          <>
-            <Rail person={result.person} />
-            <Sidebar />
-          </>
-        }
-      >
-        <main className="flex min-w-0 flex-1 flex-col bg-surface">{children}</main>
-      </NavigationDrawer>
-    </div>
+    <RealtimeProvider url={env.CHAT_API_PUBLIC_URL}>
+      <div className="flex h-screen">
+        <BfcacheReload />
+        <TimeZoneSync />
+        <NavigationDrawer
+          navigation={
+            <>
+              <Rail person={result.person} />
+              <Sidebar />
+            </>
+          }
+        >
+          <main className="flex min-w-0 flex-1 flex-col bg-surface">{children}</main>
+        </NavigationDrawer>
+      </div>
+    </RealtimeProvider>
   );
 }
