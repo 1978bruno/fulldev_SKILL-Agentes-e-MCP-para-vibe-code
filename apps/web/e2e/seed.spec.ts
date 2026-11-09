@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { test } from "./fixtures";
 
-test("seed", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(page).toHaveTitle("Full Cycle Chat");
+// Teste-semente: abre "Entrar" com uma Pessoa pronta. Os cenários de login partem daqui.
+test("seed", async ({ page, person }) => {
+  void person;
+  await page.goto("/entrar");
 });
