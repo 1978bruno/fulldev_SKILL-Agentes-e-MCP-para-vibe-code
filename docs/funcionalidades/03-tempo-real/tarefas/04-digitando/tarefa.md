@@ -1,6 +1,6 @@
 # 04: "Digitando"
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** com a Conversa aberta, a Pessoa vê quem está digitando nela, com uma, duas ou
 várias pessoas. O aviso some quando a pessoa envia, apaga o texto, troca de Conversa ou para de
