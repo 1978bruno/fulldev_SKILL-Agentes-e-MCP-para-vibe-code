@@ -24,6 +24,12 @@ docker compose -f compose.yaml exec web <comando>
 | `pnpm exec tsc --noEmit` | Checagem de tipos |
 | `pnpm build` | Compila a aplicação para produção |
 
+## Verificação completa
+
+1. `pnpm lint`
+2. `pnpm exec tsc --noEmit`
+3. `pnpm build`
+
 ## Server Components
 
 Todo componente nasce como Server Component. O `"use client"` precisa de um motivo: estado ou efeito, manipulador de evento, API do navegador ou hook que só existe no cliente. Buscar dados, ler cookies, formatar valores e montar layout não são motivo.

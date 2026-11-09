@@ -167,7 +167,8 @@ Skills usadas no projeto (ficam em `.claude/skills/`):
 | [`docs/hld.md`](docs/hld.md) | Arquitetura de alto nível: contêineres, fluxos, requisitos |
 | [`docs/lld.md`](docs/lld.md) | Detalhes de implementação: rotas, tabelas, regras |
 | [`docs/adr/`](docs/adr/) | As decisões de arquitetura, uma por arquivo |
-| `GLOSSARY.md` | O vocabulário do domínio (em breve) |
+| [`docs/roadmap.md`](docs/roadmap.md) | As funcionalidades a desenvolver, as dependências e o status de cada uma |
+| [`GLOSSARY.md`](GLOSSARY.md) | O vocabulário do domínio |
 | [`AGENTS.md`](AGENTS.md) | Como rodar o projeto e as convenções para agentes de código |
 
 ## ⭐ Gostou?

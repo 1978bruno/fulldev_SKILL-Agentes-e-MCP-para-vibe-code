@@ -34,8 +34,20 @@ docker compose -f compose.yaml exec chat-api <comando>
 | `pnpm format` | Prettier em `src/` e `test/` |
 | `pnpm exec tsc --noEmit` | Checagem de tipos |
 | `pnpm build` | Compila para `dist/` |
+| `pnpm migration:generate migrations/<Nome>` | Gera uma migração a partir da diferença entre as entidades e o Banco do chat |
+| `pnpm migration:run` | Roda as migrações pendentes no Banco do chat |
+| `pnpm migration:revert` | Reverte a última migração rodada |
 
 O `pnpm lint` roda com `--fix`: corrige o que dá e aponta o resto. O `pnpm format` reescreve os arquivos com o Prettier.
+
+## Verificação completa
+
+1. `pnpm lint`
+2. `pnpm exec tsc --noEmit`
+3. `pnpm test`
+4. `pnpm test:int`
+5. `pnpm test:e2e`
+6. `pnpm build`
 
 ## Testes
 
@@ -46,6 +58,8 @@ O arquivo de teste leva o nome do arquivo testado. O sufixo define o nível do t
 | Unidade | `.spec.ts` | Ao lado do código, em `src/` | Testes de unidade testam uma classe isolada |
 | Integração | `.int-spec.ts` | Ao lado do código, em `src/` | Testes de integração exercitam uma peça com suas dependências reais |
 | Ponta a ponta | `.e2e-spec.ts` | Em `test/` | A aplicação inteira por HTTP |
+
+**Banco dos testes:** a suíte e2e roda no banco `chat_test`, criado pelo script de inicialização do Postgres e, num volume que já existe, pelo `globalSetup`, que também roda as migrações. Detalhes no `docs/lld.md`, "Ambiente de desenvolvimento".
 
 **Onde cada regra é provada:** as regras de negócio são provadas pelos testes de ponta a ponta, pelas rotas, com banco real. O teste de unidade de um service é opcional, e vale quando a regra tem muitos casos que seriam lentos ou repetitivos pelas rotas. Funções puras têm teste de unidade. A spec da funcionalidade pode restringir isso, e ela prevalece.
 
