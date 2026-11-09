@@ -3,6 +3,7 @@ export type ErrorCode =
   | 'invalid_credentials'
   | 'unauthenticated'
   | 'email_already_exists'
+  | 'person_not_found'
   | 'not_found'
   | 'payload_too_large'
   | 'request_rejected'
@@ -13,6 +14,7 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   invalid_credentials: 401,
   unauthenticated: 401,
   email_already_exists: 409,
+  person_not_found: 404,
   not_found: 404,
   payload_too_large: 413,
   request_rejected: 400,

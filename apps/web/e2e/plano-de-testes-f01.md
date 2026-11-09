@@ -152,3 +152,33 @@ F01-T04 (`falha-no-envio.md`).
   1. Com um cookie de sessão que a API não conhece, abrir `/entrar`
     - expect: a URL continua `/entrar`, com o formulário
     - expect: o cookie de sessão deixa de existir
+
+### 6. Continuar logada e Sessão que acaba
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 6.1. segunda-aba-ja-logada
+
+**File:** `e2e/sessao/segunda-aba-ja-logada.spec.ts`
+
+**Steps:**
+  1. Com a Pessoa logada numa aba, abrir `/` em outra aba do mesmo navegador
+    - expect: a URL é `/` e a Home aparece
+
+#### 6.2. navegador-reaberto-continua-logado
+
+**File:** `e2e/sessao/navegador-reaberto-continua-logado.spec.ts`
+
+**Steps:**
+  1. Guardar os cookies e fechar o navegador
+  2. Reabrir num contexto novo com os cookies guardados e abrir `/`
+    - expect: a URL é `/` e a Home aparece
+
+#### 6.3. sessao-revogada-volta-para-entrar
+
+**File:** `e2e/sessao/sessao-revogada-volta-para-entrar.spec.ts`
+
+**Steps:**
+  1. Com a Pessoa logada, revogar as Sessões dela no banco
+  2. Navegar para `/`
+    - expect: a URL é `/entrar`, com o formulário

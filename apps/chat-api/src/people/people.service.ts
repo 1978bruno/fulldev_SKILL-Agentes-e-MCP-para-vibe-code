@@ -62,6 +62,13 @@ export class PeopleService {
     return isValid ? person : null;
   }
 
+  async changePassword(personId: string, password: string): Promise<void> {
+    await this.people.update(
+      { id: personId },
+      { passwordHash: await this.passwords.hash(password) },
+    );
+  }
+
   findByEmail(email: string): Promise<Person | null> {
     return this.people.findOneBy({ email: normalizeEmail(email) });
   }

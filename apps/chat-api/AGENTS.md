@@ -38,6 +38,9 @@ docker compose -f compose.yaml exec chat-api <comando>
 | `pnpm migration:run` | Roda as migrações pendentes no Banco do chat |
 | `pnpm migration:revert` | Reverte a última migração rodada |
 | `pnpm accounts create <e-mail> "<nome>"` | Comando de contas: cria a conta de uma Pessoa. A senha é lida do terminal, sem eco, e nunca de argumento nem de variável |
+| `pnpm accounts reset-password <e-mail>` | Troca a senha (lida do terminal) e revoga todas as Sessões da Pessoa |
+| `pnpm accounts revoke-sessions <e-mail>` | Apaga todas as Sessões da Pessoa |
+| `pnpm accounts purge-expired-sessions` | Apaga as Sessões vencidas |
 
 O comando de contas precisa do terminal para ler a senha: rode com `docker compose -f compose.yaml exec chat-api ...`, que abre um TTY. As operações estão na spec da F01, "Comando de contas".
 

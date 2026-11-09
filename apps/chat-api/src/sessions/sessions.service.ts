@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
@@ -11,6 +11,10 @@ import { generateSessionToken, hashSessionToken } from './session-token';
 import { UnauthenticatedError } from './unauthenticated.error';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Intervalo de renovação da Sessão (LLD, "Valores e configuração"): no máximo uma escrita por
+// Sessão a cada intervalo.
+const RENEWAL_INTERVAL_MS = DAY_MS;
 
 export interface LoginResult {
   token: string;
@@ -52,10 +56,41 @@ export class SessionsService {
       where: { tokenHash: hashSessionToken(token) },
       relations: { person: true },
     });
-    if (!session?.person || session.expiresAt <= new Date()) {
+    if (!session?.person) {
       throw new UnauthenticatedError();
     }
+    const now = new Date();
+    if (session.expiresAt <= now) {
+      // A Sessão vencida é apagada quando apresentada (LLD, "Sessão e login").
+      await this.sessions.delete({ id: session.id });
+      throw new UnauthenticatedError();
+    }
+    await this.renewIfDue(session, now);
     return session.person;
+  }
+
+  // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.
+  async revokeAll(personId: string): Promise<number> {
+    const result = await this.sessions.delete({ personId });
+    return result.affected ?? 0;
+  }
+
+  async purgeExpired(): Promise<number> {
+    const result = await this.sessions.delete({
+      expiresAt: LessThanOrEqual(new Date()),
+    });
+    return result.affected ?? 0;
+  }
+
+  // UPDATE condicional: duas verificações ao mesmo tempo gravam no máximo uma renovação, e
+  // antes do intervalo nada é gravado.
+  private async renewIfDue(session: Session, now: Date): Promise<void> {
+    const dueBefore = new Date(now.getTime() - RENEWAL_INTERVAL_MS);
+    if (session.lastUsedAt > dueBefore) return;
+    await this.sessions.update(
+      { id: session.id, lastUsedAt: LessThanOrEqual(dueBefore) },
+      { lastUsedAt: now, expiresAt: this.expiresFrom(now) },
+    );
   }
 
   private expiresFrom(now: Date): Date {

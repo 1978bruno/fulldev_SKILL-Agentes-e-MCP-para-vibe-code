@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
+import { agingRoutes, daysAgo } from './support/aging-routes';
 import { authRoutes } from './support/auth-routes';
 import { createTestApp } from './support/create-test-app';
 import { uniqueEmail } from './support/unique-email';
@@ -19,6 +20,17 @@ describe('sessões', () => {
   afterAll(async () => {
     await app.close();
   });
+
+  function sessionRowsOf(
+    personId: string,
+  ): Promise<{ expires_at: Date; last_used_at: Date }[]> {
+    return app
+      .get(DataSource)
+      .query(
+        'SELECT expires_at, last_used_at FROM sessions WHERE person_id = $1',
+        [personId],
+      );
+  }
 
   describe('POST /v1/sessions', () => {
     it('responde 201 com o token e a Pessoa e grava só o hash do token', async () => {
@@ -123,6 +135,58 @@ describe('sessões', () => {
 
       expect(response.status).toBe(401);
       expect(response.body).toMatchObject({ code: 'unauthenticated' });
+    });
+
+    it('renova a validade quando passou o intervalo de renovação', async () => {
+      const { person, email, password } = await authRoutes.createPerson(app);
+      const token = await authRoutes.login(app, email, password);
+      await agingRoutes.ageSession(app, token, {
+        lastUsedAt: daysAgo(2),
+        expiresAt: daysAgo(-28),
+      });
+
+      const response = await request(server)
+        .get('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(token));
+
+      expect(response.status).toBe(200);
+      const [row] = await sessionRowsOf(person.id);
+      const expectedExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      expect(Math.abs(row.expires_at.getTime() - expectedExpiry)).toBeLessThan(
+        10_000,
+      );
+      expect(Math.abs(row.last_used_at.getTime() - Date.now())).toBeLessThan(
+        10_000,
+      );
+    });
+
+    it('não renova antes do intervalo de renovação', async () => {
+      const { person, email, password } = await authRoutes.createPerson(app);
+      const token = await authRoutes.login(app, email, password);
+      const [before] = await sessionRowsOf(person.id);
+
+      const response = await request(server)
+        .get('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(token));
+
+      expect(response.status).toBe(200);
+      const [after] = await sessionRowsOf(person.id);
+      expect(after.expires_at).toEqual(before.expires_at);
+      expect(after.last_used_at).toEqual(before.last_used_at);
+    });
+
+    it('responde 401 e apaga a Sessão vencida', async () => {
+      const { person, email, password } = await authRoutes.createPerson(app);
+      const token = await authRoutes.login(app, email, password);
+      await agingRoutes.ageSession(app, token, { expiresAt: daysAgo(1) });
+
+      const response = await request(server)
+        .get('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(token));
+
+      expect(response.status).toBe(401);
+      expect(response.body).toMatchObject({ code: 'unauthenticated' });
+      expect(await sessionRowsOf(person.id)).toEqual([]);
     });
 
     it('responde 401 unauthenticated com token desconhecido', async () => {
