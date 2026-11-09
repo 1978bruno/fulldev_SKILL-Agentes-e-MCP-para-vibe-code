@@ -5,7 +5,6 @@ import useSWR from "swr";
 import { useRealtime } from "@/app/components/realtime/realtime-provider";
 import type { Conversation } from "@/app/services/chat-api";
 import { applyMemberAdded } from "@/app/utils/conversation-list";
-import { redirectToExpiredSession } from "@/app/utils/return-path";
 import { AddChannelAction } from "./add-channel-action";
 import { SidebarRow } from "./sidebar-row";
 import { SidebarSection } from "./sidebar-section";
@@ -13,9 +12,11 @@ import { SidebarSection } from "./sidebar-section";
 // Chave do cache da lista de Conversas, a rota do BFF que a lê de novo.
 export const CONVERSATIONS_KEY = "/api/conversations";
 
+// Um 401 aqui é só uma falha: a lista que está na tela fica, e quem leva a "Entrar" é o fim da
+// Sessão no tempo real (session.ended) ou a próxima ação da Pessoa. Sem isso, a busca do reset da
+// primeira conexão disputaria a navegação com quem acabou de sair.
 async function fetchConversations(): Promise<readonly Conversation[]> {
   const response = await fetch(CONVERSATIONS_KEY);
-  if (response.status === 401) return redirectToExpiredSession();
   if (!response.ok) throw new Error("Não foi possível carregar as conversas.");
   return (await response.json()) as Conversation[];
 }
