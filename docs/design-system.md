@@ -19,7 +19,7 @@ O Figma tem as fundações, os componentes e as telas; o código tem os tokens e
 | --- | --- | --- |
 | Tokens | 3 coleções de variables (`Primitives`, `Semantic`, `Layout`), 14 estilos de texto, 3 de elevação | `globals.css` com o conjunto completo, nos temas claro e escuro |
 | Componentes | 57 componentes em 3 seções, mais 42 ícones | Os da F01: Button, Input, Field, Spinner, Avatar, EmptyState, DropdownMenu, Rail, Sidebar e UserMenu |
-| Telas | 129 frames de 1440 × 900, em 10 seções | As da F01: Login, Home / Vazio e o menu do usuário |
+| Telas | 129 frames de 1440 × 900, em 10 seções | As da F01: Login, Home / Vazio, o menu do usuário e as portas de carregamento e de erro de sessão |
 | Bibliotecas | Desenho pensado para `lucide-react`, Radix, CVA e Sonner | `lucide-react`, `radix-ui` e CVA instalados; Sonner a instalar |
 
 As descrições dos componentes no Figma citam arquivos de uma implementação de referência (`shared/ui/button.tsx`, `entities/message/ui/message-item.tsx` e outros, no estilo Feature-Sliced Design). Esses arquivos não existem neste repositório. Use as descrições pelo comportamento que documentam, não pelos caminhos; a pasta de cada componente segue a seção "Organização no código" abaixo.
