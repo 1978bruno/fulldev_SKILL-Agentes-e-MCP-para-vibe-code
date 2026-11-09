@@ -1,6 +1,6 @@
 # 08: Gaveta em telas estreitas
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** numa janela estreita, abaixo de 768 px de largura, o Rail e a barra lateral
 viram uma gaveta, que a Pessoa abre por um botão no cabeçalho e que fecha ao escolher um Canal.
