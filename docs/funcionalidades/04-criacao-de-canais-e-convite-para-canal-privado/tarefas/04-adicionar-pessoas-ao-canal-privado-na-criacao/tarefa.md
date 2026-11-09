@@ -1,6 +1,6 @@
 # 04: Adicionar Pessoas ao Canal privado na criação
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** depois de criar um Canal privado, a Pessoa passa ao passo "Adicionar pessoas",
 busca Pessoas pelo nome, sem se preocupar com acentos, escolhe várias e confirma, ou pula. As
