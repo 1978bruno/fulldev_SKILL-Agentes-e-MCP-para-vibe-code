@@ -27,7 +27,7 @@ export function safeReturnPath(value: unknown): string {
 
 // Marca em "Entrar" que a verificação da Sessão acabou de falhar: a página mostra o formulário
 // sem verificar o cookie de novo, e a nova tentativa fica para a Pessoa.
-const VERIFICATION_FAILED_PARAM = "verificacao";
+export const VERIFICATION_FAILED_PARAM = "verificacao";
 const VERIFICATION_FAILED_VALUE = "falhou";
 
 function withReturnPath(

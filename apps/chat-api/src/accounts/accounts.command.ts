@@ -73,15 +73,19 @@ export class AccountsCommand {
     return 0;
   }
 
-  // Troca a senha primeiro e revoga depois: as Sessões abertas até a troca, inclusive uma criada
-  // com a senha antiga enquanto o hash novo era calculado, caem na revogação.
+  // A troca do hash e a revogação das Sessões são uma transação só: uma falha no meio não deixa
+  // a senha nova com as Sessões antigas. Um login que conferiu a senha antiga ao mesmo tempo não
+  // cria Sessão (SessionsService.startSession).
   private async resetPassword([email]: string[]): Promise<number> {
     const person = await this.requirePerson(email, 'reset-password <e-mail>');
     if (!person) return 1;
     const password = await this.askNewPassword('Senha nova: ');
     if (!password) return 1;
-    await this.people.changePassword(person.id, password);
-    const revoked = await this.sessions.revokeAll(person.id);
+    const revoked = await this.people.changePassword(
+      person.id,
+      password,
+      (manager) => this.sessions.revokeAll(person.id, manager),
+    );
     this.output.info(
       `Senha trocada para ${person.email}; ${revoked} Sessão(ões) revogada(s).`,
     );

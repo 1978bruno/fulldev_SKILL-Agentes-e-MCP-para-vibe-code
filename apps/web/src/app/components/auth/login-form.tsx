@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { login, type LoginState } from "@/app/actions/login";
+import { login, submitLogin, type LoginState } from "@/app/actions/login";
 import { Button } from "@/app/components/ui/button";
 import { Field } from "@/app/components/ui/field";
 import { Input } from "@/app/components/ui/input";
@@ -17,6 +17,10 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
+import { VERIFICATION_FAILED_PARAM } from "@/app/utils/return-path";
+
+// Mesmo nome de services/login-feedback.ts, que só roda no servidor.
+const LOGIN_FEEDBACK_COOKIE = "fc_login_feedback";
 
 const INVALID_CREDENTIALS =
   "E-mail ou senha incorretos. Confira os dados e tente de novo.";
@@ -27,8 +31,6 @@ const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
   too_many_attempts:
     "Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo.",
 };
-
-const INITIAL_STATE: LoginState = { status: "idle" };
 
 // A rede pode cair na própria chamada do Server Action, antes de ele devolver um estado: o fetch
 // rejeita com um TypeError de rede ("Failed to fetch" no Chromium, "NetworkError…" no Firefox,
@@ -59,12 +61,14 @@ function focusIsLost(): boolean {
 type LoginFormProps = {
   // Caminho pedido antes de "Entrar", já conferido; o Server Action confere de novo.
   returnPath: string;
+  // O resultado de um envio nativo (antes da hidratação), vindo da URL.
+  initialState: LoginState;
 };
 
-export function LoginForm({ returnPath }: LoginFormProps) {
+export function LoginForm({ returnPath, initialState }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(
     loginOrFailure,
-    INITIAL_STATE,
+    initialState,
   );
   // Erros da validação no cliente; os do Server Action chegam pelo state.
   const [clientErrors, setClientErrors] = useState<LoginFieldErrors>({});
@@ -81,11 +85,13 @@ export function LoginForm({ returnPath }: LoginFormProps) {
   // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
   useEffect(() => {
     formRef.current?.setAttribute("data-ready", "");
-    // A marca de verificação que falhou serve só para esta abertura: sai da URL, para recarregar a
-    // página verificar a Sessão de novo.
+    // A marca de verificação que falhou e o resultado do envio nativo servem só para esta
+    // abertura: saem da URL e do cookie, para recarregar a página não repetir a mensagem nem
+    // pular a verificação da Sessão.
+    document.cookie = `${LOGIN_FEEDBACK_COOKIE}=; Path=/entrar; Max-Age=0`;
     const url = new URL(window.location.href);
-    if (url.searchParams.has("verificacao")) {
-      url.searchParams.delete("verificacao");
+    if (url.searchParams.has(VERIFICATION_FAILED_PARAM)) {
+      url.searchParams.delete(VERIFICATION_FAILED_PARAM);
       window.history.replaceState(window.history.state, "", url);
     }
   }, []);
@@ -163,13 +169,13 @@ export function LoginForm({ returnPath }: LoginFormProps) {
         </div>
       </div>
 
-      {/* O action vale antes da hidratação (o React o renderiza como POST para o Server Action):
-          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
-          chama o mesmo Server Action. */}
+      {/* O action nativo é a Server Action submitLogin: sem JavaScript, ou antes da hidratação,
+          o navegador faz um POST para ela (e nunca um GET com a senha na URL). Com o JS, o
+          onSubmit valida e chama o login pelo useActionState, que trata a falha de rede. */}
       <form
         ref={formRef}
         className="flex w-full flex-col gap-4"
-        action={formAction}
+        action={submitLogin}
         onSubmit={handleSubmit}
         noValidate
       >

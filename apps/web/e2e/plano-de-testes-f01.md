@@ -56,6 +56,17 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
   3. Shift+Tab até a Senha e Enter
     - expect: a URL é `/` e a Home aparece
 
+#### 1.4. entrar-antes-da-hidratacao
+
+**File:** `e2e/login/entrar-antes-da-hidratacao.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar` com os bundles do Next bloqueados (o React não hidrata)
+  2. Enviar com a senha errada
+    - expect: a página volta a `/entrar` e a mensagem de dados incorretos aparece (o resultado vem num cookie de vida curta, e não na URL)
+  3. Enviar com a senha certa
+    - expect: a URL é `/` (o envio nativo é um POST para a Server Action, sem a senha na URL)
+
 ### 2. Sem Sessão
 
 **Seed:** `e2e/seed.spec.ts`
@@ -145,7 +156,7 @@ F01-T04 (`falha-no-envio.md`).
 
 **File:** `e2e/login/para-externo-cai-na-home.spec.ts`
 
-**Steps:** um caso para cada `para`: `//outro-site`, `https://outro-site`, `/\outro-site`, `/`, tabulação, `/outro-site` e `/a/..//outro-site`.
+**Steps:** um caso para cada valor de `para` que a regra de "Voltar para onde ia" recusa (LLD, "Cliente", "Sessão no cliente"): `//outro-site`, `https://outro-site`, `/\outro-site`, o valor único `/` + tabulação + `/outro-site` (no teste, `"/\t/outro-site"`) e `/a/..//outro-site`. O caminho interno aceito está no 5.1.
   1. Abrir `/entrar?para=<valor>` e entrar com a Pessoa
     - expect: a URL é `/` e a Home aparece
 

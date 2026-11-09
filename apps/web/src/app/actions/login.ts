@@ -8,7 +8,8 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
-import { safeReturnPath } from "@/app/utils/return-path";
+import { writeLoginFeedback } from "@/app/services/login-feedback";
+import { loginPath, safeReturnPath } from "@/app/utils/return-path";
 
 export type LoginState =
   | { status: "idle" }
@@ -41,4 +42,13 @@ export async function login(
 
   await writeSessionCookie(result.token);
   redirect(safeReturnPath(formData.get("para")));
+}
+
+// O mesmo login, como ação nativa do <form>: funciona antes da hidratação. O login certo
+// redireciona; nos outros casos a página volta a "Entrar", e o resultado vai num cookie de vida
+// curta para o formulário mostrar a mensagem.
+export async function submitLogin(formData: FormData): Promise<void> {
+  const state = await login({ status: "idle" }, formData);
+  await writeLoginFeedback(state);
+  redirect(loginPath(formData.get("para")));
 }

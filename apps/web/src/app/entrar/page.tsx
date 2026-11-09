@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/components/auth/login-form";
 import { getCurrentPerson } from "@/app/services/chat-api";
+import { readLoginFeedback } from "@/app/services/login-feedback";
 import { readSessionToken } from "@/app/services/session-cookie";
 import {
   expiredSessionPath,
@@ -38,5 +39,10 @@ async function LoginGate({
     if (result.kind === "ok") redirect("/");
     if (result.kind === "unauthenticated") redirect(expiredSessionPath(returnPath));
   }
-  return <LoginForm returnPath={returnPath} />;
+  return (
+    <LoginForm
+      returnPath={returnPath}
+      initialState={await readLoginFeedback()}
+    />
+  );
 }

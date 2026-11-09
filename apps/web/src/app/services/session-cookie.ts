@@ -12,20 +12,26 @@ export async function readSessionToken(): Promise<string | undefined> {
 // Só em Server Functions e Route Handlers.
 export async function writeSessionCookie(token: string): Promise<void> {
   (await cookies()).set(env.SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: env.SESSION_COOKIE_SECURE,
-    sameSite: "lax",
-    path: "/",
+    ...sessionCookieAttributes(),
     maxAge: SESSION_COOKIE_MAX_AGE,
-    domain: env.SESSION_COOKIE_DOMAIN,
   });
 }
 
-// Só em Server Functions e Route Handlers.
-export async function deleteSessionCookie(): Promise<void> {
-  (await cookies()).delete({
-    name: env.SESSION_COOKIE_NAME,
+function sessionCookieAttributes() {
+  return {
+    httpOnly: true,
+    secure: env.SESSION_COOKIE_SECURE,
+    sameSite: "lax" as const,
     path: "/",
     domain: env.SESSION_COOKIE_DOMAIN,
+  };
+}
+
+// Só em Server Functions e Route Handlers. Apaga com os mesmos atributos da gravação (inclusive o
+// Secure): com um nome de prefixo __Secure-, o navegador recusaria um Set-Cookie sem ele.
+export async function deleteSessionCookie(): Promise<void> {
+  (await cookies()).set(env.SESSION_COOKIE_NAME, "", {
+    ...sessionCookieAttributes(),
+    maxAge: 0,
   });
 }

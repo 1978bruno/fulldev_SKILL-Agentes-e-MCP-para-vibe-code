@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
+import { EntityManager, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
 import { RENEWAL_INTERVAL_DAYS } from '../config/session-values';
 import { LoginAttemptsService } from '../login-attempts/login-attempts.service';
@@ -123,8 +123,12 @@ export class SessionsService {
   }
 
   // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.
-  async revokeAll(personId: string): Promise<number> {
-    const result = await this.sessions.delete({ personId });
+  // Com `manager`, roda dentro da transação de quem chama (a troca de senha).
+  async revokeAll(
+    personId: string,
+    manager: EntityManager = this.sessions.manager,
+  ): Promise<number> {
+    const result = await manager.delete(Session, { personId });
     return result.affected ?? 0;
   }
 

@@ -36,6 +36,7 @@ export function DropdownMenuItem({
       className={cn(
         "flex min-h-8 cursor-default items-center gap-2 px-4 text-body text-fg outline-none select-none",
         "data-[highlighted]:bg-sidebar-active data-[highlighted]:text-sidebar-on-active",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
