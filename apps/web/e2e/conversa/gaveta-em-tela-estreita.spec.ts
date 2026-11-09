@@ -54,9 +54,7 @@ test.describe("Gaveta", () => {
     await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Barra lateral" })).toBeVisible();
   });
-});
 
-test.describe("Gaveta", () => {
   test("gaveta-fecha-ao-alargar", async ({ page, memberChannel: channel, loggedInPage }) => {
     void loggedInPage;
     await page.setViewportSize({ width: 767, height: 900 });

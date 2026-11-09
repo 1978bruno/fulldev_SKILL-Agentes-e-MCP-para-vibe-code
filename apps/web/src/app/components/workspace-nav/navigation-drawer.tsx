@@ -45,7 +45,7 @@ export function NavigationDrawer({ navigation, children }: NavigationDrawerProps
         setOpenedAt(open ? pathname : null);
       }}
     >
-      <div className="hidden md:flex">{navigation}</div>
+      <div className="hidden shrink-0 md:flex">{navigation}</div>
       {children}
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-30 animate-fade-in bg-surface-overlay md:hidden" />
