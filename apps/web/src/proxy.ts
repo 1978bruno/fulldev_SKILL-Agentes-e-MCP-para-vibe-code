@@ -14,7 +14,10 @@ export function proxy(request: NextRequest) {
   }
   const headers = new Headers(request.headers);
   headers.set(REQUESTED_PATH_HEADER, requestedPath);
-  return NextResponse.next({ request: { headers } });
+  const response = NextResponse.next({ request: { headers } });
+  // Telas logadas fora do cache do navegador: voltar depois de sair não mostra o chat.
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export const config = {

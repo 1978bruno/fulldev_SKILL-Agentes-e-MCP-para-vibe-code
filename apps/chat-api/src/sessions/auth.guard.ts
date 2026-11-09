@@ -8,6 +8,7 @@ import { SessionsService } from './sessions.service';
 
 export interface AuthenticatedRequest extends Request {
   person: Person;
+  sessionId: string;
 }
 
 // Lê a Sessão do cookie que o BFF repassa (LLD, "Interfaces"). A F03 reaproveita a mesma
@@ -25,7 +26,9 @@ export class AuthGuard implements CanActivate {
       request.headers.cookie,
       this.config.get('SESSION_COOKIE_NAME', { infer: true }),
     );
-    request.person = await this.sessions.authenticate(token);
+    const { person, sessionId } = await this.sessions.authenticate(token);
+    request.person = person;
+    request.sessionId = sessionId;
     return true;
   }
 }

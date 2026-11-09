@@ -6,3 +6,8 @@ export const CurrentPerson = createParamDecorator(
   (_data: unknown, context: ExecutionContext): Person =>
     context.switchToHttp().getRequest<AuthenticatedRequest>().person,
 );
+
+export const CurrentSessionId = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): string =>
+    context.switchToHttp().getRequest<AuthenticatedRequest>().sessionId,
+);

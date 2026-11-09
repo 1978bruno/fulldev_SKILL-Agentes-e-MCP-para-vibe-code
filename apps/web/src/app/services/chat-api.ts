@@ -87,3 +87,12 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   if (response.status === 401) return { kind: "unauthenticated" };
   return { kind: "failure" };
 }
+
+// Sair: apaga na API a Sessão apresentada. Devolve se a API confirmou.
+export async function logout(token: string): Promise<boolean> {
+  const response = await request("/v1/sessions/current", {
+    method: "DELETE",
+    headers: { cookie: sessionCookieHeader(token) },
+  });
+  return response?.status === 204;
+}

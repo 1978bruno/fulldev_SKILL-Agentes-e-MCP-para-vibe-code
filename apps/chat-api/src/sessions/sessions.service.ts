@@ -16,6 +16,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // Sessão a cada intervalo.
 const RENEWAL_INTERVAL_MS = DAY_MS;
 
+export interface AuthenticatedSession {
+  sessionId: string;
+  person: Person;
+}
+
 export interface LoginResult {
   token: string;
   person: Person;
@@ -48,7 +53,7 @@ export class SessionsService {
     return { token, person };
   }
 
-  async authenticate(token: string | undefined): Promise<Person> {
+  async authenticate(token: string | undefined): Promise<AuthenticatedSession> {
     if (!token) {
       throw new UnauthenticatedError();
     }
@@ -66,7 +71,12 @@ export class SessionsService {
       throw new UnauthenticatedError();
     }
     await this.renewIfDue(session, now);
-    return session.person;
+    return { sessionId: session.id, person: session.person };
+  }
+
+  // Sair apaga só a Sessão apresentada; as outras da mesma Pessoa continuam valendo.
+  async logout(sessionId: string): Promise<void> {
+    await this.sessions.delete({ id: sessionId });
   }
 
   // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.
