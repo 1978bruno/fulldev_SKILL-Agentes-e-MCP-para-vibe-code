@@ -53,6 +53,7 @@ docs/             HLD, LLD, ADRs, brief
 | Mutações do navegador ao BFF | Server Actions | Checagem de `Origin` do próprio Next contra CSRF, formulário que funciona por teclado e nenhuma rota REST a manter para o navegador |
 | Leituras no cliente que o tempo real altera | SWR | A definir |
 | Tempo real, no servidor e no cliente | Socket.IO | [ADR 0019](adr/0019-socket-io-tempo-real.md) |
+| Cliente do Redis na API do chat | `redis` (node-redis) | Cliente oficial do Redis |
 | API do chat | NestJS | HLD, seção 5 |
 | ORM e migrações do Banco do chat | TypeORM | [ADR 0018](adr/0018-typeorm-api-do-chat.md) |
 | Transação entre módulos na API do chat | `@nestjs-cls/transactional`, com o adaptador do TypeORM | A transação passa de um service a outro pelo contexto, sem levar o `EntityManager` à mão nem importar o repositório de outro módulo |
@@ -103,8 +104,10 @@ Situação de todas: `planejada`.
 
 | Operação | Recebe | Devolve | Garante |
 | --- | --- | --- | --- |
-| Guardar evento | Pessoa e evento | Identificador crescente por pessoa | A ordem dos identificadores é a ordem dos eventos daquela pessoa |
-| Ler desde | Pessoa e último identificador confirmado | Os eventos seguintes, ou "perdido" | "Perdido" quando o identificador já saiu da `retenção dos eventos de reconexão`; o cliente então recarrega pelo histórico |
+| Guardar evento | Pessoa e evento | Identificador crescente por pessoa | A ordem dos identificadores é a ordem dos eventos daquela pessoa; cada gravação corta os eventos mais velhos que a `retenção dos eventos de reconexão` |
+| Ler desde | Pessoa e último identificador confirmado | Os eventos seguintes, ou "perdido" | "Perdido" quando o corte já apagou algum evento posterior ao identificador, ou quando o Redis perdeu os dados desde que o identificador foi entregue; o cliente então recarrega pelo histórico |
+
+Um stream por Pessoa, com a época que denuncia a perda dos dados; exige Redis 7 ou mais novo. O mecanismo e a ordem da conexão estão na [spec da F03](funcionalidades/03-tempo-real/spec.md), seção "Eventos por Pessoa e reconexão".
 
 **Contadores (Redis)** — usados pelo Serviço de agentes (HLD 6.3).
 
@@ -178,8 +181,11 @@ O que precisa ser atômico é do HLD (seção 7, "Regras que pesam no desenho"):
 menções, as notificações e os contadores; a tarefa com a notificação dela. O evento só sai depois
 do commit. Na API do chat, a transação começa no método do service que orquestra, marcado com
 `@Transactional()`, e passa aos services de outros módulos pelo contexto do CLS: quem participa
-acessa o banco pelo `TransactionHost`, e não pelo repositório injetado. Como o evento é publicado
-depois do commit (publicação direta ou tabela de saída) está a definir.
+acessa o banco pelo `TransactionHost`, e não pelo repositório injetado. O evento é publicado
+direto, depois que a transação termina, pelo service que orquestra, e só quando a gravação foi
+nova: um reenvio idempotente não publica. A queda do processo entre o commit e a publicação perde o
+evento, e quem estava conectado só o vê ao abrir a conversa de novo; sem tabela de saída, porque a
+API do chat roda com uma instância só (HLD 6.2).
 
 ### Erros
 
@@ -290,6 +296,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | planejada | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -368,6 +375,27 @@ Legenda: "livre" é o e-mail sem linha de tentativas; o estado vale por e-mail n
   duas.
 - A resposta é a mesma para e-mail com e sem conta, para não revelar se o e-mail tem conta.
 
+**WebSocket**
+
+- O handshake lê o cookie e verifica a Sessão como o REST; sem Sessão, recusa com
+  `unauthenticated`.
+- Sair desconecta na hora os sockets daquela Sessão, e só os dela.
+- Cada socket reconfere a Sessão a cada `intervalo de reconferência da Sessão no WebSocket`. Se ela
+  venceu ou foi revogada, a API emite `session.ended` e desconecta. A reconferência renova a Sessão
+  como uma requisição REST, então uma aba aberta conta como uso.
+
+### 6.3 Digitando
+
+Situação: `planejada` (F03).
+
+- Só a aba que abriu a Conversa, depois da conferência de participação ("Segurança"), recebe e
+  repassa o "digitando" daquela Conversa. Ele nunca vai para as abas da própria Pessoa, não é
+  guardado e não é reenviado na reconexão (HLD 6.2).
+- Quem digita avisa no máximo a cada `intervalo do aviso de digitando`, enquanto o texto não está
+  vazio, e avisa que parou ao enviar, ao apagar todo o texto e ao trocar de Conversa.
+- Quem vê tira a Pessoa da lista no aviso de que parou ou depois da `expiração do digitando` sem
+  novo aviso; a queda da própria conexão esvazia a lista.
+
 ## 7. Processos de segundo plano
 
 | Job | Disparo | O que faz | Na falha | Situação |
@@ -387,7 +415,7 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | --- | --- | --- | --- | --- |
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
 | `/` (Home) | Sessão | Pessoa da Sessão, lista de Conversas e cookie da última Conversa | Sair | existe: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista; sem Conversas, a Home vazia; com a lista em falha, o erro com "Tentar de novo" |
-| `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; o resto a detalhar |
+| `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; tempo real e "digitando" planejados (F03); o resto a detalhar |
 | Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | existe: a lista; não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
@@ -430,7 +458,9 @@ Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota
     instável faria o navegador alternar sem fim entre "Entrar" e a rota. O formulário tira a
     marca da URL ao abrir, para recarregar a página verificar de novo.
 - Qualquer 401 vindo do BFF manda para "Entrar".
-- Um 401 no WebSocket fecha a conexão e manda para "Entrar".
+- A recusa do handshake do WebSocket com `unauthenticated`, o evento `session.ended` e a
+  desconexão pelo servidor mandam para `GET /api/session/expired`, com o `?para=` da página atual.
+  Outra falha de conexão tenta de novo, com a faixa de conexão na tela.
 - **Voltar para onde ia:** quem é mandado para "Entrar" leva o caminho pedido em `?para=`.
   - Só vale um caminho relativo que começa com `/` e cujo segundo caractere não é `/` nem `\`
     (o navegador trata `/\` como `//`).
@@ -466,7 +496,13 @@ Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota
 | Janela de tentativas de login | 15 min (PRD da F01, história 2) | API do chat | Constante |
 | Bloqueio do login | 15 min (PRD da F01, história 2) | API do chat | Constante |
 | Validade do identificador de pedido | A definir | API do chat | A definir |
-| Retenção dos eventos de reconexão | A definir | API do chat (Redis) | A definir |
+| Retenção dos eventos de reconexão | 5 min (PRD da F03, história 5) | API do chat (Redis) | Constante |
+| Intervalo de reconferência da Sessão no WebSocket | 60 s (spec da F03) | API do chat | Constante |
+| Ping do WebSocket | Intervalo de 10 s e espera de 5 s | API do chat | Constante |
+| Intervalo do aviso de digitando | 3 s | Web | Constante |
+| Expiração do digitando | 5 s (PRD da F03, história 3) | Web | Constante |
+| Atraso da faixa de conexão | 3 s (PRD da F03, história 4) | Web | Constante |
+| Distância do fim da lista | 100 px: até ela, a Mensagem nova rola a lista | Web | Constante |
 | Tempo limite da consulta ao Banco de negócio | A definir | Serviço de agentes e Worker | A definir |
 | Tamanho da página | Padrão 50, máximo 100 | API do chat | Constante |
 | Tamanho máximo da Mensagem | 4000 caracteres, contados em pontos de código Unicode (Figma, MessageComposer) | API do chat, banco e web | Constante |
@@ -482,6 +518,8 @@ O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos
 | --- | --- | --- |
 | API do chat | `DATABASE_URL` | Conexão com o Banco do chat |
 | API do chat | `WEB_ORIGIN` | Origem aceita no handshake do WebSocket |
+| API do chat | `REDIS_URL` | Conexão com o Redis |
+| API do chat | `TEST_REDIS_URL` | Banco lógico do Redis dos testes |
 | API do chat | `SESSION_TTL_DAYS` | `Duração da Sessão` |
 | API do chat | `PORT` | Porta HTTP em que a API escuta |
 | API do chat | `SESSION_COOKIE_NAME` | Nome do cookie de sessão que o BFF repassa; o mesmo valor da Web |
@@ -489,6 +527,7 @@ O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos
 | Web | `SESSION_COOKIE_NAME` | Nome do cookie de sessão |
 | Web | `SESSION_COOKIE_DOMAIN` | `Domain` do cookie; vazio no local |
 | Web | `SESSION_COOKIE_SECURE` | `Secure` do cookie; `false` no local |
+| Web | `CHAT_API_PUBLIC_URL` | Endereço público da API do chat, em que o navegador abre o WebSocket; lido no servidor e passado ao cliente, para a mesma imagem servir a todos os ambientes |
 
 As demais variáveis estão a definir.
 
@@ -505,8 +544,8 @@ substitui cada serviço de produção segue o HLD, seção 9, "Implantação e a
 | `s3` | `chrislusf/seaweedfs:4.52` (`weed mini`) | 8333 | Substituto do armazenamento compatível com S3, com o bucket `reports` |
 | `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://web:3000` e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
 
-Entram depois: o Redis, quando o primeiro uso dele for implementado, e os serviços `agents` e
-`worker`, quando `apps/agents` existir.
+O Redis entra com a F03 (`redis:8`, porta 6379, eventos de reconexão), `planejado`. Entram
+depois os serviços `agents` e `worker`, quando `apps/agents` existir.
 
 **Contêineres dos apps**
 
@@ -534,7 +573,8 @@ usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário,
   cookies não separam portas, então `web` e `chat-api` o recebem. Em produção vale para os
   subdomínios (HLD 6.1).
 - **Endereço da API do chat:** o BFF a chama pela rede interna (`http://chat-api:3000`); o
-  navegador abre o WebSocket em `localhost:3001`. São dois endereços configurados.
+  navegador abre o WebSocket em `localhost:3001` (`CHAT_API_PUBLIC_URL`). São dois endereços
+  configurados.
 - **Endereço do S3:** a API do chat assina a URL do PDF com o endereço que o navegador alcança
   (`http://localhost:8333`), porque a assinatura inclui o host; o Worker grava pelo endereço
   interno (`http://s3:8333`). São dois endereços configurados, com acesso por caminho
@@ -604,7 +644,7 @@ As decisões que mudam o desenho estão no HLD, seção 10.
 - [x] Lugar da conferência de participação: no service de Conversas.
 - [ ] Função única que monta a mensagem para cada destinatário.
 - [x] Onde a transação começa e como passa entre módulos: no service que orquestra, pelo CLS.
-- [ ] Publicação do evento depois do commit: direta ou por tabela de saída.
+- [x] Publicação do evento depois do commit: direta.
 - [x] Quem traduz exceção em resposta na API do chat: o filter global.
 - [ ] Quem traduz exceção em resposta no BFF e no Serviço de agentes.
 - [ ] Campos de correlação dos logs.
@@ -618,16 +658,15 @@ As decisões que mudam o desenho estão no HLD, seção 10.
 - [ ] Diagrama de entidades e relações; forma das tabelas.
 - [x] Paginação do histórico e das listas: keyset pelo id.
 - [x] Como o BFF leva a sessão à API do chat.
-- [ ] Índice das rotas (BFF, API do chat para o BFF e para os bots, Serviço de agentes) e lista
-      de eventos do WebSocket.
+- [ ] Índice das rotas (BFF, API do chat para o BFF e para os bots, Serviço de agentes).
+- [x] Lista de eventos do WebSocket: o pacote `chat-events`, a partir da F03.
 
 **Estados, regras e processos**
 
 - [ ] Subseções de "Estados e regras": pedido ao agente (estados; resposta a uma pergunta como
       pedido novo ou continuação), pergunta pendente (quando termina), mensagem (exclusão com
       menções, notificações e contadores; edição que acrescenta menção), consulta
-      a dados de negócio (comparação do lastro), limite de pedidos e teto de custo, presença e
-      "digitando".
+      a dados de negócio (comparação do lastro), limite de pedidos e teto de custo e presença.
 - [ ] Tarefa: concluir uma já concluída, ou reabrir uma aberta.
 - [ ] Idempotência do job do PDF (chave no S3, entrega única) e outras rotinas (retenção dos
       PDFs, perguntas pendentes vencidas).
