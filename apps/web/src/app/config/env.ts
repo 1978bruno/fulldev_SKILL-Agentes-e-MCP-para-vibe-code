@@ -1,3 +1,4 @@
+import isFQDN from "validator/lib/isFQDN";
 import { z } from "zod";
 
 const emptyAsUndefined = (value: unknown) => (value === "" ? undefined : value);
@@ -10,7 +11,9 @@ export const envSchema = z.object({
     emptyAsUndefined,
     z
       .string()
-      .regex(/^\.?[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$/i)
+      .refine((value) => isFQDN(value.replace(/^\./, ""), { require_tld: false }), {
+        message: "domínio inválido",
+      })
       .optional(),
   ),
   SESSION_COOKIE_SECURE: z

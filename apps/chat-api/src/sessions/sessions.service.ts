@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
@@ -29,8 +29,6 @@ export interface LoginResult {
 
 @Injectable()
 export class SessionsService {
-  private readonly logger = new Logger(SessionsService.name);
-
   constructor(
     @InjectRepository(Session) private readonly sessions: Repository<Session>,
     private readonly people: PeopleService,
@@ -45,7 +43,7 @@ export class SessionsService {
     await this.loginAttempts.assertNotBlocked(normalized);
     const person = await this.people.verifyCredentials(normalized, password);
     if (!person) {
-      await this.recordFailureSafely(normalized);
+      await this.loginAttempts.recordFailure(normalized);
       throw new InvalidCredentialsError();
     }
     // A Sessão vem antes de apagar a contagem: um login recusado porque a senha mudou enquanto
@@ -55,27 +53,12 @@ export class SessionsService {
       result = await this.startSession(person);
     } catch (error) {
       if (error instanceof InvalidCredentialsError) {
-        await this.recordFailureSafely(normalized);
+        await this.loginAttempts.recordFailure(normalized);
       }
       throw error;
     }
-    // A Sessão já existe: uma falha ao zerar a contagem fica no log e não vira um 500 para um
-    // login certo.
-    try {
-      await this.loginAttempts.clear(normalized);
-    } catch (error) {
-      this.logger.error('Falha ao zerar as tentativas de login', error);
-    }
+    await this.loginAttempts.clear(normalized);
     return result;
-  }
-
-  // Uma falha ao contar a tentativa fica no log e não troca o 401 de credencial errada por 500.
-  private async recordFailureSafely(email: string): Promise<void> {
-    try {
-      await this.loginAttempts.recordFailure(email);
-    } catch (error) {
-      this.logger.error('Falha ao contar a tentativa de login', error);
-    }
   }
 
   // Cria a Sessão só se o hash da senha ainda for o que o login conferiu: um reset-password ao

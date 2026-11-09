@@ -5,6 +5,19 @@ export interface PasswordPrompt {
 const ENTER = new Set(['\r', '\n']);
 const CTRL_C = '\u0003';
 const CTRL_U = '\u0015';
+const ESC = '\u001b';
+
+// Posição do último caractere de uma sequência de escape que começa em start: CSI ("ESC [", até
+// o byte final entre "@" e "~") ou SS3 ("ESC O" e mais um caractere). Um ESC sozinho é só ele.
+function escapeSequenceEnd(chars: string[], start: number): number {
+  const last = chars.length - 1;
+  const kind = chars[start + 1];
+  if (kind === 'O') return Math.min(start + 2, last);
+  if (kind !== '[') return start;
+  let i = start + 2;
+  while (i < last && !(chars[i] >= '@' && chars[i] <= '~')) i += 1;
+  return Math.min(i, last);
+}
 const BACKSPACE = new Set(['\u007f', '\b']);
 
 // Lê a senha do terminal sem eco. Sem terminal (entrada redirecionada), lê uma linha da
@@ -48,6 +61,12 @@ export class TtyPasswordPrompt implements PasswordPrompt {
           const skip = this.skipLineFeed && char === '\n';
           this.skipLineFeed = false;
           if (skip) continue;
+          // Setas e outras teclas especiais chegam como sequência de escape: não fazem parte da
+          // senha, venham sozinhas ou no meio do texto.
+          if (char === ESC) {
+            i = escapeSequenceEnd(chars, i);
+            continue;
+          }
           if (ENTER.has(char)) {
             this.skipLineFeed = char === '\r';
             this.pending = chars.slice(i + 1).join('');
@@ -59,19 +78,15 @@ export class TtyPasswordPrompt implements PasswordPrompt {
             return true;
           }
           if (char === CTRL_U) password = '';
-          // Outras teclas de controle (Ctrl+D, Tab) não fazem parte da senha.
-          else if (char < ' ' && !BACKSPACE.has(char)) continue;
           // Apaga o último ponto de código inteiro, e não meio par de surrogates (um emoji).
           else if (BACKSPACE.has(char))
             password = Array.from(password).slice(0, -1).join('');
-          else password += char;
+          // Outras teclas de controle (Ctrl+D, Tab) não fazem parte da senha.
+          else if (char >= ' ') password += char;
         }
         return false;
       };
       const onData = (chunk: string) => {
-        // Setas e outras teclas especiais chegam como sequência de escape inteira num pedaço só:
-        // não fazem parte da senha.
-        if (chunk.startsWith('\u001b')) return;
         consume(chunk);
       };
       this.input.setRawMode(true);

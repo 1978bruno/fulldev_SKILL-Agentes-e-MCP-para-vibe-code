@@ -2,7 +2,6 @@ import { House } from "lucide-react";
 import Link from "next/link";
 import { UserMenu } from "@/app/components/user/user-menu";
 import type { Person } from "@/app/services/chat-api";
-import { initials } from "@/app/utils/initials";
 
 type RailProps = { person: Person };
 
@@ -32,7 +31,7 @@ export function Rail({ person }: RailProps) {
         <span className="text-caption font-bold">Início</span>
       </Link>
       <div className="flex-1" />
-      <UserMenu person={person} initials={initials(person.name)} />
+      <UserMenu person={person} />
     </nav>
   );
 }

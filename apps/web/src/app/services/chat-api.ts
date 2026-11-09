@@ -1,12 +1,21 @@
 import { connection } from "next/server";
 import { env } from "@/app/config/env";
+import { initials } from "@/app/utils/initials";
 
 // Service HTTP da API do chat, usado só no servidor (Server Actions, Server Components e
 // Route Handlers). Devolve uniões de resultado em vez de lançar.
 
 const TIMEOUT_MS = 5000;
 
-export type Person = { id: string; name: string; email: string };
+type ApiPerson = { id: string; name: string; email: string };
+
+// As iniciais saem aqui, no servidor, e seguem prontas para os componentes do cliente
+// (utils/initials.ts).
+export type Person = ApiPerson & { initials: string };
+
+function toPerson(person: ApiPerson): Person {
+  return { ...person, initials: initials(person.name) };
+}
 
 export type LoginResult =
   | { kind: "ok"; token: string; person: Person }
@@ -62,9 +71,9 @@ export async function login(email: string, password: string): Promise<LoginResul
   });
   if (!response) return { kind: "failure" };
   if (response.status === 201) {
-    const body = await jsonBody<{ token: string; person: Person }>(response);
+    const body = await jsonBody<{ token: string; person: ApiPerson }>(response);
     if (!body) return { kind: "failure" };
-    return { kind: "ok", token: body.token, person: body.person };
+    return { kind: "ok", token: body.token, person: toPerson(body.person) };
   }
   const code = response.status < 500 ? await errorCode(response) : undefined;
   // Um 400 aqui é uma entrada que passou na validação da web e a API recusou (formato ou
@@ -85,9 +94,9 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   });
   if (!response) return { kind: "failure" };
   if (response.status === 200) {
-    const body = await jsonBody<{ person: Person }>(response);
+    const body = await jsonBody<{ person: ApiPerson }>(response);
     if (!body) return { kind: "failure" };
-    return { kind: "ok", person: body.person };
+    return { kind: "ok", person: toPerson(body.person) };
   }
   if (response.status === 401) return { kind: "unauthenticated" };
   return { kind: "failure" };

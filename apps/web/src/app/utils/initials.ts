@@ -1,9 +1,12 @@
+import "server-only";
+
 // Iniciais do nome: o primeiro grafema da primeira e da última palavra, cada um em maiúscula.
 // Por grafema (Intl.Segmenter), e não por unidade UTF-16, para não partir um caractere fora do
 // BMP nem separar uma letra do acento combinado; e só o primeiro grafema da maiúscula, porque
 // "ß" vira "SS".
-// Calculadas no servidor (o Node sempre tem Intl.Segmenter) e passadas prontas aos componentes
-// do cliente: a segmentação do navegador pode diferir e quebrar a hidratação.
+// Só no servidor: o services/chat-api.ts as calcula ao montar a Person (o Node sempre tem
+// Intl.Segmenter), e os componentes do cliente as recebem prontas. No navegador, a segmentação
+// pode diferir e quebrar a hidratação, ou faltar.
 const graphemes = new Intl.Segmenter("pt-BR", { granularity: "grapheme" });
 
 function firstGrapheme(text: string): string {

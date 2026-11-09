@@ -31,7 +31,7 @@ function colorFor(seed: string): string {
 }
 
 type AvatarProps = {
-  // Já calculadas no servidor (utils/initials.ts).
+  // Já calculadas no servidor (Person.initials, de services/chat-api.ts).
   initials: string;
   seed: string;
   size?: "sm" | "md";

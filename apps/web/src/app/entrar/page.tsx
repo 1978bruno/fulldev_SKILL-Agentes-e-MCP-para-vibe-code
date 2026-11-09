@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/components/auth/login-form";
-import { Spinner } from "@/app/components/ui/spinner";
+import { AppLoading } from "@/app/components/session/app-loading";
 import { getCurrentPerson } from "@/app/services/chat-api";
 import { readLoginFeedback } from "@/app/services/login-feedback";
 import { readSessionToken } from "@/app/services/session-cookie";
@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Entrar · Full Cycle Chat" };
 export default function LoginPage({ searchParams }: PageProps<"/entrar">) {
   return (
     <main className="flex flex-1 items-center justify-center bg-surface-subtle p-4">
-      <Suspense fallback={<Spinner size="md" className="text-fg-muted" />}>
+      <Suspense fallback={<AppLoading className="h-auto bg-transparent" />}>
         <LoginGate searchParams={searchParams} />
       </Suspense>
     </main>

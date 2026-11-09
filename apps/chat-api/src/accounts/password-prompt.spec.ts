@@ -68,4 +68,14 @@ describe('TtyPasswordPrompt', () => {
 
     await expect(answer).resolves.toBe('senha-certa');
   });
+
+  it('no terminal, uma seta no meio do texto não entra na senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha\u001b[D\u001bOA-certa\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
 });
