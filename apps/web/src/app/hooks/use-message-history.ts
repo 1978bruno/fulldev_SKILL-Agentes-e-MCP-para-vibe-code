@@ -99,7 +99,8 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
 
   // Com o reset do tempo real, o cache vira só a página mais recente, lida de novo pela rota do BFF,
   // como ao abrir a Conversa (spec da F03, "Mensagens no histórico"). Uma falha deixa o cache como
-  // está.
+  // está. As gravadas nesta abertura ficam guardadas: uma que chegou durante a leitura volta ao
+  // cache pelo efeito que confere as que faltam.
   const reloadRequest = useRef(0);
   const reloadLatest = useCallback(async () => {
     // Dois resets seguidos: só a resposta do último vale.
@@ -112,8 +113,6 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     }
     if (request !== reloadRequest.current) return;
     latestPage.current = page;
-    // A página nova já traz as gravadas até aqui.
-    saved.current = [];
     await setSize(1);
     await mutate([page], { revalidate: false });
   }, [conversationId, mutate, setSize]);

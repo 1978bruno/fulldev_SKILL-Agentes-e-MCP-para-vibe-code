@@ -62,6 +62,9 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     socket: RealtimeSocket | null;
   }>({ status: "connecting", socket: null });
   const listeners = useRef(new Set<RealtimeListener>());
+  // Um reset que chegou sem ninguém assinando: o histórico ainda montava (Suspense) ou estava
+  // entre duas Conversas. A próxima assinatura o recebe.
+  const pendingReset = useRef<SyncEvent | null>(null);
   const recent = useRef(new Map<string, readonly Message[]>());
 
   useEffect(() => {
@@ -101,7 +104,9 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       listeners.current.forEach((listener) => listener.onMessage?.(message));
     });
     socket.on("sync", (event) => {
-      listeners.current.forEach((listener) => listener.onSync?.(event));
+      const syncListeners = [...listeners.current].filter((listener) => listener.onSync);
+      pendingReset.current = event.reset && syncListeners.length === 0 ? event : null;
+      syncListeners.forEach((listener) => listener.onSync?.(event));
     });
 
     return () => {
@@ -114,6 +119,11 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
 
   const subscribe = useCallback((listener: RealtimeListener) => {
     listeners.current.add(listener);
+    const pending = pendingReset.current;
+    if (pending && listener.onSync) {
+      pendingReset.current = null;
+      listener.onSync(pending);
+    }
     return () => {
       listeners.current.delete(listener);
     };
