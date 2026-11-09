@@ -15,7 +15,7 @@
 | Contrato REST do Serviço de agentes | `apps/agents/openapi.json`, gerado pelo FastAPI (planejado) |
 | Catálogo de códigos de erro | Os snapshots OpenAPI, como enum na resposta de erro de cada rota (planejado) |
 | Eventos do WebSocket | Tipos TypeScript em `packages/chat-events/` (planejado) |
-| Schema do Banco do chat | `apps/chat-api/migrations/`, migrações do TypeORM (planejado) |
+| Schema do Banco do chat | `apps/chat-api/migrations/`, migrações do TypeORM |
 | Schema do Banco dos agentes | A definir |
 | Schema do Banco de negócio | Script de carga em `apps/agents/scripts/` (planejado) |
 | Schema das variáveis de ambiente | O schema zod do módulo de configuração de cada projeto TypeScript (`apps/chat-api/src/config/env.schema.ts` e `apps/web/src/app/config/env.ts` existem); do projeto `agents`, a definir |
@@ -226,8 +226,8 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 
 | Banco | Entidade (HLD, seção 7) | Situação |
 | --- | --- | --- |
-| Chat | Pessoas (perfil, papel de administrador, permissão de dados) | a detalhar |
-| Chat | Sessões | a detalhar |
+| Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
+| Chat | Sessões | existe (`sessions`) |
 | Chat | Canais e membros | a detalhar |
 | Chat | Conversas diretas | a detalhar |
 | Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | a detalhar |
@@ -265,11 +265,11 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 
 | Método e caminho | Situação | Comportamento |
 | --- | --- | --- |
-| API do chat: `POST /v1/sessions` | planejada | Entrar: "Estados e regras", seção "Sessão e login" |
-| API do chat: `GET /v1/sessions/current` | planejada | Verificar e renovar a Sessão: mesma seção |
+| API do chat: `POST /v1/sessions` | existe | Entrar: "Estados e regras", seção "Sessão e login" |
+| API do chat: `GET /v1/sessions/current` | existe | Verificar e renovar a Sessão: mesma seção |
 | API do chat: `DELETE /v1/sessions/current` | planejada | Sair: mesma seção |
-| BFF: Server Actions entrar e sair | planejada | Gravam e apagam o cookie: "Conceitos transversais de implementação", seção "Segurança" |
-| BFF: `GET /api/session/expired` | planejada | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
+| BFF: Server Actions entrar e sair | entrar existe; sair planejada | Gravam e apagam o cookie: "Conceitos transversais de implementação", seção "Segurança" |
+| BFF: `GET /api/session/expired` | existe | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
 | Envio de mensagem no BFF (Server Action) | a detalhar | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
@@ -364,8 +364,8 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 
 | Rota | Acesso | Lê | Ações | Situação |
 | --- | --- | --- | --- | --- |
-| `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | planejada |
-| `/` (Home) | Sessão | Pessoa da Sessão | Sair | planejada |
+| `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
+| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe; sair planejada |
 | A definir | Sessão | Histórico da conversa | Enviar, editar, apagar, citar; "digitando"; botões de resposta pronta | a detalhar |
 | A definir (lateral) | Sessão | Conversas, com não lidas e menções | Abrir conversa | a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
@@ -434,7 +434,7 @@ atualiza esse cache direto, sem nova requisição.
 **Variáveis de ambiente**
 
 O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos". As já decididas
-(`DATABASE_URL` e `PORT` da API do chat e as quatro da Web já existem; as demais são `planejadas`):
+(`DATABASE_URL`, `PORT`, `SESSION_COOKIE_NAME` e `SESSION_TTL_DAYS` da API do chat e as quatro da Web já existem; as demais são `planejadas`):
 
 | Projeto | Variável | Para quê |
 | --- | --- | --- |
