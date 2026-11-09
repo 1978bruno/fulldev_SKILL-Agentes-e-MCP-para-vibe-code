@@ -31,9 +31,13 @@ export function isValidChannelName(name: string): boolean {
 
 // O Tópico enquanto a Pessoa digita ou cola: numa linha só e até o limite.
 export function normalizeTopicInput(text: string): string {
-  return truncateCodePoints(text.replace(new RegExp(TOPIC_FORBIDDEN, "gu"), " "), TOPIC_MAX_LENGTH);
+  // Em NFC antes de cortar, como a API conta: um texto colado em NFD não perde o fim.
+  return truncateCodePoints(
+    text.normalize("NFC").replace(new RegExp(TOPIC_FORBIDDEN, "gu"), " "),
+    TOPIC_MAX_LENGTH,
+  );
 }
 
 export function isValidTopic(topic: string): boolean {
-  return !TOPIC_FORBIDDEN.test(topic) && codePointLength(topic.trim()) <= TOPIC_MAX_LENGTH;
+  return !TOPIC_FORBIDDEN.test(topic) && codePointLength(topic.trim().normalize("NFC")) <= TOPIC_MAX_LENGTH;
 }

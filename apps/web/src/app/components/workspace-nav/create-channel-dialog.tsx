@@ -42,9 +42,8 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
       case "ok":
         created.current = true;
         onCreated();
+        // O Server Action revalida o layout: a barra lateral chega com o Canal novo nesta navegação.
         router.push(`/conversas/${result.conversation.id}`);
-        // A barra lateral é renderizada no servidor: o refresh a traz com o Canal novo.
-        router.refresh();
         return;
       case "unauthenticated":
         return redirectToExpiredSession();
@@ -63,6 +62,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
     <DialogContent
       title="Criar canal"
       description="Canais organizam a conversa por assunto, projeto ou time."
+      dismissible={status !== "sending"}
       onCloseAutoFocus={(event) => {
         // Criado o Canal, o foco vai para a caixa de mensagem da Conversa que abre, e não volta a
         // "Adicionar canal".
@@ -94,7 +94,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
                 aria-describedby={nameError ? ids.error : ids.hint}
                 onChange={(event) => {
                   setName(normalizeChannelNameInput(event.target.value));
-                  if (status === "name_taken") setStatus("idle");
+                  if (status !== "sending") setStatus("idle");
                 }}
                 className="pl-9"
               />
@@ -105,7 +105,10 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
               id={ids.topic}
               value={topic}
               autoComplete="off"
-              onChange={(event) => setTopic(normalizeTopicInput(event.target.value))}
+              onChange={(event) => {
+                setTopic(normalizeTopicInput(event.target.value));
+                if (status === "failure") setStatus("idle");
+              }}
             />
           </Field>
           {status === "failure" && (
@@ -116,7 +119,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
         </DialogBody>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="secondary">
+            <Button type="button" variant="secondary" disabled={status === "sending"}>
               Cancelar
             </Button>
           </DialogClose>

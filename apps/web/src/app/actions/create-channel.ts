@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import isUUID from "validator/lib/isUUID";
 import {
   createChannel as createChannelInChat,
@@ -27,5 +28,8 @@ export async function createChannel(
   }
   const token = await readSessionToken();
   if (!token) return { kind: "unauthenticated" };
-  return createChannelInChat(token, { name, topic: topic.trim(), clientId });
+  const result = await createChannelInChat(token, { name, topic: topic.trim(), clientId });
+  // A barra lateral, renderizada no servidor no layout das telas logadas, passa a ter o Canal.
+  if (result.kind === "ok") revalidatePath("/", "layout");
+  return result;
 }

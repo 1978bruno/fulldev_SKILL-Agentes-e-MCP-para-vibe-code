@@ -47,6 +47,12 @@ describe("normalizeTopicInput", () => {
     expect(normalizeTopicInput("linha 1\nlinha 2")).toBe("linha 1 linha 2");
   });
 
+  it("conta em NFC antes de cortar", () => {
+    const decomposed = "e\u0301".repeat(200);
+
+    expect(normalizeTopicInput(decomposed)).toBe("\u00e9".repeat(200));
+  });
+
   it("para em 250 caracteres", () => {
     expect(normalizeTopicInput("a".repeat(260))).toBe("a".repeat(250));
   });

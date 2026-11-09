@@ -16,9 +16,17 @@ type DialogContentProps = {
   description?: string;
   children: React.ReactNode;
   onCloseAutoFocus?: (event: Event) => void;
+  // Falso enquanto um envio está em andamento: nem Esc, nem clique fora, nem o X fecham.
+  dismissible?: boolean;
 };
 
-export function DialogContent({ title, description, children, onCloseAutoFocus }: DialogContentProps) {
+export function DialogContent({
+  title,
+  description,
+  children,
+  onCloseAutoFocus,
+  dismissible = true,
+}: DialogContentProps) {
   return (
     <RadixDialog.Portal>
       <RadixDialog.Overlay className="fixed inset-0 z-50 animate-fade-in bg-surface-overlay" />
@@ -35,9 +43,15 @@ export function DialogContent({ title, description, children, onCloseAutoFocus }
           field.focus();
         }}
         onCloseAutoFocus={onCloseAutoFocus}
+        onEscapeKeyDown={(event) => {
+          if (!dismissible) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (!dismissible) event.preventDefault();
+        }}
         className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[512px] -translate-x-1/2 -translate-y-1/2 animate-pop-in flex-col overflow-y-auto rounded-card bg-surface-raised shadow-3 outline-none"
       >
-        <DialogHeader title={title} description={description} />
+        <DialogHeader title={title} description={description} dismissible={dismissible} />
         {children}
       </RadixDialog.Content>
     </RadixDialog.Portal>
@@ -45,7 +59,15 @@ export function DialogContent({ title, description, children, onCloseAutoFocus }
 }
 
 // DialogHeader (Figma, Primitivos): título, descrição e o X de fechar.
-function DialogHeader({ title, description }: { title: string; description?: string }) {
+function DialogHeader({
+  title,
+  description,
+  dismissible,
+}: {
+  title: string;
+  description?: string;
+  dismissible: boolean;
+}) {
   return (
     <div className="flex items-start gap-4 pb-2 pl-6 pr-4 pt-5">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -57,7 +79,7 @@ function DialogHeader({ title, description }: { title: string; description?: str
         )}
       </div>
       <RadixDialog.Close asChild>
-        <IconButton icon={X} label="Fechar" />
+        <IconButton icon={X} label="Fechar" disabled={!dismissible} />
       </RadixDialog.Close>
     </div>
   );
