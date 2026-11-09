@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  OnGatewayConnection,
   OnGatewayInit,
   WebSocketGateway,
   WebSocketServer,
@@ -17,9 +16,9 @@ import type { RealtimeServer, RealtimeSocket } from './realtime-socket';
 const UNAUTHENTICATED: HandshakeErrorCode = 'unauthenticated';
 
 // WebSocket da API do chat (spec da F03, "Conexão" e "Sessão no WebSocket"). O handshake verifica a
-// Sessão pelo mesmo authenticate do guard REST, e o socket entra nas salas da Pessoa e da Sessão.
+// Sessão pelo mesmo authenticate do guard REST e põe o socket nas salas da Pessoa e da Sessão.
 @WebSocketGateway()
-export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
+export class RealtimeGateway implements OnGatewayInit {
   private readonly logger = new Logger(RealtimeGateway.name);
 
   @WebSocketServer()
@@ -37,13 +36,6 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     });
   }
 
-  async handleConnection(socket: RealtimeSocket): Promise<void> {
-    await socket.join([
-      personRoom(socket.data.person.id),
-      sessionRoom(socket.data.sessionId),
-    ]);
-  }
-
   // Grava a Pessoa e a Sessão no socket, ou recusa o handshake.
   private async authenticateSocket(
     socket: RealtimeSocket,
@@ -58,6 +50,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       const { person, sessionId } = await this.sessions.authenticate(token);
       socket.data.person = person;
       socket.data.sessionId = sessionId;
+      // As salas entram antes do CONNECT: nenhum evento emitido logo depois se perde.
+      await socket.join([personRoom(person.id), sessionRoom(sessionId)]);
       next();
     } catch (error) {
       if (error instanceof UnauthenticatedError) {

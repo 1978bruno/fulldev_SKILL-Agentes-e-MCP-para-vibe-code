@@ -49,7 +49,7 @@ docker compose -f compose.yaml exec chat-api pnpm start:dev
 
 O `--wait` segura o primeiro comando só até o `postgres` e o `s3` ficarem prontos. A instalação das dependências continua dentro de `web` e `chat-api` depois disso e, na primeira subida, leva alguns minutos: acompanhe com `docker compose -f compose.yaml logs -f <serviço>` antes de rodar os outros dois. As migrações não rodam na subida. Os outros dois ficam presos ao terminal, então rode cada um em segundo plano. O `--hostname 0.0.0.0` é necessário para que a web aceite conexões de fora do contêiner.
 
-**Testes de ponta a ponta.** O serviço `e2e` sobe à parte, com o ambiente acima já de pé (web, API do chat e banco), e fica parado como `web` e `chat-api`:
+**Testes de ponta a ponta.** O serviço `e2e` sobe à parte, com o ambiente acima já de pé (web, API do chat e banco). Ele não roda os testes sozinho: o processo dele só encaminha `localhost:3000` para a web e `localhost:3001` para a API do chat, para o navegador do teste usar os mesmos endereços que o da máquina e o cookie de sessão valer no WebSocket (`docs/lld.md`, "Ambiente de desenvolvimento"). Por isso, no `e2e`, a web é `localhost`, e não o nome do serviço, uma exceção à regra de "Rede entre serviços":
 
 ```bash
 docker compose -f compose.yaml --profile e2e up -d e2e

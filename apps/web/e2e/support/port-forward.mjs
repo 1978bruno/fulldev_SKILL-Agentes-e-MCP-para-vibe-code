@@ -21,7 +21,12 @@ for (const route of ROUTES) {
       client.on("error", close);
       upstream.on("error", close);
     })
-    .listen(route.port, "127.0.0.1", () => {
+    .on("error", (error) => {
+      console.error(`localhost:${route.port}: ${error.message}`);
+      process.exit(1);
+    })
+    // Sem host: ouve em IPv4 e IPv6, porque "localhost" pode resolver para os dois.
+    .listen(route.port, () => {
       console.log(`localhost:${route.port} -> ${route.host}:${route.targetPort}`);
     });
 }
