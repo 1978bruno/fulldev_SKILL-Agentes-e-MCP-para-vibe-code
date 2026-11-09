@@ -1,10 +1,8 @@
 // spec: e2e/plano-de-testes-f01.md
 // seed: e2e/seed.spec.ts
 import type { Page } from "@playwright/test";
+import { EMAIL_INVALID, PASSWORD_REQUIRED } from "../../src/app/utils/login-validation";
 import { expect, test } from "../fixtures";
-
-const EMAIL_INVALID = "Informe um e-mail válido, como nome@empresa.com.";
-const PASSWORD_REQUIRED = "Informe sua senha.";
 
 function countLoginPosts(page: Page): () => number {
   let posts = 0;

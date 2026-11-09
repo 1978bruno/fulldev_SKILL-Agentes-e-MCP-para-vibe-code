@@ -84,9 +84,9 @@ export function LoginForm() {
     (state.status === "invalid_credentials" && !hasErrors(clientErrors)
       ? INVALID_CREDENTIALS
       : undefined);
-  const formMessage = hasErrors(clientErrors)
-    ? undefined
-    : FORM_MESSAGES[state.status];
+  // A mensagem do envio anterior some enquanto o novo está em andamento.
+  const formMessage =
+    hasErrors(clientErrors) || isPending ? undefined : FORM_MESSAGES[state.status];
 
   return (
     <div className="flex w-full max-w-md flex-col gap-6 rounded-panel bg-surface-raised p-8 shadow-2">
@@ -102,7 +102,15 @@ export function LoginForm() {
         </div>
       </div>
 
-      <form className="flex w-full flex-col gap-4" onSubmit={handleSubmit} noValidate>
+      {/* O action vale antes da hidratação (o React o renderiza como POST para o Server Action):
+          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
+          chama o mesmo Server Action. */}
+      <form
+        className="flex w-full flex-col gap-4"
+        action={formAction}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <Field label="E-mail" htmlFor="email" error={emailError} errorId="email-error">
           <Input
             ref={emailRef}
