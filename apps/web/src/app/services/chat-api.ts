@@ -137,7 +137,26 @@ export type Conversation = {
   kind: ConversationKind;
   name: string;
   topic: string | null;
+  memberCount: number;
 };
+
+type ApiConversation = {
+  id: string;
+  kind: ConversationKind;
+  name: string;
+  topic: string | null;
+  member_count: number;
+};
+
+function toConversation(conversation: ApiConversation): Conversation {
+  return {
+    id: conversation.id,
+    kind: conversation.kind,
+    name: conversation.name,
+    topic: conversation.topic,
+    memberCount: conversation.member_count,
+  };
+}
 
 // A Mensagem da API é a mesma do evento do tempo real (pacote chat-events).
 type ApiMessage = MessagePayload;
@@ -170,6 +189,13 @@ export type ConversationResult =
 export type MessagePageResult =
   | { kind: "ok"; page: MessagePage }
   | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export type CreateChannelResult =
+  | { kind: "ok"; conversation: Conversation }
+  | { kind: "name_taken" }
+  | { kind: "invalid" }
   | { kind: "unauthenticated" }
   | { kind: "failure" };
 
@@ -210,8 +236,10 @@ async function getJson<T>(token: string, path: string): Promise<GetResult<T>> {
 export const listConversations = cache(fetchConversations);
 
 async function fetchConversations(token: string): Promise<ConversationsResult> {
-  const result = await getJson<{ conversations: Conversation[] }>(token, "/v1/conversations");
-  if (result.kind === "ok") return { kind: "ok", conversations: result.body.conversations };
+  const result = await getJson<{ conversations: ApiConversation[] }>(token, "/v1/conversations");
+  if (result.kind === "ok") {
+    return { kind: "ok", conversations: result.body.conversations.map(toConversation) };
+  }
   // A lista não tem 404: só a Sessão recusada ou a falha.
   return result.kind === "unauthenticated" ? result : { kind: "failure" };
 }
@@ -220,8 +248,37 @@ export async function getConversation(
   token: string,
   id: string,
 ): Promise<ConversationResult> {
-  const result = await getJson<{ conversation: Conversation }>(token, conversationPath(id));
-  return result.kind === "ok" ? { kind: "ok", conversation: result.body.conversation } : result;
+  const result = await getJson<{ conversation: ApiConversation }>(token, conversationPath(id));
+  return result.kind === "ok"
+    ? { kind: "ok", conversation: toConversation(result.body.conversation) }
+    : result;
+}
+
+// Cria o Canal (spec da F04, "Rotas"). O mesmo clientId devolve o Canal já criado.
+export async function createChannel(
+  token: string,
+  channel: { name: string; topic: string; clientId: string },
+): Promise<CreateChannelResult> {
+  const response = await request("/v1/conversations", {
+    method: "POST",
+    headers: { ...authenticated(token), "content-type": "application/json" },
+    body: JSON.stringify({
+      kind: "public_channel",
+      name: channel.name,
+      topic: channel.topic,
+      client_id: channel.clientId,
+    }),
+  });
+  if (response?.status === 201) {
+    const body = await jsonBody<{ conversation: ApiConversation }>(response);
+    return body ? { kind: "ok", conversation: toConversation(body.conversation) } : { kind: "failure" };
+  }
+  if (response?.status === 401) return { kind: "unauthenticated" };
+  if (response?.status === 400) return { kind: "invalid" };
+  if (response?.status === 409 && (await errorCode(response)) === "channel_name_taken") {
+    return { kind: "name_taken" };
+  }
+  return { kind: "failure" };
 }
 
 // Uma página do histórico: as anteriores a `before`, ou as mais recentes sem ele.

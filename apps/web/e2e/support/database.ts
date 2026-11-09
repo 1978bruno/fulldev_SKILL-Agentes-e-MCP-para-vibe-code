@@ -128,3 +128,17 @@ export async function countMessagesWithBody(channel: TestChannel, body: string):
   );
   return Number(result.rows[0].count);
 }
+
+// Canais criados pela tela nos testes de e2e/canais-publicos: apagar no fim do teste tira as
+// participações de todas as Pessoas que a criação de um Canal público incluiu.
+export async function deleteChannelsNamed(names: string[]): Promise<void> {
+  await pool.query("DELETE FROM conversations WHERE name = ANY($1::text[])", [names]);
+}
+
+export async function countChannelsNamed(name: string): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    "SELECT count(*) FROM conversations WHERE name = $1",
+    [name],
+  );
+  return Number(result.rows[0].count);
+}

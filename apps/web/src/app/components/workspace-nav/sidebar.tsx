@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import { listConversations } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
+import { AddChannelAction } from "./add-channel-action";
 import { SidebarError } from "./sidebar-error";
 import { SidebarRow } from "./sidebar-row";
 import { SidebarSection } from "./sidebar-section";
 import { SidebarSkeleton } from "./sidebar-skeleton";
 
-// Lista de Conversas. Na F02, só a seção "Canais"; as outras entram com as funcionalidades delas
-// (F04, F05, F10). Abaixo de md ela fica na gaveta, com o Rail (NavigationDrawer).
+// Lista de Conversas. Só a seção "Canais", com "Adicionar canal" no fim (F04); as outras entram com
+// as funcionalidades delas (F05, F10). Abaixo de md ela fica na gaveta, com o Rail (NavigationDrawer).
 export function Sidebar() {
   return (
     <aside
@@ -41,6 +42,7 @@ async function Channels() {
           name={conversation.name}
         />
       ))}
+      <AddChannelAction />
     </SidebarSection>
   );
 }

@@ -89,7 +89,7 @@ describe('comando de canais', () => {
     const exitCode = await run(['create', name, 'Outro tópico'], output);
 
     expect(exitCode).toBe(1);
-    expect(output.errors).toEqual([`Já existe um canal com o nome ${name}.`]);
+    expect(output.errors).toEqual([`Já existe um canal chamado #${name}.`]);
     expect(await channelsNamed(name)).toHaveLength(1);
   });
 
