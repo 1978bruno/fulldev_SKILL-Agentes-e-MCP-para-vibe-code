@@ -18,9 +18,9 @@ O Figma tem as fundações, os componentes e as telas; o código tem os tokens e
 | Item | Figma | Código |
 | --- | --- | --- |
 | Tokens | 3 coleções de variables (`Primitives`, `Semantic`, `Layout`), 14 estilos de texto, 3 de elevação | `globals.css` com o conjunto completo, nos temas claro e escuro |
-| Componentes | 57 componentes em 3 seções, mais 42 ícones | Nenhum |
-| Telas | 129 frames de 1440 × 900, em 10 seções | Nenhuma tela do Figma ainda |
-| Bibliotecas | Desenho pensado para `lucide-react`, Radix, CVA e Sonner | Só `next`, `react` e `tailwindcss` instalados |
+| Componentes | 57 componentes em 3 seções, mais 42 ícones | Os da F01: Button, Input, Field, Spinner, Avatar, EmptyState, DropdownMenu, Rail, Sidebar e UserMenu |
+| Telas | 129 frames de 1440 × 900, em 10 seções | As da F01: Login, Home / Vazio e o menu do usuário |
+| Bibliotecas | Desenho pensado para `lucide-react`, Radix, CVA e Sonner | `lucide-react`, `radix-ui` e CVA instalados; Sonner a instalar |
 
 As descrições dos componentes no Figma citam arquivos de uma implementação de referência (`shared/ui/button.tsx`, `entities/message/ui/message-item.tsx` e outros, no estilo Feature-Sliced Design). Esses arquivos não existem neste repositório. Use as descrições pelo comportamento que documentam, não pelos caminhos; a pasta de cada componente segue a seção "Organização no código" abaixo.
 
@@ -31,9 +31,9 @@ As descrições dos componentes no Figma citam arquivos de uma implementação d
 | Framework | Next.js 16 (App Router, `src/app`), React 19 | Instalado |
 | Estilo | Tailwind CSS 4, configurado só em CSS (`@theme`), sem `tailwind.config` | Instalado |
 | Build | Turbopack, com o loader `@tailwindcss/turbopack` no `next.config.ts` | Instalado |
-| Ícones | `lucide-react` | A instalar |
-| Primitivos acessíveis | `radix-ui` (Dialog, AlertDialog, DropdownMenu, Tooltip, Switch, Tabs) | A instalar |
-| Variantes | `class-variance-authority`, com `clsx` e `tailwind-merge` num helper `cn` em `src/app/utils/cn.ts` | A instalar |
+| Ícones | `lucide-react` | Instalado |
+| Primitivos acessíveis | `radix-ui` (Dialog, AlertDialog, DropdownMenu, Tooltip, Switch, Tabs) | Instalado |
+| Variantes | `class-variance-authority`, com `clsx` e `tailwind-merge` num helper `cn` em `src/app/utils/cn.ts` | Instalado |
 | Toasts | `sonner` | A instalar |
 | Fonte | Lato pelo `next/font/google` | Instalada |
 

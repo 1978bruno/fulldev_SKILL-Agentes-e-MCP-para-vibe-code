@@ -27,3 +27,11 @@ export async function insertPerson(name = "Ana Souza"): Promise<TestPerson> {
 export async function deleteSessionsOf(personId: string): Promise<void> {
   await pool.query("DELETE FROM sessions WHERE person_id = $1", [personId]);
 }
+
+export async function countSessionsOf(personId: string): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    "SELECT count(*) FROM sessions WHERE person_id = $1",
+    [personId],
+  );
+  return Number(result.rows[0].count);
+}

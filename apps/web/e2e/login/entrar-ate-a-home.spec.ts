@@ -22,7 +22,9 @@ test.describe("Entrar", () => {
       "aria-current",
       "page",
     );
-    await expect(rail.getByRole("img", { name: person.name })).toHaveText("AS");
+    await expect(
+      rail.getByRole("button", { name: `Menu de ${person.name}` }),
+    ).toContainText("AS");
     await expect(
       page.getByRole("complementary", { name: "Barra lateral" }),
     ).toHaveText("Full Cycle");

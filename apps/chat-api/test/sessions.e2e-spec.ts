@@ -202,4 +202,33 @@ describe('sessões', () => {
       expect(response.body).toMatchObject({ code: 'unauthenticated' });
     });
   });
+
+  describe('DELETE /v1/sessions/current', () => {
+    it('responde 204 e apaga só a Sessão apresentada', async () => {
+      const { email, password } = await authRoutes.createPerson(app);
+      const first = await authRoutes.login(app, email, password);
+      const second = await authRoutes.login(app, email, password);
+
+      const response = await request(server)
+        .delete('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(first));
+
+      expect(response.status).toBe(204);
+      const firstCheck = await request(server)
+        .get('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(first));
+      expect(firstCheck.status).toBe(401);
+      const secondCheck = await request(server)
+        .get('/v1/sessions/current')
+        .set('Cookie', authRoutes.sessionCookie(second));
+      expect(secondCheck.status).toBe(200);
+    });
+
+    it('responde 401 unauthenticated ao sair sem Sessão', async () => {
+      const response = await request(server).delete('/v1/sessions/current');
+
+      expect(response.status).toBe(401);
+      expect(response.body).toMatchObject({ code: 'unauthenticated' });
+    });
+  });
 });

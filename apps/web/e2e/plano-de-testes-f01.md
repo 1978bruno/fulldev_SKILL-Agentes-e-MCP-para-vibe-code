@@ -26,7 +26,7 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
     - expect: o foco está no campo E-mail
   2. Preencher E-mail e Senha da Pessoa e clicar em "Entrar"
     - expect: a URL é `/`
-    - expect: a navegação "Seções" tem o "FC", o link "Início" ativo e o avatar com o nome da Pessoa e as iniciais dela
+    - expect: a navegação "Seções" tem o "FC", o link "Início" ativo e o botão do avatar, "Menu de <nome>", com as iniciais dela
     - expect: a barra lateral tem o cabeçalho "Full Cycle"
     - expect: o título "Nenhuma conversa ainda" aparece
   3. Abrir `/` em outra página do mesmo navegador
@@ -184,3 +184,58 @@ F01-T04 (`falha-no-envio.md`).
   1. Com a Pessoa logada, revogar as Sessões dela no banco
   2. Navegar para `/`
     - expect: a URL é `/entrar`, com o formulário
+
+### 7. Sair
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 7.1. menu-do-avatar
+
+**File:** `e2e/sair/menu-do-avatar.spec.ts`
+
+**Steps:**
+  1. Logada, focar o avatar ("Menu de <nome>") e apertar Enter
+    - expect: o menu abre com o nome da Pessoa e um único item, "Sair do Full Cycle"
+  2. Apertar Esc
+    - expect: o menu fecha e o foco volta ao avatar
+  3. Clicar no avatar
+    - expect: o menu abre de novo
+
+#### 7.2. sair-pelo-teclado
+
+**File:** `e2e/sair/sair-pelo-teclado.spec.ts`
+
+**Steps:**
+  1. Do link "Início", Tab até o avatar
+  2. Enter abre o menu; seta para baixo foca "Sair do Full Cycle"; Enter
+    - expect: a URL é `/entrar`, o cookie de sessão não existe e a Sessão foi apagada no banco
+
+#### 7.3. sair-com-a-api-recusando
+
+**File:** `e2e/sair/sair-com-a-api-recusando.spec.ts`
+
+**Steps:**
+  1. Logada, apagar a Sessão no banco (a API vai recusar a saída)
+  2. Sair pelo menu
+    - expect: a URL é `/entrar` e o cookie de sessão não existe
+
+#### 7.4. outra-aba-vai-para-entrar
+
+**File:** `e2e/sair/outra-aba-vai-para-entrar.spec.ts`
+
+**Steps:**
+  1. Logada, abrir a Home numa segunda aba
+  2. Sair na primeira aba
+  3. Navegar para `/` na segunda aba
+    - expect: a URL é `/entrar`
+
+#### 7.5. voltar-depois-de-sair
+
+**File:** `e2e/sair/voltar-depois-de-sair.spec.ts`
+
+**Steps:**
+  1. Logada, recarregar a Home
+    - expect: a resposta tem `Cache-Control` com `no-store`
+  2. Sair pelo menu
+  3. Voltar pelo histórico
+    - expect: a URL é `/entrar` e a Home não aparece
