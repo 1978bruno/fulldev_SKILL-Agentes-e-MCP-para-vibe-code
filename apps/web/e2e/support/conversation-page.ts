@@ -1,10 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 
-// O histórico da Conversa depois de hidratado: antes disso, rolar não pede as anteriores, e a
-// abertura leva a lista de volta ao fim.
+// O histórico da Conversa depois de hidratado e em dia com o tempo real: antes disso, rolar não
+// pede as anteriores, a abertura leva a lista de volta ao fim, e o reset da conexão ainda recarrega
+// a página mais recente.
 export async function readyHistory(page: Page, channelName: string): Promise<Locator> {
   const history = page.getByRole("region", { name: `Histórico de #${channelName}` });
-  await history.and(page.locator("[data-ready]")).waitFor();
+  await history.and(page.locator("[data-ready][data-synced]")).waitFor();
   return history;
 }
 

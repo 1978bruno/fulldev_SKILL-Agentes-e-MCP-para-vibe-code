@@ -61,7 +61,7 @@ function History({
     currentPerson,
     appendSaved,
   );
-  useRealtimeMessages(conversation.id, initialPage, {
+  const { isSynced } = useRealtimeMessages(conversation.id, initialPage, {
     currentPersonId: currentPerson.id,
     appendSaved,
     dropDelivered,
@@ -168,6 +168,8 @@ function History({
         ref={scrollRef}
         role="region"
         aria-label={`Histórico de #${conversation.name}`}
+        // Marca o histórico em dia com o tempo real, que os testes esperam antes de agir.
+        data-synced={isSynced ? "" : undefined}
         tabIndex={0}
         className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
       >

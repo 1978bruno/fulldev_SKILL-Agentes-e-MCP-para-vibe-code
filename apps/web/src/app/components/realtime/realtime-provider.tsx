@@ -65,6 +65,9 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
   // Um reset que chegou sem ninguém assinando: o histórico ainda montava (Suspense) ou estava
   // entre duas Conversas. A próxima assinatura o recebe.
   const pendingReset = useRef<SyncEvent | null>(null);
+  // O último sync da conexão atual. Quem assina depois dele recebe uma cópia sem reset: o buffer
+  // de Mensagens já cobre o que chegou desde então.
+  const lastSync = useRef<SyncEvent | null>(null);
   const recent = useRef(new Map<string, readonly Message[]>());
 
   useEffect(() => {
@@ -81,7 +84,10 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       retryDelay = RETRY_MIN_MS;
       setStatus("connected");
     });
-    socket.on("disconnect", () => setStatus("disconnected"));
+    socket.on("disconnect", () => {
+      lastSync.current = null;
+      setStatus("disconnected");
+    });
     socket.on("connect_error", (error) => {
       if (error.message === UNAUTHENTICATED) {
         void redirectToExpiredSession();
@@ -104,6 +110,7 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       listeners.current.forEach((listener) => listener.onMessage?.(message));
     });
     socket.on("sync", (event) => {
+      lastSync.current = event;
       const syncListeners = [...listeners.current].filter((listener) => listener.onSync);
       pendingReset.current = event.reset && syncListeners.length === 0 ? event : null;
       syncListeners.forEach((listener) => listener.onSync?.(event));
@@ -123,6 +130,8 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     if (pending && listener.onSync) {
       pendingReset.current = null;
       listener.onSync(pending);
+    } else if (lastSync.current && listener.onSync) {
+      listener.onSync({ ...lastSync.current, reset: false });
     }
     return () => {
       listeners.current.delete(listener);
