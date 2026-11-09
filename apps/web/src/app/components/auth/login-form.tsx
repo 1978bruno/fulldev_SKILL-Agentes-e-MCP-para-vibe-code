@@ -31,8 +31,15 @@ const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
 const INITIAL_STATE: LoginState = { status: "idle" };
 
 // A rede pode cair na própria chamada do Server Action, antes de ele devolver um estado: o fetch
-// rejeita com TypeError. Isso vira a mesma falha recuperável; o resto (como o redirecionamento
-// do login certo) segue para o Next.
+// rejeita com um TypeError de rede ("Failed to fetch" no Chromium, "NetworkError…" no Firefox,
+// "Load failed" no Safari). Isso vira a mesma falha recuperável; qualquer outro erro (um bug, ou
+// o redirecionamento do login certo) segue para o Next.
+const NETWORK_ERROR = /failed to fetch|networkerror|load failed/i;
+
+function isNetworkError(error: unknown): boolean {
+  return error instanceof TypeError && NETWORK_ERROR.test(error.message);
+}
+
 async function loginOrFailure(
   previous: LoginState,
   formData: FormData,
@@ -40,7 +47,7 @@ async function loginOrFailure(
   try {
     return await login(previous, formData);
   } catch (error) {
-    if (error instanceof TypeError) return { status: "failure" };
+    if (isNetworkError(error)) return { status: "failure" };
     throw error;
   }
 }

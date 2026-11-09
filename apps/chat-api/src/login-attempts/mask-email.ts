@@ -4,9 +4,8 @@ export function maskEmail(email: string): string {
   const at = email.lastIndexOf('@');
   const local = at >= 0 ? email.slice(0, at) : email;
   const domain = at >= 0 ? email.slice(at + 1) : '';
-  const masked = `${local.charAt(0)}***@${domain}`;
   if (local.length <= 1 || local.includes('*')) {
     return `(oculto)@${domain}`;
   }
-  return masked;
+  return `${local.charAt(0)}***@${domain}`;
 }

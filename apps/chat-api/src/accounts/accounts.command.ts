@@ -122,7 +122,8 @@ export class AccountsCommand {
       this.output.error('A senha não pode ser vazia.');
       return null;
     }
-    if (password.length > PASSWORD_MAX_LENGTH) {
+    // Conta pontos de código, como o @MaxLength do login (um emoji vale um).
+    if (Array.from(password).length > PASSWORD_MAX_LENGTH) {
       this.output.error(
         `A senha pode ter no máximo ${PASSWORD_MAX_LENGTH} caracteres.`,
       );
