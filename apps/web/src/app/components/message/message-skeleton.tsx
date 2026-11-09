@@ -13,13 +13,17 @@ export function MessageSkeleton({ width }: { width: string }) {
 
 const WIDTHS = ["70%", "45%", "92%", "58%", "77%", "38%"];
 
-// Pilha de esqueletos alinhada ao fim da área, onde as Mensagens mais recentes vão aparecer.
-export function MessageSkeletonList() {
+// Pilha de esqueletos alinhada ao fim da área, onde as Mensagens mais recentes vão aparecer. O
+// rótulo escondido é o que o leitor de tela lê no lugar deles.
+export function MessageSkeletonList({ label }: { label: string }) {
   return (
-    <div aria-hidden className="flex flex-1 flex-col justify-end gap-2 pb-4 motion-safe:animate-pulse">
-      {WIDTHS.map((width) => (
-        <MessageSkeleton key={width} width={width} />
-      ))}
+    <div role="status" className="flex min-h-0 flex-1 flex-col">
+      <div aria-hidden className="flex flex-1 flex-col justify-end gap-2 pb-4 motion-safe:animate-pulse">
+        {WIDTHS.map((width) => (
+          <MessageSkeleton key={width} width={width} />
+        ))}
+      </div>
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
