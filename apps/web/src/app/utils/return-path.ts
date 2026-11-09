@@ -35,10 +35,13 @@ function withReturnPath(
   returnPath: unknown,
   extra: Record<string, string> = {},
 ): string {
-  const params = new URLSearchParams(extra);
+  const params = { ...extra };
   const path = safeReturnPath(returnPath);
-  if (path !== "/") params.set("para", path);
-  const query = params.toString();
+  if (path !== "/") params.para = path;
+  // encodeURIComponent, e não URLSearchParams, para o "para" sair no mesmo formato de sempre.
+  const query = Object.entries(params)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&");
   return query ? `${base}?${query}` : base;
 }
 

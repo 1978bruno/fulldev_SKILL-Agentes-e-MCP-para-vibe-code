@@ -169,8 +169,9 @@ F01-T04 (`falha-no-envio.md`).
 **File:** `e2e/login/verificacao-falhou-mostra-o-formulario.spec.ts`
 
 **Steps:**
-  1. Logada, abrir `/entrar?verificacao=falhou` (a marca que a rota do BFF põe quando a reconferência falha)
-    - expect: a URL continua a mesma e o formulário aparece, sem verificar o cookie de novo
+  1. Logada, abrir `/entrar?verificacao=falhou&para=%2F%3Faba%3Dx` (a marca que a rota do BFF põe quando a reconferência falha)
+    - expect: o formulário aparece, sem verificar o cookie de novo
+    - expect: a marca sai da URL, que fica `/entrar?para=%2F%3Faba%3Dx`
 
 ### 6. Continuar logada e Sessão que acaba
 
