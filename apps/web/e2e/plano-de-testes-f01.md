@@ -91,7 +91,9 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
     - expect: o foco vai para o E-mail, que fica inválido e descrito pela mensagem dele
   2. Preencher um e-mail fora do formato e uma senha, e enviar com Enter
     - expect: só a mensagem do E-mail, com o foco no E-mail
-  3. Preencher um e-mail válido, apagar a senha e enviar
+  3. Preencher `ana@empresa..com` e, depois, `ana@empresa/com.br`, e enviar cada um
+    - expect: a mensagem do E-mail, com o foco no E-mail
+  4. Preencher um e-mail válido, apagar a senha e enviar
     - expect: só a mensagem da Senha, com o foco na Senha
     - expect: nenhum envio saiu para o servidor em todo o cenário
 
