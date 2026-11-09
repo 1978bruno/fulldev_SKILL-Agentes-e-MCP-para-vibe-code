@@ -44,7 +44,16 @@ test.describe("Erros ao entrar", () => {
     await expect(page.getByText(PASSWORD_REQUIRED)).toBeHidden();
     await expect(email).toBeFocused();
 
-    // 3. Preencher um e-mail válido, apagar a senha e enviar
+    // 3. Preencher e-mails com domínio inválido e enviar
+    for (const invalid of ["ana@empresa..com", "ana@empresa/com.br"]) {
+      await email.fill(invalid);
+      await password.press("Enter");
+
+      await expect(page.getByText(EMAIL_INVALID)).toBeVisible();
+      await expect(email).toBeFocused();
+    }
+
+    // 4. Preencher um e-mail válido, apagar a senha e enviar
     await email.fill("ana@empresa.com");
     await password.fill("");
     await page.getByRole("button", { name: "Entrar" }).click();
