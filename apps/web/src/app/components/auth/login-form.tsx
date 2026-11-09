@@ -17,6 +17,7 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
+import { LOGIN_FEEDBACK_PARAM } from "@/app/utils/login-feedback";
 
 const INVALID_CREDENTIALS =
   "E-mail ou senha incorretos. Confira os dados e tente de novo.";
@@ -27,8 +28,6 @@ const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
   too_many_attempts:
     "Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo.",
 };
-
-const INITIAL_STATE: LoginState = { status: "idle" };
 
 // A rede pode cair na própria chamada do Server Action, antes de ele devolver um estado: o fetch
 // rejeita com um TypeError de rede ("Failed to fetch" no Chromium, "NetworkError…" no Firefox,
@@ -59,12 +58,14 @@ function focusIsLost(): boolean {
 type LoginFormProps = {
   // Caminho pedido antes de "Entrar", já conferido; o Server Action confere de novo.
   returnPath: string;
+  // O resultado de um envio nativo (antes da hidratação), vindo da URL.
+  initialState: LoginState;
 };
 
-export function LoginForm({ returnPath }: LoginFormProps) {
+export function LoginForm({ returnPath, initialState }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(
     loginOrFailure,
-    INITIAL_STATE,
+    initialState,
   );
   // Erros da validação no cliente; os do Server Action chegam pelo state.
   const [clientErrors, setClientErrors] = useState<LoginFieldErrors>({});
@@ -81,11 +82,15 @@ export function LoginForm({ returnPath }: LoginFormProps) {
   // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
   useEffect(() => {
     formRef.current?.setAttribute("data-ready", "");
-    // A marca de verificação que falhou serve só para esta abertura: sai da URL, para recarregar a
-    // página verificar a Sessão de novo.
+    // As marcas de verificação que falhou e de falha do envio nativo servem só para esta
+    // abertura: saem da URL, para recarregar a página não repetir a mensagem nem pular a
+    // verificação da Sessão.
     const url = new URL(window.location.href);
-    if (url.searchParams.has("verificacao")) {
-      url.searchParams.delete("verificacao");
+    const marks = ["verificacao", LOGIN_FEEDBACK_PARAM].filter((mark) =>
+      url.searchParams.has(mark),
+    );
+    if (marks.length > 0) {
+      for (const mark of marks) url.searchParams.delete(mark);
       window.history.replaceState(window.history.state, "", url);
     }
   }, []);

@@ -87,7 +87,7 @@ export class AccountsCommand {
       (manager) => this.sessions.revokeAll(person.id, manager),
     );
     this.output.info(
-      `Senha trocada para ${person.email}; ${revoked ?? 0} Sessão(ões) revogada(s).`,
+      `Senha trocada para ${person.email}; ${revoked} Sessão(ões) revogada(s).`,
     );
     return 0;
   }

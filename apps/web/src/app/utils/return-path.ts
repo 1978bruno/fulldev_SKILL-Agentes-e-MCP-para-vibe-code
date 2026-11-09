@@ -50,6 +50,14 @@ export function loginPath(returnPath: unknown): string {
   return withReturnPath("/entrar", returnPath);
 }
 
+// "Entrar" depois de um envio nativo do login que não entrou, com o tipo da falha.
+export function loginPathWithFeedback(
+  returnPath: unknown,
+  feedback: { param: string; value: string },
+): string {
+  return withReturnPath("/entrar", returnPath, { [feedback.param]: feedback.value });
+}
+
 // "Entrar" depois de uma verificação que falhou por rede ou servidor (o cookie fica).
 export function loginPathAfterFailedVerification(returnPath: unknown): string {
   return withReturnPath("/entrar", returnPath, {

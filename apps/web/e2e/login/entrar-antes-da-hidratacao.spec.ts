@@ -8,11 +8,20 @@ test.describe("Entrar", () => {
     //    envio nativo (o streaming continua, pelos scripts inline da própria página)
     await page.route("**/_next/static/chunks/**", (route) => route.abort());
     await page.goto("/entrar");
+
+    // 2. Enviar com a senha errada: volta a "Entrar" com a mensagem de dados incorretos
+    await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
+    await page.getByLabel("Senha").fill("senha-errada");
+    await page.getByRole("button", { name: "Entrar" }).click();
+
+    await expect(page).toHaveURL("/entrar?falha=credenciais");
+    await expect(page.getByText("E-mail ou senha incorretos.", { exact: false })).toBeVisible();
+
+    // 3. Enviar com a senha certa: o POST nativo para a Server Action entra e cai na Home
     await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
     await page.getByLabel("Senha").fill(person.password);
     await page.getByRole("button", { name: "Entrar" }).click();
 
-    // O envio nativo é um POST para a Server Action: entra e cai na Home, sem a senha na URL.
     await expect(page).toHaveURL("/");
   });
 });

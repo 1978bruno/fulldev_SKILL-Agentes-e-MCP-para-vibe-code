@@ -68,7 +68,7 @@ Abaixo está o `globals.css` de destino. Os valores são os primitivos já resol
   /* texto */
   --fg: #1d1c1d;                    /* neutral/900 */
   --fg-muted: #616061;              /* neutral/600 */
-  --fg-subtle: #868686;             /* neutral/500 */
+  --fg-subtle: #868686;             /* neutral/500; abaixo de 4,5:1 no claro, não serve para texto de 15 px nem placeholder */
   --fg-inverse: #ffffff;            /* neutral/0 */
   /* bordas */
   --border: #dddddd;                /* neutral/300 */
@@ -532,7 +532,7 @@ Estes detalhes não aparecem só olhando o desenho:
 - **PresenceDot:** cheia é disponível; anel vazado é ausente. No UserAvatar, a bolinha recorta o fundo (`Backdrop`: `sidebar`, `raised` ou `chrome`).
 - **Avatar:** iniciais em `font-black` sobre `avatar-1` a `avatar-6`. Tamanhos xs 20, sm 24, md 36, lg 48 e xl 96; xs e sm usam `text-micro`.
 - **AgentAvatar:** o robô (`Bot`) distingue agentes de pessoas.
-- **Input:** `h-9`, borda `border-strong`. **Textarea:** `min-h-20`, `py-2`. **Field:** rótulo + controle + dica ou erro.
+- **Input:** `h-9`, borda `border-strong`, placeholder em `fg-muted`. **Textarea:** `min-h-20`, `py-2`. **Field:** rótulo + controle + dica ou erro.
 - **DropdownMenuItem:** `h-8`, destacado com `sidebar-active`. **DropdownMenuSeparator:** `my-2`, 1 px.
 - **Dialog:** largura máxima de 512, `rounded-card`, `shadow-3`, foco no primeiro campo.
 - **ConfirmDialog:** largura máxima de 448, foco em Cancelar, não fecha ao clicar fora (Radix AlertDialog).
@@ -589,7 +589,7 @@ Os breakpoints são os padrões do Tailwind, e o Figma registra o que acontece e
 | Breakpoint | Comportamento abaixo dele |
 | --- | --- |
 | `xl` (1280) | O painel de perfil sobrepõe a conversa em vez de dividir o espaço |
-| `md` (768) | Rail e sidebar viram drawer; as linhas passam a 44 px |
+| `md` (768) | Rail e sidebar viram drawer; as linhas passam a 44 px. Situação: o drawer ainda não existe; na F01, a Sidebar (só com o cabeçalho) some abaixo de `md`, e o drawer entra com a navegação da Sidebar (F02) |
 | `sm` (640) | Painel de perfil em largura total; somem o tópico do cabeçalho e as dicas de teclado |
 
 `lg` (1024) e `2xl` (1536) não têm uso no produto. Escreva mobile-first com os prefixos do Tailwind (`md:`, `xl:`), sem media queries soltas no CSS.

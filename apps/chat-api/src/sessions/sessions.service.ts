@@ -124,9 +124,11 @@ export class SessionsService {
 
   // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.
   // Com `manager`, roda dentro da transação de quem chama (a troca de senha).
-  async revokeAll(personId: string, manager?: EntityManager): Promise<number> {
-    const sessions = manager ? manager.getRepository(Session) : this.sessions;
-    const result = await sessions.delete({ personId });
+  async revokeAll(
+    personId: string,
+    manager: EntityManager = this.sessions.manager,
+  ): Promise<number> {
+    const result = await manager.delete(Session, { personId });
     return result.affected ?? 0;
   }
 

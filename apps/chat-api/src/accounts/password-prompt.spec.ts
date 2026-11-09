@@ -31,4 +31,16 @@ describe('TtyPasswordPrompt', () => {
 
     await expect(answer).resolves.toBe('senha-certa');
   });
+
+  it('no terminal, guarda a confirmação colada junto com a senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const first = passwords.ask('Senha: ');
+    input.write('senha-nova\rsenha-nova\r');
+    await first;
+
+    const second = await passwords.ask('Confirme a senha: ');
+
+    expect(second).toBe('senha-nova');
+  });
 });

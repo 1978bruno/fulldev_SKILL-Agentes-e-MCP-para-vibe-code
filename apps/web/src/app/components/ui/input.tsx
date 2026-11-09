@@ -1,6 +1,7 @@
 import { cn } from "@/app/utils/cn";
 
-// h-9, borda border-strong, placeholder em fg-muted (contraste AA; fg-subtle fica abaixo de 4,5:1). Foco: borda focus + anel de 4 px focus/30. Inválido (aria-invalid):
+// h-9, borda border-strong, placeholder em fg-muted (docs/design-system.md, "Comportamentos
+// registrados no Figma"). Foco: borda focus + anel de 4 px focus/30. Inválido (aria-invalid):
 // borda danger; com foco, anel danger/25.
 export function Input({ className, ...props }: React.ComponentProps<"input">) {
   return (

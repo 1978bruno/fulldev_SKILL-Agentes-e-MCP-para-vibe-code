@@ -61,7 +61,10 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
 **File:** `e2e/login/entrar-antes-da-hidratacao.spec.ts`
 
 **Steps:**
-  1. Abrir `/entrar` com os bundles do Next bloqueados (o React não hidrata), preencher E-mail e Senha e clicar em "Entrar"
+  1. Abrir `/entrar` com os bundles do Next bloqueados (o React não hidrata)
+  2. Enviar com a senha errada
+    - expect: a URL é `/entrar?falha=credenciais` e a mensagem de dados incorretos aparece
+  3. Enviar com a senha certa
     - expect: a URL é `/` (o envio nativo é um POST para a Server Action, sem a senha na URL)
 
 ### 2. Sem Sessão

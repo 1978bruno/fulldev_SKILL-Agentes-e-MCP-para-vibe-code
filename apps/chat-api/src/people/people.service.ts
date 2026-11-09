@@ -85,14 +85,14 @@ export class PeopleService {
   async changePassword<T>(
     personId: string,
     password: string,
-    alsoInTransaction?: (manager: EntityManager) => Promise<T>,
-  ): Promise<T | undefined> {
+    alsoInTransaction: (manager: EntityManager) => Promise<T>,
+  ): Promise<T> {
     const passwordHash = await this.passwords.hash(password);
     return this.people.manager.transaction(async (manager) => {
       await manager
         .getRepository(Person)
         .update({ id: personId }, { passwordHash });
-      return alsoInTransaction?.(manager);
+      return alsoInTransaction(manager);
     });
   }
 

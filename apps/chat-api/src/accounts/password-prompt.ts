@@ -10,8 +10,8 @@ const BACKSPACE = new Set(['\u007f', '\b']);
 // Lê a senha do terminal sem eco. Sem terminal (entrada redirecionada), lê uma linha da
 // entrada padrão. Nunca de argumento nem de variável de ambiente.
 export class TtyPasswordPrompt implements PasswordPrompt {
-  // Na entrada redirecionada, o que chegou depois da linha lida (a confirmação pode vir no
-  // mesmo pedaço que a senha) fica para a próxima pergunta.
+  // O que chegou depois da resposta (a confirmação pode vir no mesmo pedaço que a senha, colada
+  // no terminal ou redirecionada) fica para a próxima pergunta.
   private pending = '';
   private ended = false;
 
@@ -28,9 +28,6 @@ export class TtyPasswordPrompt implements PasswordPrompt {
   private readRaw(): Promise<string> {
     return new Promise((resolve, reject) => {
       let password = '';
-      this.input.setRawMode(true);
-      this.input.resume();
-      this.input.setEncoding('utf8');
       const finish = (error?: Error) => {
         this.input.setRawMode(false);
         this.input.pause();
@@ -39,18 +36,39 @@ export class TtyPasswordPrompt implements PasswordPrompt {
         if (error) reject(error);
         else resolve(password);
       };
-      const onData = (chunk: string) => {
-        for (const char of chunk) {
-          if (ENTER.has(char)) return finish();
-          if (char === CTRL_C) return finish(new Error('Cancelado.'));
+      // Devolve true quando a pergunta terminou; o que vem depois do Enter (a confirmação colada
+      // junto com a senha) fica em pending para a próxima pergunta.
+      const consume = (chunk: string): boolean => {
+        const chars = Array.from(chunk);
+        for (let i = 0; i < chars.length; i += 1) {
+          const char = chars[i];
+          if (ENTER.has(char)) {
+            const rest = chars.slice(i + 1).join('');
+            this.pending =
+              chars[i] === '\r' && rest.startsWith('\n') ? rest.slice(1) : rest;
+            finish();
+            return true;
+          }
+          if (char === CTRL_C) {
+            finish(new Error('Cancelado.'));
+            return true;
+          }
           if (char === CTRL_U) password = '';
           // Apaga o último ponto de código inteiro, e não meio par de surrogates (um emoji).
           else if (BACKSPACE.has(char))
             password = Array.from(password).slice(0, -1).join('');
           else password += char;
         }
+        return false;
       };
+      const onData = (chunk: string) => {
+        consume(chunk);
+      };
+      this.input.setRawMode(true);
+      this.input.setEncoding('utf8');
+      if (consume(this.drainPending())) return;
       this.input.on('data', onData);
+      this.input.resume();
     });
   }
 
@@ -65,11 +83,7 @@ export class TtyPasswordPrompt implements PasswordPrompt {
         return true;
       };
       if (takeLine()) return;
-      if (this.ended) {
-        const rest = this.pending;
-        this.pending = '';
-        return resolve(rest);
-      }
+      if (this.ended) return resolve(this.drainPending());
       this.input.setEncoding('utf8');
       const onData = (chunk: string) => {
         this.pending += chunk;
@@ -78,9 +92,7 @@ export class TtyPasswordPrompt implements PasswordPrompt {
       const onEnd = () => {
         this.ended = true;
         stop();
-        const rest = this.pending;
-        this.pending = '';
-        resolve(rest);
+        resolve(this.drainPending());
       };
       const stop = () => {
         this.input.removeListener('data', onData);
@@ -91,5 +103,11 @@ export class TtyPasswordPrompt implements PasswordPrompt {
       this.input.on('end', onEnd);
       this.input.resume();
     });
+  }
+
+  private drainPending(): string {
+    const rest = this.pending;
+    this.pending = '';
+    return rest;
   }
 }
