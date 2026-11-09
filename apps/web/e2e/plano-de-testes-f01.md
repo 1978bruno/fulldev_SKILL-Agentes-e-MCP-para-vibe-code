@@ -132,7 +132,7 @@ F01-T04 (`falha-no-envio.md`).
 
 **File:** `e2e/login/para-externo-cai-na-home.spec.ts`
 
-**Steps:** um caso para cada `para`: `//outro-site`, `https://outro-site`, `/\outro-site` e `/`, tabulação, `/outro-site`.
+**Steps:** um caso para cada `para`: `//outro-site`, `https://outro-site`, `/\outro-site`, `/`, tabulação, `/outro-site` e `/a/..//outro-site`.
   1. Abrir `/entrar?para=<valor>` e entrar com a Pessoa
     - expect: a URL é `/` e a Home aparece
 

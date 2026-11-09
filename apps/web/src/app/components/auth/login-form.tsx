@@ -28,19 +28,44 @@ const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
 
 const INITIAL_STATE: LoginState = { status: "idle" };
 
+// A rede pode cair na própria chamada do Server Action, antes de ele devolver um estado: o fetch
+// rejeita com TypeError. Isso vira a mesma falha recuperável; o resto (como o redirecionamento
+// do login certo) segue para o Next.
+async function loginOrFailure(
+  previous: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
+  try {
+    return await login(previous, formData);
+  } catch (error) {
+    if (error instanceof TypeError) return { status: "failure" };
+    throw error;
+  }
+}
+
+function focusIsLost(): boolean {
+  return !document.activeElement || document.activeElement === document.body;
+}
+
 type LoginFormProps = {
   // Caminho pedido antes de "Entrar", já conferido; o Server Action confere de novo.
   returnPath: string;
 };
 
 export function LoginForm({ returnPath }: LoginFormProps) {
-  const [state, formAction, isPending] = useActionState(login, INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(
+    loginOrFailure,
+    INITIAL_STATE,
+  );
   // Erros da validação no cliente; os do Server Action chegam pelo state.
   const [clientErrors, setClientErrors] = useState<LoginFieldErrors>({});
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   // Onde estava o foco ao enviar: o botão desabilitado durante o envio o perde.
   const focusedOnSubmitRef = useRef<HTMLElement | null>(null);
+  // O foco vai para o primeiro campo inválido depois que os erros aparecem, para o leitor de
+  // tela já encontrar a descrição ao chegar no campo.
+  const shouldFocusInvalidRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Marca o formulário como hidratado: antes disso, o envio é o do navegador, sem a validação
@@ -58,16 +83,19 @@ export function LoginForm({ returnPath }: LoginFormProps) {
         input.focus();
       }
     }
-    // Falha no envio: o foco volta para onde estava.
-    if (state.status === "failure") {
+    // Falha no envio: o foco volta para onde estava, só se ele se perdeu (a Pessoa pode ter ido
+    // para outro campo enquanto esperava).
+    if (state.status === "failure" && focusIsLost()) {
       focusedOnSubmitRef.current?.focus();
     }
   }, [state]);
 
-  function focusFirstInvalid(errors: LoginFieldErrors) {
-    if (errors.email) emailRef.current?.focus();
-    else if (errors.password) passwordRef.current?.focus();
-  }
+  useEffect(() => {
+    if (!shouldFocusInvalidRef.current) return;
+    shouldFocusInvalidRef.current = false;
+    if (clientErrors.email) emailRef.current?.focus();
+    else if (clientErrors.password) passwordRef.current?.focus();
+  }, [clientErrors]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,7 +107,7 @@ export function LoginForm({ returnPath }: LoginFormProps) {
     });
     setClientErrors(errors);
     if (hasErrors(errors)) {
-      focusFirstInvalid(errors);
+      shouldFocusInvalidRef.current = true;
       return;
     }
     focusedOnSubmitRef.current =

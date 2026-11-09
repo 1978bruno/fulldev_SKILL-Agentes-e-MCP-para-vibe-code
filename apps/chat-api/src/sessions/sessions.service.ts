@@ -1,7 +1,8 @@
+import { randomUUIDv7 } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, Repository } from 'typeorm';
+import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
@@ -34,17 +35,31 @@ export class SessionsService {
     if (!person) {
       throw new InvalidCredentialsError();
     }
+    return this.startSession(person);
+  }
 
+  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu, numa instrução só:
+  // um reset-password que troca a senha enquanto este login verificava a antiga faz a inserção
+  // não acontecer, e as Sessões criadas antes da troca caem na revogação que vem depois dela.
+  async startSession(person: Person): Promise<LoginResult> {
     const token = generateSessionToken();
     const now = new Date();
-    await this.sessions.save(
-      this.sessions.create({
-        personId: person.id,
-        tokenHash: hashSessionToken(token),
-        expiresAt: this.expiresFrom(now),
-        lastUsedAt: now,
-      }),
+    const inserted = await this.sessions.query<{ id: string }[]>(
+      `INSERT INTO sessions (id, person_id, token_hash, expires_at, last_used_at)
+       SELECT $1, id, $2, $3, $4 FROM people WHERE id = $5 AND password_hash = $6
+       RETURNING id`,
+      [
+        randomUUIDv7(),
+        hashSessionToken(token),
+        this.expiresFrom(now),
+        now,
+        person.id,
+        person.passwordHash,
+      ],
     );
+    if (inserted.length === 0) {
+      throw new InvalidCredentialsError();
+    }
     return { token, person };
   }
 
@@ -61,8 +76,15 @@ export class SessionsService {
     }
     const now = new Date();
     if (session.expiresAt <= now) {
-      // A Sessão vencida é apagada quando apresentada (LLD, "Sessão e login").
-      await this.sessions.delete({ id: session.id });
+      // A Sessão vencida é apagada quando apresentada (LLD, "Sessão e login"). A condição de
+      // vencimento no DELETE preserva uma renovação concorrente de outra requisição.
+      const deleted = await this.sessions.delete({
+        id: session.id,
+        expiresAt: LessThanOrEqual(now),
+      });
+      if (deleted.affected === 0 && (await this.isStillValid(session.id))) {
+        return session.person;
+      }
       throw new UnauthenticatedError();
     }
     await this.renewIfDue(session, now);
@@ -80,6 +102,12 @@ export class SessionsService {
       expiresAt: LessThanOrEqual(new Date()),
     });
     return result.affected ?? 0;
+  }
+
+  private async isStillValid(sessionId: string): Promise<boolean> {
+    return this.sessions.exists({
+      where: { id: sessionId, expiresAt: MoreThan(new Date()) },
+    });
   }
 
   // UPDATE condicional: duas verificações ao mesmo tempo gravam no máximo uma renovação, e
