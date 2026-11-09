@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import type { MessageCreatedEvent, SyncEvent } from 'chat-events';
+import { compareStreamIds } from '../src/realtime/events.store';
 import { authRoutes } from './support/auth-routes';
 import { conversationRoutes } from './support/conversation-routes';
 import {
@@ -90,9 +91,17 @@ describe('Recuperação depois da queda', () => {
     );
 
     // Outros testes criam Canais públicos ao mesmo tempo, que incluem esta Pessoa: só os eventos
-    // deste Canal contam.
-    const ours = messages.filter(
-      (event) => event.message.conversation_id === channelId,
+    // deste Canal contam. A publicação sai depois da resposta do envio, e um evento pode chegar
+    // ao vivo e no reenvio, em qualquer ordem: como a aba, o teste fica com um por cursor, em
+    // ordem de cursor.
+    const ours = [
+      ...new Map(
+        messages
+          .filter((event) => event.message.conversation_id === channelId)
+          .map((event) => [event.event_id, event]),
+      ).values(),
+    ].sort((a, b) =>
+      compareStreamIds(a.event_id!.split(':')[1], b.event_id!.split(':')[1]),
     );
     expect(ours.map((event) => event.message.body)).toEqual([
       'Durante a queda 1',

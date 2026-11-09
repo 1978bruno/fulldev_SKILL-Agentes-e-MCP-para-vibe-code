@@ -121,6 +121,9 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     };
     socket.on("disconnect", (reason) => {
       lastSync.current = null;
+      // Os eventos da próxima conexão podem chegar antes do "connect": a fila já começa aqui.
+      isSyncing = true;
+      pendingEvents = [];
       if (reason === "io server disconnect") return endSession();
       setStatus("disconnected");
     });

@@ -7,7 +7,7 @@ import { personRoom } from './realtime-socket';
 // Emite os eventos guardados por Pessoa para as abas dela (spec da F03, "Eventos por Pessoa e
 // reconexão"). Quem chama publica depois da gravação. Cada evento entra antes no stream de cada
 // Pessoa, e cada sala recebe o cursor da sua; com o Redis fora, o evento sai sem cursor, e a
-// reconexão seguinte recarrega.
+// reconexão seguinte das Pessoas afetadas recarrega.
 @Injectable()
 export class RealtimePublisher {
   private readonly logger = new Logger(RealtimePublisher.name);
@@ -30,6 +30,7 @@ export class RealtimePublisher {
       });
     } catch (error) {
       this.logger.error('Falha ao guardar o evento no Redis', error);
+      this.events.markMissed(memberIds);
       this.gateway.server
         .to(memberIds.map(personRoom))
         .emit('message.created', { message });
