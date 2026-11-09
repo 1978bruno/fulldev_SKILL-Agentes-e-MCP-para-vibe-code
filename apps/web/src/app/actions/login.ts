@@ -8,6 +8,7 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
+import { safeReturnPath } from "@/app/utils/return-path";
 
 export type LoginState =
   | { status: "idle" }
@@ -35,5 +36,5 @@ export async function login(
   }
 
   await writeSessionCookie(result.token);
-  redirect("/");
+  redirect(safeReturnPath(formData.get("para")));
 }

@@ -1,11 +1,13 @@
 // spec: e2e/plano-de-testes-f01.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
+import { waitForLoginForm } from "../support/login-page";
 
 test.describe("Entrar", () => {
   test("entrar-pelo-teclado", async ({ page, person }) => {
     // 1. Abrir /entrar; o foco começa no E-mail
     await page.goto("/entrar");
+    await waitForLoginForm(page);
     await expect(page.getByRole("textbox", { name: "E-mail" })).toBeFocused();
 
     // 2. Digitar o e-mail, Tab, digitar a senha, Tab até o botão

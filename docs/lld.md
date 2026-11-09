@@ -394,7 +394,8 @@ atualiza esse cache direto, sem nova requisição.
 - Qualquer 401 vindo do BFF manda para "Entrar".
 - Um 401 no WebSocket fecha a conexão e manda para "Entrar".
 - **Voltar para onde ia:** quem é mandado para "Entrar" leva o caminho pedido em `?para=`.
-  - Só vale um caminho relativo que começa com `/` e não com `//`.
+  - Só vale um caminho relativo que começa com `/` e cujo segundo caractere não é `/` nem `\`
+    (o navegador trata `/\` como `//`).
   - Sem ele, ou com outro valor, a Pessoa vai para a Home depois de entrar.
 - **Histórico depois de sair:**
   - As telas logadas saem com `Cache-Control: no-store`.

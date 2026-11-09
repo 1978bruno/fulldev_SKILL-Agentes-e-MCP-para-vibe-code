@@ -3,6 +3,7 @@
 import type { Page } from "@playwright/test";
 import { EMAIL_INVALID, PASSWORD_REQUIRED } from "../../src/app/utils/login-validation";
 import { expect, test } from "../fixtures";
+import { waitForLoginForm } from "../support/login-page";
 
 function countLoginPosts(page: Page): () => number {
   let posts = 0;
@@ -20,6 +21,7 @@ test.describe("Erros ao entrar", () => {
 
     // 1. Abrir /entrar e clicar em "Entrar" com os dois campos vazios
     await page.goto("/entrar");
+    await waitForLoginForm(page);
     await page.getByRole("button", { name: "Entrar" }).click();
 
     const email = page.getByRole("textbox", { name: "E-mail" });

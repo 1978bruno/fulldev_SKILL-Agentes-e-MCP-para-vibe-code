@@ -54,7 +54,12 @@ function focusIsLost(): boolean {
   return !document.activeElement || document.activeElement === document.body;
 }
 
-export function LoginForm() {
+type LoginFormProps = {
+  // Caminho pedido antes de "Entrar", já conferido; o Server Action confere de novo.
+  returnPath: string;
+};
+
+export function LoginForm({ returnPath }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(
     loginOrFailure,
     INITIAL_STATE,
@@ -68,6 +73,13 @@ export function LoginForm() {
   // O foco vai para o primeiro campo inválido depois que os erros aparecem, para o leitor de
   // tela já encontrar a descrição ao chegar no campo.
   const shouldFocusInvalidRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Marca o formulário como hidratado: antes disso, o envio é o do navegador, sem a validação
+  // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
+  useEffect(() => {
+    formRef.current?.setAttribute("data-ready", "");
+  }, []);
 
   // Credenciais incorretas: a senha é limpa e recebe o foco; o e-mail continua.
   useEffect(() => {
@@ -143,11 +155,13 @@ export function LoginForm() {
           sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
           chama o mesmo Server Action. */}
       <form
+        ref={formRef}
         className="flex w-full flex-col gap-4"
         action={formAction}
         onSubmit={handleSubmit}
         noValidate
       >
+        <input type="hidden" name="para" value={returnPath} />
         <Field label="E-mail" htmlFor="email" error={emailError} errorId="email-error">
           <Input
             ref={emailRef}

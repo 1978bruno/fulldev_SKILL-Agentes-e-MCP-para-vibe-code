@@ -1,11 +1,13 @@
 // spec: e2e/plano-de-testes-f01.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
+import { waitForLoginForm } from "../support/login-page";
 
 test.describe("Entrar", () => {
   test("credenciais-incorretas", async ({ page, person }) => {
     // 1. Abrir /entrar, preencher o E-mail da Pessoa e uma senha errada
     await page.goto("/entrar");
+    await waitForLoginForm(page);
     await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
     await page.getByLabel("Senha").fill("senha-errada");
 
