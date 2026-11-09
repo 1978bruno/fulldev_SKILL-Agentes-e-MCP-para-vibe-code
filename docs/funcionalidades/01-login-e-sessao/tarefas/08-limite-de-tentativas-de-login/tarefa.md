@@ -1,6 +1,6 @@
 # 08: Limite de tentativas de login
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** depois de errar a senha várias vezes seguidas, as tentativas seguintes com
 aquele e-mail são recusadas por um tempo, mesmo com a senha certa. A tela avisa que houve
