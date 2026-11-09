@@ -99,7 +99,12 @@ export class MessagesService {
       try {
         const memberIds =
           await this.conversations.listMemberIds(conversationId);
-        this.publisher.messageCreated(memberIds, toMessageResponse(message));
+        // A gravação no Redis e a emissão não prendem a resposta do envio.
+        void this.publisher
+          .messageCreated(memberIds, toMessageResponse(message))
+          .catch((error: unknown) =>
+            this.logger.error('Falha ao publicar a Mensagem gravada', error),
+          );
       } catch (error) {
         this.logger.error('Falha ao publicar a Mensagem gravada', error);
       }

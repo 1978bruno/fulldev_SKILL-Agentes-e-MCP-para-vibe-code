@@ -37,6 +37,8 @@ services:
       BASE_URL: http://localhost:3000
       # As fixtures gravam as Pessoas de teste direto no banco chat (LLD, "Ambiente de desenvolvimento").
       DATABASE_URL: postgres://chat:chat@postgres:5432/chat
+      # A fixture da recuperação apaga a época dos eventos no Redis de desenvolvimento.
+      REDIS_URL: redis://redis:6379/0
       PLAYWRIGHT_HTML_OPEN: never
       HOME: /tmp
     command: ["node", "e2e/support/port-forward.mjs"]
@@ -59,12 +61,18 @@ services:
       SESSION_TTL_DAYS: "30"
       # Origem da web aceita no handshake do WebSocket.
       WEB_ORIGIN: http://localhost:3000
+      # Eventos por Pessoa para a reconexão; os testes usam o banco lógico 1.
+      REDIS_URL: redis://redis:6379/0
+      TEST_REDIS_URL: redis://redis:6379/1
     ports:
       - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
       s3:
+        condition: service_started
+      # A API sobe mesmo com o Redis fora: a reconexão só passa a recarregar.
+      redis:
         condition: service_started
 
   postgres:
@@ -79,6 +87,19 @@ services:
       - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Eventos por Pessoa para a reconexão do WebSocket (HLD 6.2).
+  redis:
+    image: redis:8
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -99,3 +120,4 @@ services:
 volumes:
   postgres-data:
   s3-data:
+  redis-data:

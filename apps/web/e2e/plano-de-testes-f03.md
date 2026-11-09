@@ -200,3 +200,21 @@ provedor derruba o socket na hora.
   1. O Canal aberto em duas abas da mesma Sessão, a segunda conectada
   2. Sair na primeira aba
     - expect: a segunda vai para "Entrar" sem navegar, com o `?para=` do Canal
+
+### 8. Recuperar depois da queda
+
+**File:** `e2e/tempo-real/recuperar-depois-da-queda.spec.ts`
+
+As duas Pessoas abrem o Canal em comum, sem histórico. A queda é o `context.setOffline(true)`; a
+perda dos dados do Redis é simulada apagando a época (`events:epoch`) pelo Redis de desenvolvimento
+(`e2e/support/redis.ts`).
+
+#### 8.1. a Mensagem da queda curta aparece uma vez, sem recarregar
+  1. Marcar a `window` e cair
+  2. A outra Pessoa envia; a rede volta
+    - expect: a Mensagem aparece uma vez e a marca da `window` continua lá
+
+#### 8.2. com a época apagada, recarrega as mais recentes e mantém o texto
+  1. Com um rascunho na caixa, cair e apagar a época
+  2. A outra Pessoa envia; a rede volta
+    - expect: a Mensagem aparece uma vez e o rascunho continua na caixa

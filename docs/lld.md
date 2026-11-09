@@ -84,7 +84,7 @@ e do projeto `web`. O que já vale vem do HLD: o BFF dispara o agente
 
 ### Integrações externas
 
-Situação de todas: `planejada`.
+Situação: "Eventos por pessoa (Redis)" `existe`; as demais, `planejada`.
 
 **Armazenamento de objetos (S3)** — usado pelo Worker (gravar) e pela API do chat (URL).
 
@@ -105,9 +105,9 @@ Situação de todas: `planejada`.
 | Operação | Recebe | Devolve | Garante |
 | --- | --- | --- | --- |
 | Guardar evento | Pessoa e evento | Identificador crescente por pessoa | A ordem dos identificadores é a ordem dos eventos daquela pessoa; cada gravação corta os eventos mais velhos que a `retenção dos eventos de reconexão` |
-| Ler desde | Pessoa e último identificador confirmado | Os eventos seguintes, ou "perdido" | "Perdido" quando o corte já apagou algum evento posterior ao identificador, ou quando o Redis perdeu os dados desde que o identificador foi entregue; o cliente então recarrega pelo histórico |
+| Ler desde | Pessoa e último identificador confirmado | Os eventos seguintes, ou "perdido" | "Perdido" quando o corte pode ter apagado algum evento posterior ao identificador (há eventos mais novos e o primeiro que sobrou é posterior a ele), ou quando o Redis perdeu os dados desde que o identificador foi entregue; o cliente então recarrega pelo histórico |
 
-Um stream por Pessoa, com a época que denuncia a perda dos dados; exige Redis 7 ou mais novo. O mecanismo e a ordem da conexão estão na [spec da F03](funcionalidades/03-tempo-real/spec.md), seção "Eventos por Pessoa e reconexão".
+Um stream por Pessoa, com a época que denuncia a perda dos dados. O mecanismo e a ordem da conexão estão na [spec da F03](funcionalidades/03-tempo-real/spec.md), seção "Eventos por Pessoa e reconexão".
 
 **Contadores (Redis)** — usados pelo Serviço de agentes (HLD 6.3).
 
@@ -297,7 +297,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created`, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -516,7 +516,7 @@ Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota
 **Variáveis de ambiente**
 
 O que cada contêiner recebe está no HLD, seção 8, "Configuração e segredos". As já decididas
-(`DATABASE_URL`, `PORT`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS` e `WEB_ORIGIN` da API do chat e as cinco da Web já existem; as demais são `planejadas`):
+(`DATABASE_URL`, `PORT`, `SESSION_COOKIE_NAME`, `SESSION_TTL_DAYS`, `WEB_ORIGIN`, `REDIS_URL` e `TEST_REDIS_URL` da API do chat e as cinco da Web já existem; as demais são `planejadas`):
 
 | Projeto | Variável | Para quê |
 | --- | --- | --- |
@@ -546,10 +546,10 @@ substitui cada serviço de produção segue o HLD, seção 9, "Implantação e a
 | `chat-api` | `apps/chat-api/Dockerfile.dev` (Node 26, pnpm 11) | 3001 (3000 no contêiner) | API do chat |
 | `postgres` | `postgres:18` | 5432 | Banco do chat, dos agentes e de negócio |
 | `s3` | `chrislusf/seaweedfs:4.52` (`weed mini`) | 8333 | Substituto do armazenamento compatível com S3, com o bucket `reports` |
+| `redis` | `redis:8` | 6379 | Eventos por Pessoa para a reconexão; o banco lógico 1 (`TEST_REDIS_URL`) é dos testes da API do chat |
 | `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://localhost:3000`, encaminhado para a web, e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
 
-O Redis entra com a F03 (`redis:8`, porta 6379, eventos de reconexão), `planejado`. Entram
-depois os serviços `agents` e `worker`, quando `apps/agents` existir.
+Entram depois os serviços `agents` e `worker`, quando `apps/agents` existir.
 
 **Contêineres dos apps**
 

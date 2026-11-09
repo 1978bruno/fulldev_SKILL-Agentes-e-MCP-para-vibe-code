@@ -77,8 +77,7 @@ As regras estão no LLD, "Sessão e login", "WebSocket". A implementação:
 ### Eventos por Pessoa e reconexão (API do chat e Redis)
 
 O Redis entra na F03, com o primeiro uso dele ([ADR 0007](../../adr/0007-redis-gerenciado.md); LLD,
-"Integrações externas", "Eventos por pessoa"). Precisa da versão 7 ou mais nova, pelo
-`max-deleted-entry-id` do `XINFO STREAM`.
+"Integrações externas", "Eventos por pessoa").
 
 - **Guardar:** um stream por Pessoa, `events:person:<id>`. Cada evento entra por `XADD` com o corte
   `MINID ~` de agora menos a `retenção dos eventos de reconexão`. O id do stream é o id do evento,
@@ -86,10 +85,13 @@ O Redis entra na F03, com o primeiro uso dele ([ADR 0007](../../adr/0007-redis-g
 - **Época:** a chave `events:epoch` guarda um valor aleatório, criado com `SET NX` quando falta. O
   cursor que o cliente recebe é `<época>:<id do stream>`. Se o Redis perdeu os dados, a época muda e
   todo cursor antigo vira "perdido", em vez de uma reconexão que não reenvia nada e esconde a perda.
-- **Ler desde:** o cursor é "perdido" quando a época difere ou quando o `max-deleted-entry-id` do
-  stream é maior que o id do cursor, isto é, quando o corte já apagou algum evento posterior a ele.
-  Fora disso, a API reenvia os eventos depois do cursor, por `XRANGE`. Um stream que não existe é
-  vazio, sem nada apagado.
+- **Ler desde:** o cursor é "perdido" quando a época difere, ou quando há eventos mais novos que o
+  cursor (o `last-generated-id` do stream é maior que ele) e o primeiro evento que sobrou no stream
+  é posterior ao cursor, ou não sobrou nenhum: algum evento depois do cursor pode ter sido cortado.
+  Quando o corte apagou só o próprio evento do cursor, a regra recarrega sem precisar, mas nunca
+  esconde uma perda. Fora disso, a API reenvia os eventos depois do cursor, por `XRANGE`. Um stream
+  que não existe é vazio, sem nada apagado. O `max-deleted-entry-id` do `XINFO STREAM` não serve:
+  ele só acompanha o `XDEL`, e não o corte (descoberto na F03-T07).
 - **Queda mais longa que a retenção:** sem eventos novos para a Pessoa, o corte não roda e nada se
   perde; a reconexão reenvia o que houver, sem recarregar. O critério do PRD (história 5) vale como
   garantia: até 5 min, nunca recarrega.
@@ -103,9 +105,11 @@ O Redis entra na F03, com o primeiro uso dele ([ADR 0007](../../adr/0007-redis-g
   reenvio do mesmo `client_id` não gera evento (LLD, "Concorrência e idempotência"). A publicação lê
   os Membros da Conversa, faz um `XADD` por Membro num pipeline e emite para cada sala `person:`, com
   o id do evento daquela Pessoa.
-- **Redis fora:** a Mensagem já está gravada, então o envio responde sucesso. A publicação emite sem
-  id de evento e registra `error` no log; a reconexão seguinte dessa Pessoa, sem Redis, responde
-  `reset`.
+- **Redis fora ou travado:** a Mensagem já está gravada, então o envio responde sucesso; cada operação
+  no Redis tem um prazo de 2 s, e a publicação não prende a resposta do envio. A publicação que não
+  grava emite sem id de evento, registra `error` no log e marca, na memória do processo, as Pessoas
+  que perderam o evento: a reconexão seguinte de cada uma responde `reset`. A reconexão sem Redis
+  também responde `reset`.
 - **Perda aceita:** se o processo cai entre o commit e a publicação, o evento não existe. Quem estava
   conectado vê a Mensagem só ao abrir a Conversa de novo.
 
@@ -232,7 +236,7 @@ livre, com `socket.io-client`, o banco de testes e o Redis de testes:
   chega a quem não é Membro (participação apagada no Arrange); o reenvio do mesmo `client_id` não
   gera outro evento;
 - reconexão com cursor reenvia, em ordem, só os eventos posteriores; sem cursor, `sync` com
-  `reset`; cursor de outra época e cursor anterior ao corte (`max-deleted-entry-id`): `reset`;
+  `reset`; cursor de outra época e cursor anterior ao corte: `reset`;
 - `conversation.open` de quem não é Membro: `conversation_not_found`, e o socket não recebe o
   "digitando" daquela Conversa; `typing.start` chega aos outros da sala e não às abas da própria
   Pessoa;

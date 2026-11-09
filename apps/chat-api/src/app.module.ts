@@ -6,12 +6,14 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { DatabaseModule } from './database/database.module';
 import { MessagesModule } from './messages/messages.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RedisModule } from './redis/redis.module';
 import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
   imports: [
     AppConfigModule,
     DatabaseModule,
+    RedisModule,
     SessionsModule,
     ConversationsModule,
     MessagesModule,
