@@ -288,9 +288,9 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | BFF: `GET /api/session/expired` | existe | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
 | API do chat: `GET /v1/conversations` | existe | As Conversas de que a Pessoa é Membro: spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
-| API do chat: `GET /v1/conversations/:id/messages` | existe: a página mais recente; `before` e `limit` planejados | Página do histórico: spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe; o reenvio sem duplicar é planejado | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| BFF: `GET /api/conversations/:id/messages` | planejada | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
+| BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras

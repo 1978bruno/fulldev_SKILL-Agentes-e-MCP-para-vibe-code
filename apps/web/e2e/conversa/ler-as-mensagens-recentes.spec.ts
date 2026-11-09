@@ -1,6 +1,7 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
+import { messageList } from "../support/conversation-page";
 import { insertChannel, insertMessages, insertPerson } from "../support/database";
 
 test.describe("Ler as Mensagens", () => {
@@ -17,8 +18,8 @@ test.describe("Ler as Mensagens", () => {
     await page.goto(`/conversas/${channel.id}`);
 
     await expect(page.getByRole("heading", { level: 1, name: channel.name })).toBeVisible();
-    await expect(page.getByText("Conversas do time")).toBeVisible();
-    const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
+    await expect(page.locator("header").getByText("Conversas do time")).toBeVisible();
+    const mensagens = messageList(page, channel.name);
     const itens = mensagens.getByRole("listitem");
     await expect(itens).toHaveCount(3);
     await expect(itens.nth(0)).toContainText("Bruno Lima");

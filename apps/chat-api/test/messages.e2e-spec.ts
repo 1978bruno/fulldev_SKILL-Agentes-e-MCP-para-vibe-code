@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
-import { MESSAGE_PAGE_SIZE } from '../src/messages/message-values';
+import {
+  MESSAGE_PAGE_MAX_SIZE,
+  MESSAGE_PAGE_SIZE,
+} from '../src/messages/message-values';
 import { authRoutes } from './support/auth-routes';
 import { conversationRoutes } from './support/conversation-routes';
 import { createTestApp } from './support/create-test-app';
@@ -82,6 +85,102 @@ describe('mensagens', () => {
       const body = response.body as { messages: unknown[]; has_more: boolean };
       expect(body.messages).toHaveLength(2);
       expect(body.has_more).toBe(false);
+    });
+
+    it('devolve as Mensagens anteriores a before, em ordem cronológica', async () => {
+      const { person, channel, cookie } = await memberOfNewChannel();
+      const ids = await conversationRoutes.insertMessages(app, {
+        conversationId: channel.id,
+        authorId: person.id,
+        count: 5,
+      });
+
+      const response = await request(server)
+        .get(`/v1/conversations/${channel.id}/messages`)
+        .query({ before: ids[3], limit: 2 })
+        .set('Cookie', cookie);
+
+      expect(response.status).toBe(200);
+      const body = response.body as {
+        messages: MessageBody[];
+        has_more: boolean;
+      };
+      expect(body.messages.map((message) => message.id)).toEqual([
+        ids[1],
+        ids[2],
+      ]);
+      expect(body.has_more).toBe(true);
+    });
+
+    it('as páginas encadeadas cobrem o histórico inteiro sem repetir nem pular', async () => {
+      const { person, channel, cookie } = await memberOfNewChannel();
+      const ids = await conversationRoutes.insertMessages(app, {
+        conversationId: channel.id,
+        authorId: person.id,
+        count: 7,
+      });
+      const pages: { messages: MessageBody[]; has_more: boolean }[] = [];
+      let before: string | undefined;
+      do {
+        const response = await request(server)
+          .get(`/v1/conversations/${channel.id}/messages`)
+          .query({ limit: 3, ...(before ? { before } : {}) })
+          .set('Cookie', cookie);
+        pages.push(
+          response.body as { messages: MessageBody[]; has_more: boolean },
+        );
+        before = pages.at(-1)!.messages[0]?.id;
+      } while (pages.at(-1)!.has_more && pages.length < 10);
+
+      const received = pages
+        .toReversed()
+        .flatMap((page) => page.messages.map((message) => message.id));
+      expect(received).toEqual(ids);
+      expect(pages.map((page) => page.has_more)).toEqual([true, true, false]);
+    });
+
+    it('usa o tamanho padrão e aceita o máximo', async () => {
+      const { person, channel, cookie } = await memberOfNewChannel();
+      await conversationRoutes.insertMessages(app, {
+        conversationId: channel.id,
+        authorId: person.id,
+        count: MESSAGE_PAGE_MAX_SIZE + 1,
+      });
+
+      const [standard, maximum] = await Promise.all(
+        [{}, { limit: MESSAGE_PAGE_MAX_SIZE }].map((query) =>
+          request(server)
+            .get(`/v1/conversations/${channel.id}/messages`)
+            .query(query)
+            .set('Cookie', cookie),
+        ),
+      );
+
+      expect((standard.body as { messages: unknown[] }).messages).toHaveLength(
+        MESSAGE_PAGE_SIZE,
+      );
+      expect((maximum.body as { messages: unknown[] }).messages).toHaveLength(
+        MESSAGE_PAGE_MAX_SIZE,
+      );
+    });
+
+    it.each([
+      ['before que não é uuid', { before: 'abc' }],
+      ['limit zero', { limit: 0 }],
+      ['limit acima do máximo', { limit: MESSAGE_PAGE_MAX_SIZE + 1 }],
+      ['limit que não é inteiro', { limit: 'dez' }],
+    ])('recusa %s com validation_failed', async (_caso, query) => {
+      const { channel, cookie } = await memberOfNewChannel();
+
+      const response = await request(server)
+        .get(`/v1/conversations/${channel.id}/messages`)
+        .query(query)
+        .set('Cookie', cookie);
+
+      expect(response.status).toBe(400);
+      expect((response.body as { code: string }).code).toBe(
+        'validation_failed',
+      );
     });
 
     it('responde 404 nas Mensagens de uma Conversa sem participação', async () => {

@@ -238,13 +238,16 @@ export async function getConversation(
   return result.kind === "ok" ? { kind: "ok", conversation: result.body.conversation } : result;
 }
 
-export async function listLatestMessages(
+// Uma página do histórico: as anteriores a `before`, ou as mais recentes sem ele.
+export async function listMessages(
   token: string,
   conversationId: string,
+  { before }: { before?: string } = {},
 ): Promise<MessagePageResult> {
+  const query = before ? `?before=${encodeURIComponent(before)}` : "";
   const result = await getJson<{ messages: ApiMessage[]; has_more: boolean }>(
     token,
-    conversationPath(conversationId, "/messages"),
+    conversationPath(conversationId, `/messages${query}`),
   );
   if (result.kind !== "ok") return result;
   return {

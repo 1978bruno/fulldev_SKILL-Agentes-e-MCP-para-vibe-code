@@ -1,11 +1,10 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
 import { Message } from './message.entity';
-import { MESSAGE_PAGE_SIZE } from './message-values';
 
 export interface MessageAuthor {
   id: string;
@@ -26,6 +25,11 @@ export interface MessagePage {
   hasMore: boolean;
 }
 
+export interface PageRequest {
+  before?: string;
+  limit: number;
+}
+
 export interface NewMessage {
   clientId: string;
   body: string;
@@ -43,19 +47,24 @@ export class MessagesService {
     return this.txHost.tx.getRepository(Message);
   }
 
-  // A página mais recente, em ordem cronológica. Uma linha a mais diz se há Mensagens anteriores.
-  async listLatest(
+  // Uma página do histórico, em ordem cronológica: as `limit` Mensagens anteriores a `before`, ou
+  // as mais recentes sem ele. Uma linha a mais diz se há Mensagens anteriores (LLD, "Interfaces").
+  async listPage(
     personId: string,
     conversationId: string,
+    { before, limit }: PageRequest,
   ): Promise<MessagePage> {
     await this.conversations.getForMember(personId, conversationId);
     const newestFirst = await this.messages.find({
-      where: { conversationId },
+      where: {
+        conversationId,
+        ...(before ? { id: LessThan(before) } : {}),
+      },
       order: { id: 'DESC' },
-      take: MESSAGE_PAGE_SIZE + 1,
+      take: limit + 1,
     });
-    const hasMore = newestFirst.length > MESSAGE_PAGE_SIZE;
-    const page = newestFirst.slice(0, MESSAGE_PAGE_SIZE).reverse();
+    const hasMore = newestFirst.length > limit;
+    const page = newestFirst.slice(0, limit).reverse();
     return { messages: await this.withAuthors(page), hasMore };
   }
 

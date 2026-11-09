@@ -1,7 +1,16 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
+import { ListMessagesQuery } from './list-messages.query';
 import { MessageResponse, toMessageResponse } from './message.response';
 import { MessagesService } from './messages.service';
 import { SendMessageDto } from './send-message.dto';
@@ -15,8 +24,9 @@ export class MessagesController {
   async list(
     @CurrentPerson() person: Person,
     @Param('conversationId') conversationId: string,
+    @Query() query: ListMessagesQuery,
   ): Promise<{ messages: MessageResponse[]; has_more: boolean }> {
-    const page = await this.messages.listLatest(person.id, conversationId);
+    const page = await this.messages.listPage(person.id, conversationId, query);
     return {
       messages: page.messages.map(toMessageResponse),
       has_more: page.hasMore,

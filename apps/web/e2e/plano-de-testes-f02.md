@@ -112,9 +112,78 @@ banco, com nome de prefixo `e2e-` e só as participações que o teste passa (`m
   3. Avançar no navegador
     - expect: o segundo Canal
 
-### 5. Acessibilidade
+### 5. Histórico até a primeira Mensagem
 
-#### 5.1. conversa-sem-violacoes
+Os testes desta seção esperam o histórico hidratado (`readyHistory`, que espera o `data-ready`)
+antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensagem N").
+
+#### 5.1. rolar-ate-o-comeco
+
+**File:** `e2e/conversa/rolar-ate-o-comeco.spec.ts`
+
+**Steps:**
+  1. Abrir um Canal com 75 Mensagens
+    - expect: 50 itens, o último "Mensagem 75"
+  2. Rolar até o topo
+    - expect: a página anterior chega pela rota `/api/conversations/<id>/messages?before=`
+    - expect: 75 itens, o primeiro "Mensagem 1"
+    - expect: a "Mensagem 26", que estava no topo, continua no mesmo lugar da tela
+  3. Rolar até o topo de novo
+    - expect: "Este é o começo do canal #<nome>"
+
+#### 5.2. carregar-anteriores-pelo-teclado
+
+**File:** `e2e/conversa/carregar-anteriores-pelo-teclado.spec.ts`
+
+**Steps:**
+  1. Sem o IntersectionObserver (só o teclado carrega), abrir um Canal com 60 Mensagens
+  2. Shift+Tab da caixa de mensagem
+    - expect: o foco está em "Carregar mensagens anteriores"
+  3. Shift+Tab de novo, End e PageUp
+    - expect: o foco está na área do histórico, e ela rola para cima
+  4. Tab e Enter
+    - expect: 60 itens e o começo do Canal
+    - expect: o foco está na área do histórico, porque o botão saiu com a última página
+
+#### 5.3. falha-ao-carregar-anteriores
+
+**File:** `e2e/conversa/falha-ao-carregar-anteriores.spec.ts`
+
+**Steps:**
+  1. Com a rota das anteriores abortada por `page.route`, rolar até o topo
+    - expect: "Carregar mensagens anteriores" visível, fora de carga, e os 50 itens mantidos
+  2. Liberar a rota e clicar no link
+    - expect: 60 itens e o começo do Canal
+
+#### 5.4. canal-sem-mensagens
+
+**File:** `e2e/conversa/canal-sem-mensagens.spec.ts`
+
+**Steps:**
+  1. Abrir um Canal sem Mensagens
+    - expect: "Este é o começo do canal #<nome>" com o Tópico, nenhum item e nenhum link de anteriores
+
+#### 5.5. anteriores-com-sessao-revogada
+
+**File:** `e2e/conversa/anteriores-com-sessao-revogada.spec.ts`
+
+**Steps:**
+  1. Com 60 Mensagens, revogar a Sessão e rolar até o topo
+    - expect: a URL é `/entrar?para=%2Fconversas%2F<id>`
+
+#### 5.6. enviar-e-carregar-anteriores
+
+**File:** `e2e/conversa/enviar-e-carregar-anteriores.spec.ts`
+
+**Steps:**
+  1. Com 60 Mensagens, enviar "Recém-enviada"
+    - expect: a última Mensagem é a enviada
+  2. Rolar até o topo
+    - expect: 61 itens, e a enviada continua a última
+
+### 6. Acessibilidade
+
+#### 6.1. conversa-sem-violacoes
 
 **File:** `e2e/acessibilidade/conversa-sem-violacoes.spec.ts`
 

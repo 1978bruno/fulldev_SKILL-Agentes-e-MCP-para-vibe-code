@@ -102,3 +102,21 @@ export async function insertMessages(
   );
   return inserted;
 }
+
+// Um histórico de `count` Mensagens da Pessoa, "Mensagem 1" a "Mensagem <count>", uma por minuto
+// até um dia atrás.
+export function insertHistory(
+  channel: TestChannel,
+  author: TestPerson,
+  count: number,
+): Promise<TestMessage[]> {
+  const start = Date.now() - 86_400_000;
+  return insertMessages(
+    channel,
+    Array.from({ length: count }, (_, index) => ({
+      author,
+      body: `Mensagem ${index + 1}`,
+      at: new Date(start + index * 60_000),
+    })),
+  );
+}
