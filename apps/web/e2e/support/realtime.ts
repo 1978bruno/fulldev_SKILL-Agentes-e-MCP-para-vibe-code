@@ -2,11 +2,20 @@ import { expect, type Page } from "@playwright/test";
 import { composer, readyHistory } from "./conversation-page";
 import { insertHistory, type TestChannel, type TestPerson } from "./database";
 
-// Espera o socket da aba conectado: o provedor do tempo real marca o estado em data-realtime.
-export async function waitForRealtime(page: Page): Promise<void> {
-  await expect(page.locator("[data-realtime]")).toHaveAttribute("data-realtime", "connected", {
+// Espera o socket da aba no estado dado (conectado, sem ele): o provedor do tempo real marca o
+// estado em data-realtime.
+export async function waitForRealtime(
+  page: Page,
+  status: "connected" | "disconnected" = "connected",
+): Promise<void> {
+  await expect(page.locator("[data-realtime]")).toHaveAttribute("data-realtime", status, {
     timeout: 15_000,
   });
+}
+
+// A faixa de conexão no topo da Casca.
+export function connectionBanner(page: Page) {
+  return page.getByRole("status").filter({ hasText: "Sem conexão em tempo real. Reconectando…" });
 }
 
 // Os WebSockets da página com a API do chat que estão abertos agora. Conta os abertos, e não os

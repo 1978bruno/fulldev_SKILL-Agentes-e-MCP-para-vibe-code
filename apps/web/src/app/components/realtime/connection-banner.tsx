@@ -11,7 +11,7 @@ export function ConnectionBanner() {
   return (
     <div role="status">
       {isVisible ? (
-        <p className="flex h-[26px] items-center justify-center gap-2 bg-warning px-4 text-small font-bold text-on-warning">
+        <p className="flex items-center justify-center gap-2 bg-warning px-4 py-1 text-small font-bold text-on-warning">
           <WifiOff aria-hidden size={16} />
           Sem conexão em tempo real. Reconectando…
         </p>

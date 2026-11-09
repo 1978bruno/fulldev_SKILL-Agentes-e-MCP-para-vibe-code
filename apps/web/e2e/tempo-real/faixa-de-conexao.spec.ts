@@ -1,10 +1,8 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
-import { expect, test } from "../fixtures";
+import { expect, logIn, test } from "../fixtures";
 import { messageItem, readyHistory } from "../support/conversation-page";
-import { sendFromComposer, waitForRealtime } from "../support/realtime";
-
-const BANNER_TEXT = "Sem conexão em tempo real. Reconectando…";
+import { connectionBanner, sendFromComposer, waitForRealtime } from "../support/realtime";
 
 test.describe("Faixa de conexão", () => {
   test("a faixa aparece depois de 3 s offline e some ao voltar", async ({
@@ -16,9 +14,9 @@ test.describe("Faixa de conexão", () => {
     await page.goto(`/conversas/${memberChannel.id}`);
     await waitForRealtime(page);
     await context.setOffline(true);
-    const banner = page.getByRole("status").filter({ hasText: BANNER_TEXT });
+    const banner = connectionBanner(page);
 
-    await expect(page.locator("[data-realtime]")).toHaveAttribute("data-realtime", "disconnected");
+    await waitForRealtime(page, "disconnected");
     await expect(banner).toHaveCount(0);
     await expect(banner).toBeVisible({ timeout: 6_000 });
     await expect(banner).not.toBeFocused();
@@ -39,12 +37,12 @@ test.describe("Faixa de conexão", () => {
     await page.goto(`/conversas/${memberChannel.id}`);
     await waitForRealtime(page);
     await context.setOffline(true);
-    await expect(page.locator("[data-realtime]")).toHaveAttribute("data-realtime", "disconnected");
+    await waitForRealtime(page, "disconnected");
     await context.setOffline(false);
 
     await waitForRealtime(page);
     await page.waitForTimeout(3_500);
-    await expect(page.getByText(BANNER_TEXT)).toHaveCount(0);
+    await expect(connectionBanner(page)).toHaveCount(0);
   });
 
   test("a faixa aparece quando a primeira conexão não acontece", async ({
@@ -54,14 +52,10 @@ test.describe("Faixa de conexão", () => {
   }) => {
     // 1. Entrar com o WebSocket sem chegar ao servidor: a conexão nunca se completa
     await page.routeWebSocket(/\/socket\.io\//, () => {});
-    await page.goto("/entrar");
-    await page.locator("form[data-ready]").waitFor();
-    await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
-    await page.getByLabel("Senha").fill(person.password);
-    await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL(`/conversas/${memberChannel.id}`, { timeout: 15_000 });
+    await logIn(page, person, { waitForRealtime: false });
+    await expect(page).toHaveURL(`/conversas/${memberChannel.id}`);
 
-    await expect(page.getByText(BANNER_TEXT)).toBeVisible({ timeout: 6_000 });
+    await expect(connectionBanner(page)).toBeVisible({ timeout: 6_000 });
   });
 
   test("durante a queda, o envio segue a F02", async ({

@@ -7,18 +7,19 @@ import { useRealtime } from "@/app/components/realtime/realtime-provider";
 // não pisca na tela.
 export const CONNECTION_BANNER_DELAY_MS = 3_000;
 
-// Se a faixa de conexão aparece: depois do atraso sem conexão, contado da última mudança do estado,
-// inclusive a primeira conexão que demora; some assim que conecta.
+// Se a faixa de conexão aparece: quando a queda atual, inclusive a primeira conexão que demora, já
+// passou do atraso; some assim que conecta. O atraso é contado por queda, e não por mudança de
+// estado: ir de "conectando" a "desconectada" não o reinicia.
 export function useConnectionBanner(): boolean {
-  const { status, statusSince } = useRealtime();
-  const [checkedAt, setCheckedAt] = useState(0);
+  const { status, outage } = useRealtime();
+  const isConnected = status === "connected";
+  const [lateOutage, setLateOutage] = useState(0);
 
   useEffect(() => {
-    if (status === "connected") return;
-    const wait = Math.max(0, statusSince + CONNECTION_BANNER_DELAY_MS - Date.now());
-    const timer = setTimeout(() => setCheckedAt(Date.now()), wait);
+    if (isConnected || outage === 0) return;
+    const timer = setTimeout(() => setLateOutage(outage), CONNECTION_BANNER_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [status, statusSince]);
+  }, [isConnected, outage]);
 
-  return status !== "connected" && checkedAt - statusSince >= CONNECTION_BANNER_DELAY_MS;
+  return !isConnected && outage !== 0 && lateOutage === outage;
 }

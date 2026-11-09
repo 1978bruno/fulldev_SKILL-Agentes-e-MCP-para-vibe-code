@@ -57,7 +57,11 @@ export const test = base.extend<Fixtures>({
 });
 
 // Entra pelo formulário da tela Entrar.
-export async function logIn(page: Page, person: TestPerson): Promise<void> {
+export async function logIn(
+  page: Page,
+  person: TestPerson,
+  { waitForRealtime: waitForConnection = true }: { waitForRealtime?: boolean } = {},
+): Promise<void> {
   await page.goto("/entrar");
   await waitForLoginForm(page);
   await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
@@ -67,8 +71,8 @@ export async function logIn(page: Page, person: TestPerson): Promise<void> {
   // Conversa, o que pesa no next dev com vários testes em paralelo.
   await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible({ timeout: 15_000 });
   // O socket conectado: um teste que revoga a Sessão logo depois não vê o handshake recusado
-  // levando a aba a "Entrar" antes da ação dele.
-  await waitForRealtime(page);
+  // levando a aba a "Entrar" antes da ação dele. Quem prende a conexão de propósito não espera.
+  if (waitForConnection) await waitForRealtime(page);
 }
 
 export { expect };
