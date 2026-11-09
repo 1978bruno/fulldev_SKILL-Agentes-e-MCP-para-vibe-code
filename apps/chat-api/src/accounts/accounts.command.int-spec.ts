@@ -73,5 +73,21 @@ describe('comando de contas', () => {
         name: 'Ana Souza',
       });
     });
+
+    it('recusa uma senha acima de 256 caracteres', async () => {
+      const email = uniqueEmail();
+      const output = recordingOutput();
+      const command = new AccountsCommand(
+        people,
+        givenPassword('a'.repeat(257)),
+        output,
+      );
+
+      const exitCode = await command.run(['create', email, 'Ana Souza']);
+
+      expect(exitCode).toBe(1);
+      expect(output.errors.join('\n')).toContain('no máximo 256');
+      expect(await people.findByEmail(email)).toBeNull();
+    });
   });
 });

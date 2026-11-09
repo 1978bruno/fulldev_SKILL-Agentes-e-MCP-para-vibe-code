@@ -51,7 +51,15 @@ export function LoginForm() {
         </div>
       </div>
 
-      <form className="flex w-full flex-col gap-4" onSubmit={handleSubmit} noValidate>
+      {/* O action vale antes da hidratação (o React o renderiza como POST para o Server Action):
+          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit chama o
+          mesmo Server Action. */}
+      <form
+        className="flex w-full flex-col gap-4"
+        action={formAction}
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <Field label="E-mail" htmlFor="email">
           <Input
             id="email"
