@@ -27,8 +27,14 @@ export interface LoginResult {
   person: Person;
 }
 
+// Quem precisa saber que uma Sessão acabou pelo sair: o WebSocket desconecta as abas dela. O
+// módulo de tempo real depende deste, e não o contrário, por isso o aviso é por ouvinte.
+export type SessionEndedListener = (sessionId: string) => void;
+
 @Injectable()
 export class SessionsService {
+  private readonly endedListeners = new Set<SessionEndedListener>();
+
   constructor(
     @InjectRepository(Session) private readonly sessions: Repository<Session>,
     private readonly people: PeopleService,
@@ -120,6 +126,12 @@ export class SessionsService {
   // Sair apaga só a Sessão apresentada; as outras da mesma Pessoa continuam valendo.
   async logout(sessionId: string): Promise<void> {
     await this.sessions.delete({ id: sessionId });
+    this.endedListeners.forEach((listener) => listener(sessionId));
+  }
+
+  onSessionEnded(listener: SessionEndedListener): () => void {
+    this.endedListeners.add(listener);
+    return () => this.endedListeners.delete(listener);
   }
 
   // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.

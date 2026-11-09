@@ -95,10 +95,15 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       retryDelay = RETRY_MIN_MS;
       setStatus("connected");
     });
-    socket.on("disconnect", () => {
-      lastSync.current = null;
+    socket.on("disconnect", (reason) => {
+      // O servidor só desconecta quando a Sessão acabou (LLD, "Sessão e login", "WebSocket").
+      if (reason === "io server disconnect") {
+        void redirectToExpiredSession();
+        return;
+      }
       setStatus("disconnected");
     });
+    socket.on("session.ended", () => void redirectToExpiredSession());
     socket.on("connect_error", (error) => {
       if (error.message === UNAUTHENTICATED) {
         void redirectToExpiredSession();
