@@ -1,4 +1,4 @@
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
 import { EntityManager, QueryFailedError, Repository } from 'typeorm';
@@ -76,7 +76,7 @@ export class PeopleService {
     person: Person,
     work: (manager: EntityManager) => Promise<T>,
   ): Promise<T | null> {
-    return this.txHost.withTransaction(async () => {
+    return this.txHost.withTransaction(Propagation.RequiresNew, async () => {
       const locked = await this.people.findOne({
         where: { id: person.id, passwordHash: person.passwordHash },
         lock: { mode: 'pessimistic_read' },
@@ -94,7 +94,7 @@ export class PeopleService {
     alsoInTransaction: (manager: EntityManager) => Promise<T>,
   ): Promise<T> {
     const passwordHash = await this.passwords.hash(password);
-    return this.txHost.withTransaction(async () => {
+    return this.txHost.withTransaction(Propagation.RequiresNew, async () => {
       await this.people.update({ id: personId }, { passwordHash });
       return alsoInTransaction(this.txHost.tx);
     });

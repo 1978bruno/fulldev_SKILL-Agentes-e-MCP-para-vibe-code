@@ -97,11 +97,10 @@ A mesma regra vale para o repository: ele não importa nada de HTTP.
 
 ### Transações
 
-Uma operação que grava por services de módulos diferentes roda numa transação só, que passa de um service a outro pelo contexto do CLS (`@nestjs-cls/transactional`, registrado no `DatabaseModule`):
+Onde a transação começa e como passa entre módulos é regra do LLD, seção "Transações". Na prática, com o `@nestjs-cls/transactional` registrado no `DatabaseModule`:
 
-- **Quem orquestra** marca o método com `@Transactional()`.
-- **Quem participa** acessa o banco pelo `TransactionHost<TransactionalAdapterTypeOrm>` (`txHost.tx.getRepository(Entidade)`), e não por um repositório injetado com `@InjectRepository`. Fora de uma transação, o `txHost.tx` usa o gerenciador comum. O exemplo é o `PeopleService`.
-- **Fora do HTTP** (comandos, rotinas), quem chama os services envolve a execução com `ClsService.run`, como o `cli.ts` do comando de contas. No HTTP, o middleware do `ClsModule` abre o contexto.
+- O repositório de quem participa vem de `txHost.tx.getRepository(Entidade)`, com `TransactionHost<TransactionalAdapterTypeOrm>` injetado. Fora de uma transação, o `txHost.tx` usa o gerenciador comum. O exemplo é o `PeopleService`.
+- Fora do HTTP (comandos, rotinas), quem chama os services envolve a execução com `ClsService.run`, como o `cli.ts` do comando de contas. No HTTP, o middleware do `ClsModule` abre o contexto.
 
 ### Erros
 
