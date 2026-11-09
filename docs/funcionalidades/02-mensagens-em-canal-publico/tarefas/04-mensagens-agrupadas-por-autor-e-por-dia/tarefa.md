@@ -1,6 +1,6 @@
 # 04: Mensagens agrupadas por autor e por dia
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa lê o Canal como uma conversa:
 - as Mensagens seguidas do mesmo autor aparecem juntas, sem repetir nome e avatar;
