@@ -105,9 +105,11 @@ O Redis entra na F03, com o primeiro uso dele ([ADR 0007](../../adr/0007-redis-g
   reenvio do mesmo `client_id` não gera evento (LLD, "Concorrência e idempotência"). A publicação lê
   os Membros da Conversa, faz um `XADD` por Membro num pipeline e emite para cada sala `person:`, com
   o id do evento daquela Pessoa.
-- **Redis fora:** a Mensagem já está gravada, então o envio responde sucesso. A publicação emite sem
-  id de evento e registra `error` no log; a reconexão seguinte dessa Pessoa, sem Redis, responde
-  `reset`.
+- **Redis fora ou travado:** a Mensagem já está gravada, então o envio responde sucesso; cada operação
+  no Redis tem um prazo de 2 s, e a publicação não prende a resposta do envio. A publicação que não
+  grava emite sem id de evento, registra `error` no log e marca, na memória do processo, as Pessoas
+  que perderam o evento: a reconexão seguinte de cada uma responde `reset`. A reconexão sem Redis
+  também responde `reset`.
 - **Perda aceita:** se o processo cai entre o commit e a publicação, o evento não existe. Quem estava
   conectado vê a Mensagem só ao abrir a Conversa de novo.
 
