@@ -1,9 +1,15 @@
 import { test as base, expect, type Page } from "@playwright/test";
-import { insertPerson, type TestPerson } from "./support/database";
+import {
+  insertChannel,
+  insertPerson,
+  type TestChannel,
+  type TestPerson,
+} from "./support/database";
 import { waitForLoginForm } from "./support/login-page";
 
 type Fixtures = {
   person: TestPerson;
+  memberChannel: TestChannel;
   loggedInPage: Page;
 };
 
@@ -13,14 +19,21 @@ export const test = base.extend<Fixtures>({
     await use(await insertPerson());
   },
 
-  // O único lugar que entra pelo formulário da tela Entrar.
+  // Canal público com a Pessoa da fixture como Membro, criado direto no banco.
+  // "channel" é uma opção do Playwright (o canal do navegador), daí o nome.
+  memberChannel: async ({ person }, use) => {
+    await use(await insertChannel([person]));
+  },
+
+  // O único lugar que entra pelo formulário da tela Entrar. Sem Canais, a Pessoa fica na Home;
+  // com Canais, a Home a leva ao primeiro.
   loggedInPage: async ({ page, person }, use) => {
     await page.goto("/entrar");
     await waitForLoginForm(page);
     await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
     await page.getByLabel("Senha").fill(person.password);
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible();
     await use(page);
   },
 });

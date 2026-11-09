@@ -23,7 +23,8 @@
     "migration:generate": "pnpm typeorm migration:generate",
     "migration:run": "pnpm typeorm migration:run",
     "migration:revert": "pnpm typeorm migration:revert",
-    "accounts": "ts-node src/accounts/cli.ts"
+    "accounts": "ts-node src/accounts/cli.ts",
+    "channels": "ts-node src/channels/cli.ts"
   },
   "dependencies": {
     "@nestjs-cls/transactional": "4.0.2",

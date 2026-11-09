@@ -1,4 +1,5 @@
 import { isEmail } from 'class-validator';
+import { Command, CommandOutput } from '../common/cli/command';
 import { DomainError } from '../common/errors/domain.error';
 import { normalizeEmail } from '../people/normalize-email';
 import { PASSWORD_MAX_LENGTH } from '../people/password-policy';
@@ -7,11 +8,6 @@ import { PersonNotFoundError } from '../people/person-not-found.error';
 import { Person } from '../people/person.entity';
 import { SessionsService } from '../sessions/sessions.service';
 import { PasswordPrompt } from './password-prompt';
-
-export interface CommandOutput {
-  info(message: string): void;
-  error(message: string): void;
-}
 
 const USAGE = `Uso: pnpm accounts <operação> [argumentos]
 
@@ -23,7 +19,7 @@ Operações:
 
 // Comando de contas de quem opera a instalação (spec da F01, "Comando de contas").
 // Devolve o código de saída do processo.
-export class AccountsCommand {
+export class AccountsCommand implements Command {
   constructor(
     private readonly people: PeopleService,
     private readonly sessions: SessionsService,

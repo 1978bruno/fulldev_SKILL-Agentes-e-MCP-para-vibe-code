@@ -18,6 +18,8 @@ const DETAILS: Record<ErrorCode, string> = {
     'Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo.',
   email_already_exists: 'Já existe uma Pessoa com esse e-mail.',
   person_not_found: 'Pessoa não encontrada.',
+  conversation_not_found: 'Conversa não encontrada.',
+  channel_name_taken: 'Já existe um canal com esse nome.',
   not_found: 'Recurso não encontrado.',
   payload_too_large: 'O corpo da requisição é grande demais.',
   request_rejected: 'A requisição foi recusada.',
