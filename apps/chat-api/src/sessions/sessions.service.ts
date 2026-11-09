@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
+import { RENEWAL_INTERVAL_DAYS } from '../config/session-values';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
 import { InvalidCredentialsError } from './invalid-credentials.error';
@@ -11,6 +12,8 @@ import { generateSessionToken, hashSessionToken } from './session-token';
 import { UnauthenticatedError } from './unauthenticated.error';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const RENEWAL_INTERVAL_MS = RENEWAL_INTERVAL_DAYS * DAY_MS;
 
 export interface LoginResult {
   token: string;
@@ -30,17 +33,31 @@ export class SessionsService {
     if (!person) {
       throw new InvalidCredentialsError();
     }
+    return this.startSession(person);
+  }
 
+  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu: um reset-password ao
+  // mesmo tempo não deixa uma Sessão aberta com a senha antiga.
+  async startSession(person: Person): Promise<LoginResult> {
     const token = generateSessionToken();
     const now = new Date();
-    await this.sessions.save(
-      this.sessions.create({
-        personId: person.id,
-        tokenHash: hashSessionToken(token),
-        expiresAt: this.expiresFrom(now),
-        lastUsedAt: now,
-      }),
+    const created = await this.people.withPasswordUnchanged(
+      person,
+      (manager) => {
+        const sessions = manager.getRepository(Session);
+        return sessions.save(
+          sessions.create({
+            personId: person.id,
+            tokenHash: hashSessionToken(token),
+            expiresAt: this.expiresFrom(now),
+            lastUsedAt: now,
+          }),
+        );
+      },
     );
+    if (!created) {
+      throw new InvalidCredentialsError();
+    }
     return { token, person };
   }
 
@@ -52,10 +69,57 @@ export class SessionsService {
       where: { tokenHash: hashSessionToken(token) },
       relations: { person: true },
     });
-    if (!session?.person || session.expiresAt <= new Date()) {
+    if (!session?.person) {
       throw new UnauthenticatedError();
     }
+    const now = new Date();
+    if (session.expiresAt <= now) {
+      // A Sessão vencida é apagada quando apresentada (LLD, "Sessão e login"). A condição de
+      // vencimento no DELETE preserva uma renovação concorrente de outra requisição.
+      const deleted = await this.sessions.delete({
+        id: session.id,
+        expiresAt: LessThanOrEqual(now),
+      });
+      if (
+        deleted.affected === 0 &&
+        (await this.isStillValid(session.id, now))
+      ) {
+        return session.person;
+      }
+      throw new UnauthenticatedError();
+    }
+    await this.renewIfDue(session, now);
     return session.person;
+  }
+
+  // Revogar é apagar a linha; a próxima requisição com a Sessão recebe unauthenticated.
+  async revokeAll(personId: string): Promise<number> {
+    const result = await this.sessions.delete({ personId });
+    return result.affected ?? 0;
+  }
+
+  async purgeExpired(): Promise<number> {
+    const result = await this.sessions.delete({
+      expiresAt: LessThanOrEqual(new Date()),
+    });
+    return result.affected ?? 0;
+  }
+
+  private async isStillValid(sessionId: string, now: Date): Promise<boolean> {
+    return this.sessions.exists({
+      where: { id: sessionId, expiresAt: MoreThan(now) },
+    });
+  }
+
+  // UPDATE condicional: duas verificações ao mesmo tempo gravam no máximo uma renovação, e
+  // antes do intervalo nada é gravado.
+  private async renewIfDue(session: Session, now: Date): Promise<void> {
+    const dueBefore = new Date(now.getTime() - RENEWAL_INTERVAL_MS);
+    if (session.lastUsedAt > dueBefore) return;
+    await this.sessions.update(
+      { id: session.id, lastUsedAt: LessThanOrEqual(dueBefore) },
+      { lastUsedAt: now, expiresAt: this.expiresFrom(now) },
+    );
   }
 
   private expiresFrom(now: Date): Date {

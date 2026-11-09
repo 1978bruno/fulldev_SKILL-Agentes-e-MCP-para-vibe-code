@@ -22,3 +22,8 @@ export async function insertPerson(name = "Ana Souza"): Promise<TestPerson> {
   );
   return { id, name, email, password: TEST_PASSWORD };
 }
+
+// Revoga todas as Sessões da Pessoa, como o comando de contas faria.
+export async function deleteSessionsOf(personId: string): Promise<void> {
+  await pool.query("DELETE FROM sessions WHERE person_id = $1", [personId]);
+}

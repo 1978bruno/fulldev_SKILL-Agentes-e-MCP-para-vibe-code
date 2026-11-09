@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import { EmailAlreadyExistsError } from './email-already-exists.error';
 import { normalizeEmail } from './normalize-email';
 import { PasswordHasher } from './password-hasher';
@@ -60,6 +60,30 @@ export class PeopleService {
     }
     const isValid = await this.passwords.verify(person.passwordHash, password);
     return isValid ? person : null;
+  }
+
+  // Roda `work` numa transação com a linha da Pessoa travada (FOR SHARE), só se o hash da senha
+  // ainda for o que o login conferiu; devolve null se a senha mudou. Uma troca de senha ao mesmo
+  // tempo faz a trava esperar e reavaliar o hash, e a troca que começa depois espera `work`
+  // terminar, para a revogação que vem em seguida alcançar o que ele gravou.
+  async withPasswordUnchanged<T>(
+    person: Person,
+    work: (manager: EntityManager) => Promise<T>,
+  ): Promise<T | null> {
+    return this.people.manager.transaction(async (manager) => {
+      const locked = await manager.getRepository(Person).findOne({
+        where: { id: person.id, passwordHash: person.passwordHash },
+        lock: { mode: 'pessimistic_read' },
+      });
+      return locked ? work(manager) : null;
+    });
+  }
+
+  async changePassword(personId: string, password: string): Promise<void> {
+    await this.people.update(
+      { id: personId },
+      { passwordHash: await this.passwords.hash(password) },
+    );
   }
 
   findByEmail(email: string): Promise<Person | null> {
