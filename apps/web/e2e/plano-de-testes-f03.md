@@ -47,3 +47,45 @@ O provedor do tempo real marca o estado da conexão em `data-realtime`, e os tes
     - expect: `connected`
   2. Revogar as Sessões da Pessoa no banco e fechar a conexão pela rota
     - expect: a reconexão recebe `unauthenticated` e a aba vai para "Entrar", com o `?para=` do Canal
+
+### 3. Mensagens chegando sem recarregar
+
+#### 3.1. a Mensagem da outra Pessoa aparece sem recarregar
+
+**File:** `e2e/tempo-real/mensagem-chega-sem-recarregar.spec.ts`
+
+**Steps:**
+  1. As duas Pessoas abrem o Canal em comum e esperam `connected`
+  2. A outra Pessoa envia uma Mensagem
+    - expect: a Mensagem aparece uma vez para a primeira, com o nome da autora
+
+#### 3.2. a Mensagem enviada por outra aba aparece uma vez só
+
+**File:** `e2e/tempo-real/mensagem-chega-sem-recarregar.spec.ts`
+
+**Steps:**
+  1. A mesma Pessoa abre o Canal em duas abas do mesmo contexto
+  2. Envia pela segunda aba
+    - expect: a Mensagem aparece uma vez em cada aba, sem ficar "enviando"
+
+#### 3.3. o reset traz a Mensagem gravada antes da conexão e mantém o texto da caixa
+
+**File:** `e2e/tempo-real/reset-recarrega-a-mais-recente.spec.ts`
+
+**Steps:**
+  1. Entrar com o WebSocket encaminhado pelo `routeWebSocket`; depois disso, a próxima conexão fica
+     segurada
+  2. Abrir o Canal e escrever na caixa, sem enviar
+  3. A outra Pessoa envia uma Mensagem
+  4. Soltar a conexão
+    - expect: o `sync` com `reset` recarrega a página mais recente e a Mensagem aparece
+    - expect: o texto da caixa continua lá
+
+#### 3.4. a Mensagem que chegou em outro Canal aparece ao abri-lo
+
+**File:** `e2e/tempo-real/mensagem-de-outra-conversa.spec.ts`
+
+**Steps:**
+  1. A Pessoa fica no Canal em comum; a outra abre um segundo Canal das duas e envia nele
+  2. A Pessoa abre o segundo Canal pela barra lateral
+    - expect: a Mensagem aparece uma vez

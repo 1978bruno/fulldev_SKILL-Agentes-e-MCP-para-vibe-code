@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { sendMessage } from "@/app/actions/send-message";
 import type { Message, MessageAuthor, SendMessageResult } from "@/app/services/chat-api";
 import { newClientId } from "@/app/utils/client-id";
+import { withoutDelivered } from "@/app/utils/pending-messages";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 export type PendingStatus = "sending" | "failed";
@@ -81,5 +82,10 @@ export function usePendingMessages(
     setPending((current) => current.filter((message) => message.clientId !== clientId));
   }, []);
 
-  return { pending, send, retry, discard };
+  // A Mensagem gravada que chegou pelo tempo real, talvez antes da resposta do envio.
+  const dropDelivered = useCallback((message: Message) => {
+    setPending((current) => withoutDelivered(current, message));
+  }, []);
+
+  return { pending, send, retry, discard, dropDelivered };
 }

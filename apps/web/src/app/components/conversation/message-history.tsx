@@ -6,6 +6,7 @@ import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
+import { useRealtimeMessages } from "@/app/hooks/use-realtime-messages";
 import {
   type PendingMessage,
   type PendingStatus,
@@ -53,13 +54,14 @@ function History({
   renderedAt,
   currentPerson,
 }: MessageHistoryProps) {
-  const { messages: saved, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
+  const { messages: saved, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSaved, reloadLatest } =
     useMessageHistory(conversation.id, initialPage);
-  const { pending, send, retry, discard } = usePendingMessages(
+  const { pending, send, retry, discard, dropDelivered } = usePendingMessages(
     conversation.id,
     currentPerson,
-    appendSent,
+    appendSaved,
   );
+  useRealtimeMessages(conversation.id, initialPage, { appendSaved, dropDelivered, reloadLatest });
   // As pendentes vêm sempre depois das gravadas, e passam pelo mesmo agrupamento.
   const messages = useMemo<(Message & { status?: PendingStatus })[]>(
     () => [...saved, ...pending],

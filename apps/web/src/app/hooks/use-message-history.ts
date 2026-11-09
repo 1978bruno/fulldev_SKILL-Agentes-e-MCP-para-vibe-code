@@ -24,6 +24,14 @@ async function fetchOlderPage([, conversationId, before]: PageKey): Promise<Mess
   return (await response.json()) as MessagePage;
 }
 
+// A página mais recente pela rota do BFF, sem `before`.
+async function fetchLatestPage(conversationId: string): Promise<MessagePage> {
+  const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/messages`);
+  if (response.status === 401) return redirectToExpiredSession();
+  if (!response.ok) throw new Error("Não foi possível recarregar as mensagens.");
+  return (await response.json()) as MessagePage;
+}
+
 // Histórico de uma Conversa no cache do SWR (spec da F02, "Leituras"). pages[0] é a página mais
 // recente, que vem do Server Component como fallbackData e nunca é buscada na API; a página
 // n tem a chave da Mensagem mais antiga da página n-1 e só existe enquanto ela tem `hasMore`. Os
@@ -90,12 +98,29 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     );
   }, [messages, mutate, initialPage]);
 
+  // Com o reset do tempo real, o cache vira só a página mais recente, lida de novo pela rota do BFF,
+  // como ao abrir a Conversa (spec da F03, "Mensagens no histórico"). Uma falha deixa o cache como
+  // está.
+  const reloadLatest = useCallback(async () => {
+    let page: MessagePage;
+    try {
+      page = await fetchLatestPage(conversationId);
+    } catch {
+      return;
+    }
+    latestPage.current = page;
+    await setSize(1);
+    await mutate([page], { revalidate: false });
+  }, [conversationId, mutate, setSize]);
+
   return {
     messages,
     hasOlder,
     isLoadingOlder,
     olderFailed: Boolean(error),
     loadOlder,
-    appendSent,
+    // A Mensagem gravada, pelo envio ou pelo tempo real, entra no cache do mesmo jeito.
+    appendSaved: appendSent,
+    reloadLatest,
   };
 }

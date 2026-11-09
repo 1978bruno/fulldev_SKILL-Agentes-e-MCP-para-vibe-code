@@ -21,3 +21,10 @@ export function openRealtimeSockets(page: Page): { count: () => number } {
   });
   return { count: () => open };
 }
+
+// Escreve e envia uma Mensagem pela caixa de mensagem do Canal aberto.
+export async function sendFromComposer(page: Page, channelName: string, text: string): Promise<void> {
+  const composer = page.getByRole("textbox", { name: `Mensagem para #${channelName}` });
+  await composer.fill(text);
+  await composer.press("Enter");
+}

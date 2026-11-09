@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  OnGatewayConnection,
   OnGatewayInit,
   WebSocketGateway,
   WebSocketServer,
@@ -18,7 +19,7 @@ const UNAUTHENTICATED: HandshakeErrorCode = 'unauthenticated';
 // WebSocket da API do chat (spec da F03, "Conexão" e "Sessão no WebSocket"). O handshake verifica a
 // Sessão pelo mesmo authenticate do guard REST e põe o socket nas salas da Pessoa e da Sessão.
 @WebSocketGateway()
-export class RealtimeGateway implements OnGatewayInit {
+export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   private readonly logger = new Logger(RealtimeGateway.name);
 
   @WebSocketServer()
@@ -34,6 +35,12 @@ export class RealtimeGateway implements OnGatewayInit {
     server.use((socket, next) => {
       void this.authenticateSocket(socket, cookieName, next);
     });
+  }
+
+  // Sem o registro de eventos por Pessoa (tarefa 07), toda conexão pede à aba que recarregue a
+  // página mais recente: nada se perde entre a leitura do histórico e a entrada nas salas.
+  handleConnection(socket: RealtimeSocket): void {
+    socket.emit('sync', { cursor: null, reset: true });
   }
 
   // Grava a Pessoa e a Sessão no socket, ou recusa o handshake.

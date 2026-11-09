@@ -44,6 +44,14 @@ export class ConversationsService {
       .getMany();
   }
 
+  // Ids das Pessoas que são Membros da Conversa: os destinatários dos eventos dela.
+  async listMemberIds(conversationId: string): Promise<string[]> {
+    const members = await this.txHost.tx
+      .getRepository(ConversationMember)
+      .find({ select: { personId: true }, where: { conversationId } });
+    return members.map((member) => member.personId);
+  }
+
   // A conferência de acesso única (LLD, "Segurança", "Participação numa Conversa"): toda rota e
   // todo service que recebe um id de Conversa passa por aqui.
   async getForMember(

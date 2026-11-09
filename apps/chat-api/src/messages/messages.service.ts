@@ -5,8 +5,10 @@ import { randomUUIDv7 } from 'node:crypto';
 import { LessThan, Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
+import { RealtimePublisher } from '../realtime/realtime.publisher';
 import { ClientIdConflictError } from './client-id-conflict.error';
 import { Message } from './message.entity';
+import { toMessageResponse } from './message.response';
 
 export interface MessageAuthor {
   id: string;
@@ -37,12 +39,19 @@ export interface NewMessage {
   body: string;
 }
 
+export interface SentMessage {
+  message: MessageView;
+  // Falso quando o client_id já tinha sido gravado: o reenvio não gera evento.
+  created: boolean;
+}
+
 @Injectable()
 export class MessagesService {
   constructor(
     private readonly txHost: TransactionHost<TransactionalAdapterTypeOrm>,
     private readonly conversations: ConversationsService,
     private readonly people: PeopleService,
+    private readonly publisher: RealtimePublisher,
   ) {}
 
   private get messages(): Repository<Message> {
@@ -73,11 +82,30 @@ export class MessagesService {
   // Envio sem duplicar (LLD, "Concorrência e idempotência"): o mesmo `client_id` do mesmo autor
   // devolve a Mensagem já gravada, sem gravar outra; o texto do reenvio é ignorado. O conflito é
   // resolvido pela unicidade do banco, o que vale também para dois envios ao mesmo tempo.
+  // Envia a Mensagem: grava e, só quando a gravação é nova, publica o evento para os Membros, depois
+  // da gravação (spec da F03, "Eventos por Pessoa e reconexão", "Publicação").
+  async sendMessage(
+    author: MessageAuthor,
+    conversationId: string,
+    newMessage: NewMessage,
+  ): Promise<MessageView> {
+    const { message, created } = await this.send(
+      author,
+      conversationId,
+      newMessage,
+    );
+    if (created) {
+      const memberIds = await this.conversations.listMemberIds(conversationId);
+      this.publisher.messageCreated(memberIds, toMessageResponse(message));
+    }
+    return message;
+  }
+
   async send(
     author: MessageAuthor,
     conversationId: string,
     { clientId, body }: NewMessage,
-  ): Promise<MessageView> {
+  ): Promise<SentMessage> {
     await this.conversations.getForMember(author.id, conversationId);
     const inserted = await this.messages
       .createQueryBuilder()
@@ -108,7 +136,7 @@ export class MessagesService {
     if (message.conversationId !== conversationId) {
       throw new ClientIdConflictError();
     }
-    return toView(message, author);
+    return { message: toView(message, author), created: Boolean(row) };
   }
 
   // Os nomes dos autores vêm do PeopleService, numa consulta pelos ids da página.

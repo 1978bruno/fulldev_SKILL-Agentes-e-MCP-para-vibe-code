@@ -4,24 +4,39 @@ import type {
   ClientToServerEvents,
   HandshakeErrorCode,
   ServerToClientEvents,
+  SyncEvent,
 } from "chat-events";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
+import type { Message } from "@/app/services/chat-api";
+import { messageFromEvent } from "@/app/utils/message-event";
+import { rememberMessage } from "@/app/utils/recent-messages";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 export type RealtimeSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 export type RealtimeStatus = "connecting" | "connected" | "disconnected";
 
+export type RealtimeListener = {
+  onMessage?: (message: Message) => void;
+  onSync?: (event: SyncEvent) => void;
+};
+
 type RealtimeContextValue = {
   status: RealtimeStatus;
   // Nulo só antes do primeiro efeito, na renderização do servidor e na hidratação.
   socket: RealtimeSocket | null;
+  // Assina os eventos da aba; devolve a função que cancela.
+  subscribe: (listener: RealtimeListener) => () => void;
+  // As Mensagens de uma Conversa recebidas desde a conexão (spec da F03, "Conexão por aba").
+  recentMessages: (conversationId: string) => Message[];
 };
 
 const RealtimeContext = createContext<RealtimeContextValue>({
   status: "connecting",
   socket: null,
+  subscribe: () => () => {},
+  recentMessages: () => [],
 });
 
 const UNAUTHENTICATED: HandshakeErrorCode = "unauthenticated";
@@ -38,13 +53,16 @@ type RealtimeProviderProps = {
 };
 
 // Conexão em tempo real da aba (spec da F03, "Cliente", "Conexão por aba"): um socket só, aberto no
-// layout das telas logadas e mantido entre as trocas de Conversa. O estado da conexão também vai
-// para o atributo data-realtime, que os testes esperam.
+// layout das telas logadas e mantido entre as trocas de Conversa. Ele guarda as Mensagens recebidas
+// por Conversa e repassa os eventos a quem assina. O estado da conexão também vai para o atributo
+// data-realtime, que os testes esperam.
 export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
-  const [value, setValue] = useState<RealtimeContextValue>({
-    status: "connecting",
-    socket: null,
-  });
+  const [connection, setConnection] = useState<{
+    status: RealtimeStatus;
+    socket: RealtimeSocket | null;
+  }>({ status: "connecting", socket: null });
+  const listeners = useRef(new Set<RealtimeListener>());
+  const recent = useRef(new Map<string, Message[]>());
 
   useEffect(() => {
     const socket: RealtimeSocket = io(url, {
@@ -53,7 +71,8 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     });
     let retryDelay = RETRY_MIN_MS;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    const setStatus = (status: RealtimeStatus) => setValue({ status, socket });
+    const setStatus = (status: RealtimeStatus) => setConnection({ status, socket });
+    const received = recent.current;
 
     socket.on("connect", () => {
       retryDelay = RETRY_MIN_MS;
@@ -73,16 +92,46 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
         retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
       }
     });
+    socket.on("message.created", ({ message: payload }) => {
+      const message = messageFromEvent(payload);
+      received.set(
+        message.conversationId,
+        rememberMessage(received.get(message.conversationId) ?? [], message),
+      );
+      listeners.current.forEach((listener) => listener.onMessage?.(message));
+    });
+    socket.on("sync", (event) => {
+      listeners.current.forEach((listener) => listener.onSync?.(event));
+    });
+
     return () => {
       clearTimeout(retryTimer);
       socket.removeAllListeners();
       socket.disconnect();
+      received.clear();
     };
   }, [url]);
 
+  const subscribe = useCallback((listener: RealtimeListener) => {
+    listeners.current.add(listener);
+    return () => {
+      listeners.current.delete(listener);
+    };
+  }, []);
+
+  const recentMessages = useCallback(
+    (conversationId: string) => recent.current.get(conversationId) ?? [],
+    [],
+  );
+
+  const value = useMemo(
+    () => ({ ...connection, subscribe, recentMessages }),
+    [connection, subscribe, recentMessages],
+  );
+
   return (
     <RealtimeContext value={value}>
-      <div data-realtime={value.status} className="contents">
+      <div data-realtime={connection.status} className="contents">
         {children}
       </div>
     </RealtimeContext>
