@@ -112,6 +112,52 @@ banco, com nome de prefixo `e2e-` e só as participações que o teste passa (`m
   1. Com o Canal aberto, revogar as Sessões da Pessoa no banco, escrever e apertar Enter
     - expect: a URL é `/entrar?para=%2Fconversas%2F<id>`
 
+#### 3.3. limite-de-caracteres
+
+**File:** `e2e/conversa/limite-de-caracteres.spec.ts`
+
+**Steps:**
+  1. Com a caixa vazia
+    - expect: "Enviar mensagem" desabilitado
+  2. Preencher 4001 emojis
+    - expect: "1 caractere acima do limite", o botão desabilitado, e Enter não envia
+  3. Preencher 4010 letras e depois 4000
+    - expect: "10 caracteres acima do limite"; com 4000, o contador some e o botão habilita
+
+#### 3.4. mensagem-enviando
+
+**File:** `e2e/conversa/mensagem-enviando.spec.ts`
+
+**Steps:**
+  1. Com o Server Action segurado por `page.route`, enviar
+    - expect: a última Mensagem com `data-status="sending"` e a caixa vazia
+  2. Liberar o envio
+    - expect: o mesmo item passa a `data-status="sent"`
+
+#### 3.5. envios-em-sequencia
+
+**File:** `e2e/conversa/envios-em-sequencia.spec.ts`
+
+**Steps:**
+  1. Enviar "um", "dois" e "três" seguidos
+    - expect: as três na ordem, gravadas
+  2. Recarregar
+    - expect: a mesma ordem
+
+#### 3.6. falha-no-envio
+
+**File:** `e2e/conversa/falha-no-envio.spec.ts`
+
+**Steps:**
+  1. Com o Server Action abortado, enviar duas Mensagens
+    - expect: as duas com "Não foi possível enviar."
+  2. Liberar a rota e "Tentar de novo" na primeira
+    - expect: gravada, sem o aviso, e uma linha só no banco
+  3. "Descartar" na segunda
+    - expect: ela sai da lista e não está no banco
+  4. Abortar de novo, enviar uma terceira e recarregar
+    - expect: só a primeira continua na lista
+
 ### 4. Canal ao entrar e endereço do Canal
 
 #### 4.1. home-abre-o-primeiro-canal

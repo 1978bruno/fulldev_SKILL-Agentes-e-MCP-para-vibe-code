@@ -1,4 +1,6 @@
+import { CircleAlert } from "lucide-react";
 import { Avatar } from "@/app/components/ui/avatar";
+import { buttonVariants } from "@/app/components/ui/button";
 import { cn } from "@/app/utils/cn";
 import type { Message } from "@/app/services/chat-api";
 import { formatTime } from "@/app/utils/format-time";
@@ -13,26 +15,66 @@ type MessageItemProps = {
   compact?: boolean;
   // Rótulo do divisor de dia, na primeira Mensagem de cada dia.
   dayLabel?: string;
+  // Estado do envio (22:11072 e 22:12030): "sent" para as gravadas.
+  status?: "sent" | "sending" | "failed";
+  onRetry?: () => void;
+  onDiscard?: () => void;
 };
 
 // Mensagem (MessageItem), no layout completo ou compacto. Os estados "enviando" e "falhou" e a
 // barra de ações entram na F02-T05 e na F06.
-export function MessageItem({ message, timeZone, compact = false, dayLabel }: MessageItemProps) {
+export function MessageItem({
+  message,
+  timeZone,
+  compact = false,
+  dayLabel,
+  status = "sent",
+  onRetry,
+  onDiscard,
+}: MessageItemProps) {
+  const failed = status === "failed" && (
+    <SendFailure onRetry={onRetry} onDiscard={onDiscard} />
+  );
   return (
-    <li data-message-id={message.id} data-layout={compact ? "compact" : "full"} className="flex flex-col">
+    <li
+      data-message-id={message.id}
+      data-layout={compact ? "compact" : "full"}
+      data-status={status}
+      aria-busy={status === "sending" || undefined}
+      className={cn("flex flex-col", status === "sending" && "opacity-60")}
+    >
       {dayLabel && <DayDivider label={dayLabel} />}
       {compact ? (
-        <CompactRow message={message} timeZone={timeZone} />
+        <CompactRow message={message} timeZone={timeZone} extra={failed} />
       ) : (
-        <FullRow message={message} timeZone={timeZone} />
+        <FullRow message={message} timeZone={timeZone} extra={failed} />
       )}
     </li>
   );
 }
 
-type RowProps = { message: Message; timeZone: string };
+type RowProps = { message: Message; timeZone: string; extra?: React.ReactNode };
 
-function CompactRow({ message, timeZone }: RowProps) {
+// "Não foi possível enviar." com "Tentar de novo" e "Descartar" (22:12030).
+function SendFailure({ onRetry, onDiscard }: { onRetry?: () => void; onDiscard?: () => void }) {
+  const action = buttonVariants({ variant: "link", className: "text-small" });
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 pt-1 text-small">
+      <span role="alert" className="flex items-center gap-2 text-danger-fg">
+        <CircleAlert size={16} aria-hidden />
+        Não foi possível enviar.
+      </span>
+      <button type="button" onClick={onRetry} className={action}>
+        Tentar de novo
+      </button>
+      <button type="button" onClick={onDiscard} className={action}>
+        Descartar
+      </button>
+    </div>
+  );
+}
+
+function CompactRow({ message, timeZone, extra }: RowProps) {
   return (
     <div className="group flex gap-2 px-5 py-1">
       {/* Sem o nome à vista, como no Figma; o leitor de tela ainda ouve de quem é. */}
@@ -46,12 +88,13 @@ function CompactRow({ message, timeZone }: RowProps) {
       </div>
       <div className="min-w-0 flex-1">
         <MessageBody text={message.body} />
+        {extra}
       </div>
     </div>
   );
 }
 
-function FullRow({ message, timeZone }: RowProps) {
+function FullRow({ message, timeZone, extra }: RowProps) {
   return (
     <div className="mt-2 flex gap-2 px-5 py-1">
       <div className="flex w-9 shrink-0 justify-end">
@@ -63,6 +106,7 @@ function FullRow({ message, timeZone }: RowProps) {
           <MessageTime message={message} timeZone={timeZone} />
         </p>
         <MessageBody text={message.body} />
+        {extra}
       </div>
     </div>
   );

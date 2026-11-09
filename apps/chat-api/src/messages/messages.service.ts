@@ -1,6 +1,7 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
+import { randomUUIDv7 } from 'node:crypto';
 import { LessThan, Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
@@ -68,20 +69,31 @@ export class MessagesService {
     return { messages: await this.withAuthors(page), hasMore };
   }
 
+  // Envio sem duplicar (LLD, "Concorrência e idempotência"): o mesmo `client_id` do mesmo autor
+  // devolve a Mensagem já gravada, sem gravar outra; o texto do reenvio é ignorado. O conflito é
+  // resolvido pela unicidade do banco, o que vale também para dois envios ao mesmo tempo.
   async send(
     author: MessageAuthor,
     conversationId: string,
     { clientId, body }: NewMessage,
   ): Promise<MessageView> {
     await this.conversations.getForMember(author.id, conversationId);
-    const message = await this.messages.save(
-      this.messages.create({
+    await this.messages
+      .createQueryBuilder()
+      .insert()
+      .values({
+        id: randomUUIDv7(),
         conversationId,
         authorId: author.id,
         clientId,
         body,
-      }),
-    );
+      })
+      .orIgnore()
+      .execute();
+    const message = await this.messages.findOneByOrFail({
+      authorId: author.id,
+      clientId,
+    });
     return toView(message, author);
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { Message, MessagePage } from "@/app/services/chat-api";
 import { appendToLatestPage, flattenPages } from "@/app/utils/message-pages";
@@ -66,14 +66,29 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     void setSize(pages.length + 1);
   }, [hasOlder, isLoadingOlder, pages.length, setSize]);
 
+  // As Mensagens gravadas nesta abertura. Uma carga de anteriores que começou antes de uma delas
+  // entrar no cache pode terminar depois e gravar as páginas sem ela; aqui ela volta.
+  const sent = useRef<Message[]>([]);
+
   const appendSent = useCallback(
     (message: Message) => {
+      sent.current.push(message);
       void mutate((current) => appendToLatestPage(current ?? [initialPage], message), {
         revalidate: false,
       });
     },
     [mutate, initialPage],
   );
+
+  useEffect(() => {
+    const present = new Set(messages.map((message) => message.id));
+    const missing = sent.current.filter((message) => !present.has(message.id));
+    if (missing.length === 0) return;
+    void mutate(
+      (current) => missing.reduce(appendToLatestPage, current ?? [initialPage]),
+      { revalidate: false },
+    );
+  }, [messages, mutate, initialPage]);
 
   return {
     messages,

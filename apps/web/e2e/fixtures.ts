@@ -33,7 +33,9 @@ export const test = base.extend<Fixtures>({
     await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
     await page.getByLabel("Senha").fill(person.password);
     await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible();
+    // Mais folga que o padrão: o login confere a senha com Argon2id e, com Canais, a Home leva à
+    // Conversa, o que pesa no next dev com vários testes em paralelo.
+    await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible({ timeout: 15_000 });
     await use(page);
   },
 });

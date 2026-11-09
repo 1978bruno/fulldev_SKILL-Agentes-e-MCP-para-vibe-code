@@ -10,6 +10,7 @@ test.describe("Abrir um Canal", () => {
     const second = await insertChannel([person], { name: `e2e-b-${person.id}` });
     const first = await insertChannel([person], { name: `e2e-a-${person.id}` });
     await page.goto("/");
+    await expect(page).toHaveURL(`/conversas/${first.id}`);
 
     const canais = page.getByRole("region", { name: "Canais" });
     await expect(canais.getByRole("link")).toHaveText([first.name, second.name]);

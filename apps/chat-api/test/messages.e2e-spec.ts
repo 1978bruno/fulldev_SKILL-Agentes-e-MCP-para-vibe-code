@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import {
+  MESSAGE_MAX_LENGTH,
   MESSAGE_PAGE_MAX_SIZE,
   MESSAGE_PAGE_SIZE,
 } from '../src/messages/message-values';
@@ -32,6 +33,16 @@ describe('mensagens', () => {
   afterAll(async () => {
     await app.close();
   });
+
+  async function countByClientId(clientId: string): Promise<number> {
+    const [row] = await app
+      .get(DataSource)
+      .query<{ count: string }[]>(
+        'SELECT count(*) FROM messages WHERE client_id = $1',
+        [clientId],
+      );
+    return Number(row.count);
+  }
 
   async function memberOfNewChannel(name = 'Ana Souza') {
     const { person, email, password } = await authRoutes.createPerson(app, {
@@ -266,6 +277,80 @@ describe('mensagens', () => {
         .post(`/v1/conversations/${channel.id}/messages`)
         .set('Cookie', cookie)
         .send(payload);
+
+      expect(response.status).toBe(400);
+      expect((response.body as { code: string }).code).toBe(
+        'validation_failed',
+      );
+    });
+
+    it('o mesmo client_id devolve a Mensagem já gravada, sem gravar outra', async () => {
+      const { channel, cookie } = await memberOfNewChannel();
+      const clientId = randomUUID();
+      const first = await request(server)
+        .post(`/v1/conversations/${channel.id}/messages`)
+        .set('Cookie', cookie)
+        .send({ client_id: clientId, body: 'Primeiro envio' });
+
+      const repeated = await request(server)
+        .post(`/v1/conversations/${channel.id}/messages`)
+        .set('Cookie', cookie)
+        .send({ client_id: clientId, body: 'Reenvio com outro texto' });
+
+      expect(repeated.status).toBe(201);
+      const message = (repeated.body as { message: MessageBody }).message;
+      expect(message.id).toBe(
+        (first.body as { message: MessageBody }).message.id,
+      );
+      expect(message.body).toBe('Primeiro envio');
+      expect(await countByClientId(clientId)).toBe(1);
+    });
+
+    it('dois envios simultâneos com o mesmo client_id gravam uma linha só', async () => {
+      const { channel, cookie } = await memberOfNewChannel();
+      const clientId = randomUUID();
+
+      const responses = await Promise.all(
+        [1, 2].map(() =>
+          request(server)
+            .post(`/v1/conversations/${channel.id}/messages`)
+            .set('Cookie', cookie)
+            .send({ client_id: clientId, body: 'Ao mesmo tempo' }),
+        ),
+      );
+
+      expect(responses.map((response) => response.status)).toEqual([201, 201]);
+      const ids = responses.map(
+        (response) => (response.body as { message: MessageBody }).message.id,
+      );
+      expect(ids[0]).toBe(ids[1]);
+      expect(await countByClientId(clientId)).toBe(1);
+    });
+
+    it('aceita exatamente o limite em emojis', async () => {
+      const { channel, cookie } = await memberOfNewChannel();
+
+      const response = await request(server)
+        .post(`/v1/conversations/${channel.id}/messages`)
+        .set('Cookie', cookie)
+        .send({
+          client_id: randomUUID(),
+          body: '😀'.repeat(MESSAGE_MAX_LENGTH),
+        });
+
+      expect(response.status).toBe(201);
+    });
+
+    it('recusa um caractere acima do limite', async () => {
+      const { channel, cookie } = await memberOfNewChannel();
+
+      const response = await request(server)
+        .post(`/v1/conversations/${channel.id}/messages`)
+        .set('Cookie', cookie)
+        .send({
+          client_id: randomUUID(),
+          body: '😀'.repeat(MESSAGE_MAX_LENGTH + 1),
+        });
 
       expect(response.status).toBe(400);
       expect((response.body as { code: string }).code).toBe(
