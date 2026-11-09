@@ -16,10 +16,10 @@ Os serviços do projeto seguem os princípios do Application Layer, do Martin Fo
 
 ## Comandos
 
-Todos rodam no contêiner `api`, a partir da raiz do repositório:
+Todos rodam no contêiner `chat-api`, a partir da raiz do repositório:
 
 ```bash
-docker compose -f compose.yaml exec api <comando>
+docker compose -f compose.yaml exec chat-api <comando>
 ```
 
 | Comando | O que faz |
@@ -37,7 +37,7 @@ O `pnpm lint` só aponta os problemas, sem corrigir. A formatação é conferida
 
 ## Verificação completa
 
-O termo está definido no `AGENTS.md` da raiz, seção "Planejamento". Na API, rode no contêiner `api`, nesta ordem:
+O termo está definido no `AGENTS.md` da raiz, seção "Planejamento". Na API, rode no contêiner `chat-api`, nesta ordem:
 
 1. `pnpm lint`
 2. `pnpm exec tsc --noEmit`
