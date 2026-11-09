@@ -41,6 +41,13 @@ export function LoginForm({ returnPath }: LoginFormProps) {
   const passwordRef = useRef<HTMLInputElement>(null);
   // Onde estava o foco ao enviar: o botão desabilitado durante o envio o perde.
   const focusedOnSubmitRef = useRef<HTMLElement | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Marca o formulário como hidratado: antes disso, o envio é o do navegador, sem a validação
+  // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
+  useEffect(() => {
+    formRef.current?.setAttribute("data-ready", "");
+  }, []);
 
   // Credenciais incorretas: a senha é limpa e recebe o foco; o e-mail continua.
   useEffect(() => {
@@ -111,6 +118,7 @@ export function LoginForm({ returnPath }: LoginFormProps) {
           sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
           chama o mesmo Server Action. */}
       <form
+        ref={formRef}
         className="flex w-full flex-col gap-4"
         action={formAction}
         onSubmit={handleSubmit}

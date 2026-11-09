@@ -1,11 +1,13 @@
 // spec: e2e/plano-de-testes-f01.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
+import { waitForLoginForm } from "../support/login-page";
 
 test.describe("Entrar", () => {
   test("entrar-ate-a-home", async ({ page, person, context }) => {
     // 1. Abrir /entrar
     await page.goto("/entrar");
+    await waitForLoginForm(page);
     await expect(page.getByRole("textbox", { name: "E-mail" })).toBeFocused();
 
     // 2. Preencher E-mail e Senha da Pessoa e clicar em "Entrar"

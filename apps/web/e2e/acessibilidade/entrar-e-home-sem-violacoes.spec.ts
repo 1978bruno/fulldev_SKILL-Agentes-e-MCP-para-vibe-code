@@ -2,11 +2,13 @@
 // seed: e2e/seed.spec.ts
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "../fixtures";
+import { waitForLoginForm } from "../support/login-page";
 
 test.describe("Acessibilidade", () => {
   test("entrar-e-home-sem-violacoes", async ({ page, person }) => {
     // 1. Abrir /entrar e analisar
     await page.goto("/entrar");
+    await waitForLoginForm(page);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
     // 2. Enviar vazio e analisar a tela com os erros de validação
