@@ -1,6 +1,6 @@
 # 05: Faixa de conexão e queda percebida
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** quando a conexão em tempo real cai, por falha da rede, do servidor ou depois de
 o computador sair da suspensão, a Pessoa vê a faixa "Sem conexão em tempo real. Reconectando…" e o
