@@ -7,15 +7,14 @@ import { Env } from '../config/env.schema';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
 import { InvalidCredentialsError } from './invalid-credentials.error';
+import { RENEWAL_INTERVAL_DAYS } from './session-renewal';
 import { Session } from './session.entity';
 import { generateSessionToken, hashSessionToken } from './session-token';
 import { UnauthenticatedError } from './unauthenticated.error';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Intervalo de renovação da Sessão (LLD, "Valores e configuração"): no máximo uma escrita por
-// Sessão a cada intervalo.
-const RENEWAL_INTERVAL_MS = DAY_MS;
+const RENEWAL_INTERVAL_MS = RENEWAL_INTERVAL_DAYS * DAY_MS;
 
 export interface AuthenticatedSession {
   sessionId: string;
@@ -43,15 +42,17 @@ export class SessionsService {
     return this.startSession(person);
   }
 
-  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu, numa instrução só:
-  // um reset-password que troca a senha enquanto este login verificava a antiga faz a inserção
-  // não acontecer, e as Sessões criadas antes da troca caem na revogação que vem depois dela.
+  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu. O FOR SHARE trava a
+  // linha da Pessoa: um reset-password que troca a senha ao mesmo tempo faz esta inserção esperar
+  // e reavaliar o hash (e não inserir), e a troca que começa depois espera a inserção terminar,
+  // para a revogação que vem em seguida apagar a Sessão.
   async startSession(person: Person): Promise<LoginResult> {
     const token = generateSessionToken();
     const now = new Date();
     const inserted = await this.sessions.query<{ id: string }[]>(
       `INSERT INTO sessions (id, person_id, token_hash, expires_at, last_used_at)
        SELECT $1, id, $2, $3, $4 FROM people WHERE id = $5 AND password_hash = $6
+       FOR SHARE
        RETURNING id`,
       [
         randomUUIDv7(),
@@ -87,7 +88,10 @@ export class SessionsService {
         id: session.id,
         expiresAt: LessThanOrEqual(now),
       });
-      if (deleted.affected === 0 && (await this.isStillValid(session.id))) {
+      if (
+        deleted.affected === 0 &&
+        (await this.isStillValid(session.id, now))
+      ) {
         return { sessionId: session.id, person: session.person };
       }
       throw new UnauthenticatedError();
@@ -114,9 +118,9 @@ export class SessionsService {
     return result.affected ?? 0;
   }
 
-  private async isStillValid(sessionId: string): Promise<boolean> {
+  private async isStillValid(sessionId: string, now: Date): Promise<boolean> {
     return this.sessions.exists({
-      where: { id: sessionId, expiresAt: MoreThan(new Date()) },
+      where: { id: sessionId, expiresAt: MoreThan(now) },
     });
   }
 
