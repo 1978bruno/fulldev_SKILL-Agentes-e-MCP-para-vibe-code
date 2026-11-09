@@ -9,7 +9,8 @@ const CHANNEL_NAME_PATTERN = /^[\p{Ll}\p{Lo}\p{Lm}\p{Nd}_-][\p{Ll}\p{Lo}\p{Lm}\p
 // O que o nome aceita depois da primeira letra; o resto não entra.
 const CHANNEL_NAME_CHARACTER = /[\p{Ll}\p{Lo}\p{Lm}\p{M}\p{Nd}_-]/u;
 const LEADING_MARKS = /^\p{M}+/u;
-const TOPIC_FORBIDDEN = /[\p{Cc}\p{Zl}\p{Zp}]/gu;
+// Quebras de linha e outros caracteres de controle: o Tópico é uma linha só.
+const TOPIC_FORBIDDEN = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 
 function truncateCodePoints(text: string, max: number): string {
   return Array.from(text).slice(0, max).join("");
@@ -30,9 +31,9 @@ export function isValidChannelName(name: string): boolean {
 
 // O Tópico enquanto a Pessoa digita ou cola: numa linha só e até o limite.
 export function normalizeTopicInput(text: string): string {
-  return truncateCodePoints(text.replace(TOPIC_FORBIDDEN, " "), TOPIC_MAX_LENGTH);
+  return truncateCodePoints(text.replace(new RegExp(TOPIC_FORBIDDEN, "gu"), " "), TOPIC_MAX_LENGTH);
 }
 
 export function isValidTopic(topic: string): boolean {
-  return !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(topic) && codePointLength(topic.trim()) <= TOPIC_MAX_LENGTH;
+  return !TOPIC_FORBIDDEN.test(topic) && codePointLength(topic.trim()) <= TOPIC_MAX_LENGTH;
 }

@@ -45,6 +45,7 @@ export class Conversation extends BaseEntity {
   @Column({ type: 'uuid', nullable: true })
   createdBy!: string | null;
 
+  // Só para a chave estrangeira da migração: a relação não é carregada.
   @ManyToOne(() => Person, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   creator?: Person;

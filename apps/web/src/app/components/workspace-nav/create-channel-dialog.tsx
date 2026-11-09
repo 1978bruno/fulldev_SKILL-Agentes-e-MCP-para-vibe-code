@@ -27,8 +27,6 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  // O nome que a API recusou como repetido, para a frase do erro.
-  const [takenName, setTakenName] = useState("");
   const created = useRef(false);
   const ids = { name: useId(), topic: useId(), hint: useId(), error: useId() };
 
@@ -51,7 +49,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
       case "unauthenticated":
         return redirectToExpiredSession();
       case "name_taken":
-        setTakenName(name);
+        // Digitar no nome volta o status a idle: o nome recusado é sempre o que está no campo.
         setStatus("name_taken");
         return;
       default:
@@ -59,7 +57,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
     }
   }
 
-  const nameError = status === "name_taken" ? `Já existe um canal chamado #${takenName}.` : undefined;
+  const nameError = status === "name_taken" ? `Já existe um canal chamado #${name}.` : undefined;
 
   return (
     <DialogContent

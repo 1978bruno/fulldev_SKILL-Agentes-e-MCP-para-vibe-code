@@ -1,5 +1,6 @@
 import { randomUUIDv7 } from "node:crypto";
 import type { Locator, Page } from "@playwright/test";
+import { routeServerAction } from "./server-action";
 
 // Nome único de Canal criado pela tela, com o prefixo e2e- dos dados de teste. Digitado com
 // maiúsculas e espaço, ele chega ao campo normalizado.
@@ -18,17 +19,10 @@ export function addChannelButton(page: Page): Locator {
     .getByRole("button", { name: "Adicionar canal" });
 }
 
-// A criação é um Server Action: um POST para a própria página, com o cabeçalho next-action.
-export async function routeCreateChannel(
+// A criação é um Server Action, chamado da página em que a barra lateral está.
+export function routeCreateChannel(
   page: Page,
   handler: Parameters<Page["route"]>[1],
 ): Promise<() => Promise<void>> {
-  const matcher = () => true;
-  await page.route(matcher, async (route, request) => {
-    if (request.method() === "POST" && (await request.headerValue("next-action"))) {
-      return handler(route, request);
-    }
-    return route.fallback();
-  });
-  return () => page.unroute(matcher);
+  return routeServerAction(page, handler);
 }

@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
-import { Conversation } from './conversation.entity';
 import {
   ConversationResponse,
   toConversationResponse,
@@ -20,7 +19,8 @@ export class ConversationsController {
     @CurrentPerson() person: Person,
   ): Promise<{ conversations: ConversationResponse[] }> {
     const conversations = await this.conversations.listForMember(person.id);
-    return { conversations: await this.withMemberCounts(conversations) };
+    const summaries = await this.conversations.withMemberCounts(conversations);
+    return { conversations: summaries.map(toConversationResponse) };
   }
 
   @Post()
@@ -28,14 +28,13 @@ export class ConversationsController {
     @CurrentPerson() person: Person,
     @Body() body: CreateConversationDto,
   ): Promise<{ conversation: ConversationResponse }> {
-    const { conversation } = await this.conversations.createChannel(person.id, {
+    const created = await this.conversations.createChannel(person.id, {
       kind: body.kind,
       name: body.name,
       topic: body.topic,
       clientId: body.client_id,
     });
-    const [response] = await this.withMemberCounts([conversation]);
-    return { conversation: response };
+    return { conversation: toConversationResponse(created) };
   }
 
   @Get(':id')
@@ -44,18 +43,7 @@ export class ConversationsController {
     @Param('id') id: string,
   ): Promise<{ conversation: ConversationResponse }> {
     const conversation = await this.conversations.getForMember(person.id, id);
-    const [response] = await this.withMemberCounts([conversation]);
-    return { conversation: response };
-  }
-
-  private async withMemberCounts(
-    conversations: Conversation[],
-  ): Promise<ConversationResponse[]> {
-    const counts = await this.conversations.countMembers(
-      conversations.map((conversation) => conversation.id),
-    );
-    return conversations.map((conversation) =>
-      toConversationResponse(conversation, counts.get(conversation.id) ?? 0),
-    );
+    const [summary] = await this.conversations.withMemberCounts([conversation]);
+    return { conversation: toConversationResponse(summary) };
   }
 }

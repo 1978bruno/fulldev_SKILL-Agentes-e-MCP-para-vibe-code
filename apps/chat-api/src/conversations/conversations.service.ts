@@ -31,8 +31,14 @@ export interface NewChannel {
   clientId: string;
 }
 
-export interface CreatedChannel {
+// Uma Conversa com a quantidade de Membros: o que a Conversa do REST e o evento do tempo real levam
+// (spec da F04, "Rotas" e "Tempo real").
+export interface ConversationSummary {
   conversation: Conversation;
+  memberCount: number;
+}
+
+export interface CreatedChannel extends ConversationSummary {
   // Falso quando o client_id já tinha criado o Canal: o reenvio não grava nem publica nada.
   created: boolean;
 }
@@ -60,9 +66,24 @@ export class ConversationsService {
     return conversations.sort((a, b) => compareNames(a.name, b.name));
   }
 
+  // As Conversas com a quantidade de Membros de cada uma, na mesma ordem.
+  async withMemberCounts(
+    conversations: Conversation[],
+  ): Promise<ConversationSummary[]> {
+    const counts = await this.countMembers(
+      conversations.map((conversation) => conversation.id),
+    );
+    return conversations.map((conversation) => ({
+      conversation,
+      memberCount: counts.get(conversation.id) ?? 0,
+    }));
+  }
+
   // Quantidade de Membros de cada Conversa pedida, numa consulta agrupada. A Conversa sem Membros
   // não aparece no mapa.
-  async countMembers(conversationIds: string[]): Promise<Map<string, number>> {
+  private async countMembers(
+    conversationIds: string[],
+  ): Promise<Map<string, number>> {
     if (conversationIds.length === 0) return new Map();
     const rows = await this.txHost.tx
       .getRepository(ConversationMember)
@@ -116,12 +137,15 @@ export class ConversationsService {
       createdBy: creatorId,
       clientId,
     });
-    if (existing) return { conversation: existing, created: false };
-    const conversation = await this.insertChannel(kind, name, topic, {
+    if (existing) {
+      const [summary] = await this.withMemberCounts([existing]);
+      return { ...summary, created: false };
+    }
+    const summary = await this.insertChannel(kind, name, topic, {
       createdBy: creatorId,
       clientId,
     });
-    return { conversation, created: true };
+    return { ...summary, created: true };
   }
 
   // Cria o Canal público pelo comando de canais, sem criador nem client_id.
@@ -131,20 +155,23 @@ export class ConversationsService {
     rawTopic?: string,
   ): Promise<Conversation> {
     await lockPublicMembership(this.txHost.tx);
-    return this.insertChannel('public_channel', rawName, rawTopic, {
-      createdBy: null,
-      clientId: null,
-    });
+    const { conversation } = await this.insertChannel(
+      'public_channel',
+      rawName,
+      rawTopic,
+      { createdBy: null, clientId: null },
+    );
+    return conversation;
   }
 
   // Só sob a trava de participação: valida, confere o nome entre todos os Canais e grava o Canal
-  // com a participação de todas as Pessoas.
+  // com a participação de todas as Pessoas, cuja quantidade já se sabe sem contar de novo.
   private async insertChannel(
     kind: ChannelKind,
     rawName: string,
     rawTopic: string | undefined,
     origin: { createdBy: string | null; clientId: string | null },
-  ): Promise<Conversation> {
+  ): Promise<ConversationSummary> {
     const name = parseChannelName(rawName);
     if (!name.ok) throw new InvalidChannelError(name.error);
     const topic = parseTopic(rawTopic);
@@ -164,7 +191,7 @@ export class ConversationsService {
     await this.insertMembers(
       personIds.map((personId) => [channel.id, personId]),
     );
-    return channel;
+    return { conversation: channel, memberCount: personIds.length };
   }
 
   // Troca o Tópico de um Canal público pela regra do create; vazio apaga. Devolve o nome
@@ -184,7 +211,7 @@ export class ConversationsService {
     return { name, topic: topic.value };
   }
 
-  // Canais públicos em ordem alfabética, com o número de Membros.
+  // Canais públicos em ordem alfabética ("name-order.ts"), com o número de Membros.
   async listPublicChannels(): Promise<PublicChannelSummary[]> {
     const rows = await this.conversations
       .createQueryBuilder('conversation')
@@ -198,17 +225,18 @@ export class ConversationsService {
       .addSelect('count(member.id)', 'member_count')
       .where("conversation.kind = 'public_channel'")
       .groupBy('conversation.id')
-      .orderBy('conversation.name', 'ASC')
       .getRawMany<{
         name: string;
         topic: string | null;
         member_count: string;
       }>();
-    return rows.map((row) => ({
-      name: row.name,
-      topic: row.topic,
-      memberCount: Number(row.member_count),
-    }));
+    return rows
+      .sort((a, b) => compareNames(a.name, b.name))
+      .map((row) => ({
+        name: row.name,
+        topic: row.topic,
+        memberCount: Number(row.member_count),
+      }));
   }
 
   // Cria a conta e a inclui em todos os Canais públicos, numa transação (ADR 0024). A Pessoa é

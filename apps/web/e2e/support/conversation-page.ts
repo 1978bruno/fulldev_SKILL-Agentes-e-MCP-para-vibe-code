@@ -1,3 +1,4 @@
+import { routeServerAction } from "./server-action";
 import type { Locator, Page } from "@playwright/test";
 
 // O histórico da Conversa depois de hidratado e em dia com o tempo real: antes disso, rolar não
@@ -33,20 +34,12 @@ export function conversationIntro(page: Page, channelName: string): Locator {
   return page.getByRole("heading", { name: `Este é o começo do canal #${channelName}` });
 }
 
-// O envio de Mensagem é um Server Action: um POST para a própria página, com o cabeçalho
-// next-action. `handler` decide o que fazer com cada envio.
-export async function routeSendMessage(
+// O envio de Mensagem é um Server Action na página da Conversa (support/server-action.ts).
+export function routeSendMessage(
   page: Page,
   handler: Parameters<Page["route"]>[1],
 ): Promise<() => Promise<void>> {
-  const matcher = (url: URL) => url.pathname.startsWith("/conversas/");
-  await page.route(matcher, async (route, request) => {
-    if (request.method() === "POST" && (await request.headerValue("next-action"))) {
-      return handler(route, request);
-    }
-    return route.fallback();
-  });
-  return () => page.unroute(matcher);
+  return routeServerAction(page, handler, (url) => url.pathname.startsWith("/conversas/"));
 }
 
 // Leva a lista para longe do fim (e longe do topo, para não pedir as anteriores) e devolve a
