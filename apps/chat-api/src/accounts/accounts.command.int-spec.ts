@@ -1,6 +1,7 @@
 import { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { verify } from '@node-rs/argon2';
+import { ClsService } from 'nestjs-cls';
 import { DataSource } from 'typeorm';
 import { uniqueEmail } from '../../test/support/unique-email';
 import { PeopleService } from '../people/people.service';
@@ -22,6 +23,7 @@ describe('comando de contas', () => {
   let people: PeopleService;
   let sessions: SessionsService;
   let dataSource: DataSource;
+  let cls: ClsService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -31,19 +33,22 @@ describe('comando de contas', () => {
     people = context.get(PeopleService);
     sessions = context.get(SessionsService);
     dataSource = context.get(DataSource);
+    cls = context.get(ClsService);
   });
 
   afterAll(async () => {
     await context.close();
   });
 
+  // Como o cli.ts: cada execução do comando roda dentro de um contexto do CLS.
   function command(password = 'senha-do-terminal', output = recordingOutput()) {
-    return new AccountsCommand(
+    const accounts = new AccountsCommand(
       people,
       sessions,
       givenPassword(password),
       output,
     );
+    return { run: (argv: string[]) => cls.run(() => accounts.run(argv)) };
   }
 
   async function personWithSessions(count: number) {

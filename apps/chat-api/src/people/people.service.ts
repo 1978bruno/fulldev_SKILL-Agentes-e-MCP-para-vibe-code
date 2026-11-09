@@ -1,5 +1,6 @@
+import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
+import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, QueryFailedError, Repository } from 'typeorm';
 import { EmailAlreadyExistsError } from './email-already-exists.error';
 import { normalizeEmail } from './normalize-email';
@@ -22,9 +23,14 @@ function isUniqueViolation(error: unknown): boolean {
 @Injectable()
 export class PeopleService {
   constructor(
-    @InjectRepository(Person) private readonly people: Repository<Person>,
+    private readonly txHost: TransactionHost<TransactionalAdapterTypeOrm>,
     private readonly passwords: PasswordHasher,
   ) {}
+
+  // Pelo TransactionHost, para participar da transação de quem orquestra, quando há uma.
+  private get people(): Repository<Person> {
+    return this.txHost.tx.getRepository(Person);
+  }
 
   async create({ email, name, password }: NewPerson): Promise<Person> {
     const normalized = normalizeEmail(email);
@@ -70,12 +76,12 @@ export class PeopleService {
     person: Person,
     work: (manager: EntityManager) => Promise<T>,
   ): Promise<T | null> {
-    return this.people.manager.transaction(async (manager) => {
-      const locked = await manager.getRepository(Person).findOne({
+    return this.txHost.withTransaction(Propagation.RequiresNew, async () => {
+      const locked = await this.people.findOne({
         where: { id: person.id, passwordHash: person.passwordHash },
         lock: { mode: 'pessimistic_read' },
       });
-      return locked ? work(manager) : null;
+      return locked ? work(this.txHost.tx) : null;
     });
   }
 
@@ -88,11 +94,9 @@ export class PeopleService {
     alsoInTransaction: (manager: EntityManager) => Promise<T>,
   ): Promise<T> {
     const passwordHash = await this.passwords.hash(password);
-    return this.people.manager.transaction(async (manager) => {
-      await manager
-        .getRepository(Person)
-        .update({ id: personId }, { passwordHash });
-      return alsoInTransaction(manager);
+    return this.txHost.withTransaction(Propagation.RequiresNew, async () => {
+      await this.people.update({ id: personId }, { passwordHash });
+      return alsoInTransaction(this.txHost.tx);
     });
   }
 

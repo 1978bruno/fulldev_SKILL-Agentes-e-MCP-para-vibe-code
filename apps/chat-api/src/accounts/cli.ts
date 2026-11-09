@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ClsService } from 'nestjs-cls';
 import { PeopleService } from '../people/people.service';
 import { SessionsService } from '../sessions/sessions.service';
 import { AccountsCommand } from './accounts.command';
@@ -16,7 +17,10 @@ async function main(): Promise<void> {
       new TtyPasswordPrompt(),
       { info: console.log, error: console.error },
     );
-    process.exitCode = await command.run(process.argv.slice(2));
+    // Contexto do CLS fora do HTTP (AGENTS.md da API, "Transações").
+    process.exitCode = await app
+      .get(ClsService)
+      .run(() => command.run(process.argv.slice(2)));
   } finally {
     await app.close();
   }

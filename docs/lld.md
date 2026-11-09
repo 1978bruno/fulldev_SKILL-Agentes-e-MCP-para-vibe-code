@@ -55,9 +55,11 @@ docs/             HLD, LLD, ADRs, brief
 | Tempo real, no servidor e no cliente | Socket.IO | [ADR 0019](adr/0019-socket-io-tempo-real.md) |
 | API do chat | NestJS | HLD, seção 5 |
 | ORM e migrações do Banco do chat | TypeORM | [ADR 0018](adr/0018-typeorm-api-do-chat.md) |
+| Transação entre módulos na API do chat | `@nestjs-cls/transactional`, com o adaptador do TypeORM | A transação passa de um service a outro pelo contexto, sem levar o `EntityManager` à mão nem importar o repositório de outro módulo |
 | Snapshot do contrato da API do chat | `@nestjs/swagger` | Gera o OpenAPI a partir do código |
 | Hash de senha | Argon2id | Primeira recomendação da OWASP para senhas |
-| Testes de ponta a ponta do `web` | Playwright, só no Chromium em modo headless, com `@axe-core/playwright` | Prova os fluxos pela tela, com a web e a API reais, e é o único seam da web; o produto é só para navegador de desktop. Sem teste de unidade na web por enquanto |
+| Testes de ponta a ponta do `web` | Playwright, só no Chromium em modo headless, com `@axe-core/playwright` | Prova os fluxos pela tela, com a web e a API reais, e é o seam dos fluxos da web; o produto é só para navegador de desktop |
+| Testes de unidade do `web` | Vitest, em ambiente Node, só para funções puras com muitos casos | Provar dezenas de casos de data e de texto (agrupamento, divisor de dia, links, contagem de caracteres) pelo navegador seria lento; o Playwright continua provando os fluxos |
 | Gerenciador dos projetos TypeScript | pnpm, um projeto por pasta, sem workspace | [ADR 0017](adr/0017-projetos-pnpm-independentes.md) |
 | Agentes | Python + Google ADK | [ADR 0003](adr/0003-agentes-python-google-adk.md) |
 | HTTP do Serviço de agentes | FastAPI próprio, com as rotas chamando o `Runner` do ADK | A definir |
@@ -134,8 +136,11 @@ novas tentativas e idempotência").
 - **Limite de tentativas de login:** contado só pelo e-mail normalizado, inclusive de e-mails sem
   conta, e guardado no Banco do chat ([ADR 0023](adr/0023-limite-de-login-por-email.md)). As
   regras estão em "Estados e regras", seção "Sessão e login".
-- **Participação em canal privado e conversa direta:** o lugar no código onde a API do chat a
-  confere está a definir.
+- **Participação numa Conversa:** conferida no service de Conversas, por uma operação única,
+  "Conversa da qual a Pessoa é Membro", que toda rota e todo service que recebe um id de Conversa
+  usa, e que a F03 reaproveita no WebSocket. Conversa inexistente, sem participação ou com id
+  malformado recebem o mesmo `conversation_not_found`, para a resposta não revelar se a Conversa
+  existe.
 - **Credenciais de bot e de serviço:** a forma (um segredo por processo ou por agente) está a
   definir. Toda ação de bot leva o identificador de pedido
   ([ADR 0011](adr/0011-identificador-de-pedido.md)).
@@ -152,6 +157,11 @@ novas tentativas e idempotência").
 - **Envio de mensagem:** unicidade em (autor, identificador gerado no cliente). A inserção tolera
   o conflito: se o identificador já existe, a API devolve a mensagem já gravada, com o mesmo
   status de sucesso, e não gera de novo menções, notificações, contadores nem eventos.
+- **Participação em Canal público:** criar um Canal público inclui todas as Pessoas, e criar uma
+  conta inclui a Pessoa em todos os Canais públicos. As duas transações começam tomando a mesma
+  trava transacional do Postgres (`pg_advisory_xact_lock`, chave fixa), para uma conta e um Canal
+  criados ao mesmo tempo não deixarem a Pessoa fora do Canal; a gravação tolera a participação que
+  já existe ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)).
 - **Ação de bot:** unicidade em (identificador de pedido, tipo de ação). Tipos: resposta, pergunta
   ao usuário, aviso de início, entrega do PDF, criação de tarefa. A repetição devolve o que já foi
   gravado, sem nova mensagem, tarefa ou notificação.
@@ -166,8 +176,10 @@ novas tentativas e idempotência").
 
 O que precisa ser atômico é do HLD (seção 7, "Regras que pesam no desenho"): a mensagem com as
 menções, as notificações e os contadores; a tarefa com a notificação dela. O evento só sai depois
-do commit. Onde a transação começa, como passa de um módulo a outro e como o evento é publicado
-depois do commit (publicação direta ou tabela de saída) estão a definir.
+do commit. Na API do chat, a transação começa no método do service que orquestra, marcado com
+`@Transactional()`, e passa aos services de outros módulos pelo contexto do CLS: quem participa
+acessa o banco pelo `TransactionHost`, e não pelo repositório injetado. Como o evento é publicado
+depois do commit (publicação direta ou tabela de saída) está a definir.
 
 ### Erros
 
@@ -229,9 +241,9 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 | Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
 | Chat | Sessões | existe (`sessions`) |
 | Chat | Tentativas de login por e-mail | existe (`login_attempts`) |
-| Chat | Canais e membros | a detalhar |
-| Chat | Conversas diretas | a detalhar |
-| Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | a detalhar |
+| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | planejada: Canal público, com a forma na spec da F02, seção "Conversas e participação" |
+| Chat | Conversas diretas | tipo de Conversa (ADR 0024); a detalhar |
+| Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | planejada: autor pessoa e texto, com a forma na spec da F02, seção "Mensagens"; autor bot, citação e marca a detalhar |
 | Chat | Menções | a detalhar |
 | Chat | Última leitura e contadores por pessoa e conversa | a detalhar |
 | Chat | Notificações | a detalhar |
@@ -255,7 +267,10 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
   autenticação só, igual no REST e no WebSocket; o BFF chama o Serviço de agentes com a credencial de serviço; os bots chamam a
   API do chat com a credencial de bot e o identificador de pedido (forma em "Segurança").
 - Campos do JSON em `snake_case`, nas três APIs.
-- Paginação: a definir.
+- Paginação: keyset pelo id (UUID v7), com `before` (o id do item mais antigo já recebido) e
+  `limit`. A resposta traz os itens em ordem cronológica e `has_more`, que diz se há itens mais
+  antigos. O padrão e o máximo de `limit` estão em "Valores e configuração", em "Tamanho da
+  página".
 - Erros: "Conceitos transversais de implementação", seção "Erros".
 - Eventos do WebSocket: tipos em `packages/chat-events/`, consumidos por `chat-api` e `web`.
 
@@ -271,7 +286,12 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `DELETE /v1/sessions/current` | existe | Sair: mesma seção |
 | BFF: Server Actions entrar e sair | existe | Gravam e apagam o cookie: "Conceitos transversais de implementação", seção "Segurança" |
 | BFF: `GET /api/session/expired` | existe | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
-| Envio de mensagem no BFF (Server Action) | a detalhar | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
+| API do chat: `GET /v1/conversations` | planejada | As Conversas de que a Pessoa é Membro: spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id` | planejada | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id/messages` | planejada | Página do histórico: spec da F02, seção "Rotas" |
+| API do chat: `POST /v1/conversations/:id/messages` | planejada | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
+| BFF: `GET /api/conversations/:id/messages` | planejada | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
+| Envio de mensagem no BFF (Server Action) | planejada | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
 
@@ -366,9 +386,9 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | Rota | Acesso | Lê | Ações | Situação |
 | --- | --- | --- | --- | --- |
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
-| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe |
-| A definir | Sessão | Histórico da conversa | Enviar, editar, apagar, citar; "digitando"; botões de resposta pronta | a detalhar |
-| A definir (lateral) | Sessão | Conversas, com não lidas e menções | Abrir conversa | a detalhar |
+| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe. Alteração `planejada`: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista |
+| `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | planejada: ler e enviar; o resto a detalhar |
+| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | planejada: a lista; não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
@@ -377,7 +397,19 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 
 **Leituras e tempo real.** A página carrega pelos Server Components. No cliente, o SWR guarda as
 leituras que o tempo real altera (mensagens, não lidas, notificações), e cada evento do WebSocket
-atualiza esse cache direto, sem nova requisição.
+atualiza esse cache direto, sem nova requisição. A primeira página do histórico vem do Server
+Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota do BFF
+`GET /api/conversations/:id/messages`, porque um Server Action, além de usar POST, roda em série.
+
+**Cookies do cliente.** Gravados pelo navegador, sem `HttpOnly` e sem dado sensível, com `Path=/`,
+`SameSite=Lax` e a `validade do cookie de sessão`:
+
+- **Última Conversa:** o id da Conversa aberta, gravado ao abri-la e lido pela Home para
+  redirecionar. Fica no navegador, e não na Pessoa, porque o PRD da F02 (história 2) fala do último
+  canal visitado naquele navegador.
+- **Fuso:** o fuso IANA do navegador. O servidor formata horas e datas com ele e, sem o cookie, usa
+  o `fuso padrão`. Se o fuso gravado difere do navegador, o cliente regrava o cookie e renderiza a
+  rota de novo. É também o fuso de quem pediu que o BFF leva ao agente (HLD 6.3).
 
 **Sessão no cliente.**
 
@@ -436,7 +468,10 @@ atualiza esse cache direto, sem nova requisição.
 | Validade do identificador de pedido | A definir | API do chat | A definir |
 | Retenção dos eventos de reconexão | A definir | API do chat (Redis) | A definir |
 | Tempo limite da consulta ao Banco de negócio | A definir | Serviço de agentes e Worker | A definir |
-| Tamanho da página do histórico | A definir | API do chat | A definir |
+| Tamanho da página | Padrão 50, máximo 100 | API do chat | Constante |
+| Tamanho máximo da Mensagem | 4000 caracteres, contados em pontos de código Unicode (Figma, MessageComposer) | API do chat, banco e web | Constante |
+| Intervalo da forma compacta | 5 min (PRD da F02, história 3) | Web | Constante |
+| Fuso padrão | `America/Sao_Paulo`, usado sem o cookie de fuso | Web | Constante |
 
 **Variáveis de ambiente**
 
@@ -531,6 +566,7 @@ usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário,
 | [0021](adr/0021-contadores-gravados.md) | Contadores de não lidas e de menções gravados na transação | aceita |
 | [0022](adr/0022-uuid-v7.md) | UUID v7 como id, gerado na aplicação | aceita |
 | [0023](adr/0023-limite-de-login-por-email.md) | Limite de tentativas de login contado só pelo e-mail | aceita |
+| [0024](adr/0024-conversas-numa-tabela-so.md) | Canais e Conversas diretas numa tabela só, com participação gravada | aceita |
 
 As decisões que mudam o desenho estão no HLD, seção 10.
 
@@ -565,9 +601,9 @@ As decisões que mudam o desenho estão no HLD, seção 10.
 - [ ] Credenciais de bot (por processo ou por agente) e credencial de serviço.
 - [x] Chave do limite de tentativas de login: só o e-mail (ADR 0023).
 - [x] Origem do IP atrás do proxy: deixou de ser necessária, porque o limite não usa o IP.
-- [ ] Lugar da conferência de participação em canal privado e conversa direta.
+- [x] Lugar da conferência de participação: no service de Conversas.
 - [ ] Função única que monta a mensagem para cada destinatário.
-- [ ] Onde a transação começa e como passa entre módulos.
+- [x] Onde a transação começa e como passa entre módulos: no service que orquestra, pelo CLS.
 - [ ] Publicação do evento depois do commit: direta ou por tabela de saída.
 - [x] Quem traduz exceção em resposta na API do chat: o filter global.
 - [ ] Quem traduz exceção em resposta no BFF e no Serviço de agentes.
@@ -577,10 +613,10 @@ As decisões que mudam o desenho estão no HLD, seção 10.
 
 **Dados e interfaces**
 
-- [ ] Canais e conversas diretas: uma tabela com tipo, ou tabelas separadas.
+- [x] Canais e conversas diretas: uma tabela com tipo (ADR 0024).
 - [ ] Bots na mesma tabela das pessoas, ou não.
 - [ ] Diagrama de entidades e relações; forma das tabelas.
-- [ ] Paginação do histórico e das listas.
+- [x] Paginação do histórico e das listas: keyset pelo id.
 - [x] Como o BFF leva a sessão à API do chat.
 - [ ] Índice das rotas (BFF, API do chat para o BFF e para os bots, Serviço de agentes) e lista
       de eventos do WebSocket.
