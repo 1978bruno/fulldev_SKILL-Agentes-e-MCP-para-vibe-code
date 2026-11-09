@@ -9,7 +9,6 @@ import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
 import { getCurrentPerson } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
-import { readTimeZone } from "@/app/services/time-zone-cookie";
 import {
   expiredSessionPath,
   REQUESTED_PATH_HEADER,
@@ -46,9 +45,7 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen">
       <BfcacheReload />
-      <TimeZoneSync
-        serverTimeZone={await readTimeZone()}
-      />
+      <TimeZoneSync />
       <Rail person={result.person} />
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col bg-surface">{children}</main>

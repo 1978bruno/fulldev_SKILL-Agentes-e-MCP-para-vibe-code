@@ -2,19 +2,24 @@ export type TextSegment = { kind: "text"; text: string } | { kind: "link"; href:
 
 // Só http:// e https:// viram link; nada mais do texto vira marcação.
 const URL_PATTERN = /https?:\/\/[^\s<>"]+/gi;
-const TRAILING_PUNCTUATION = /[.,;:!?]+$/;
+// Pontuação e aspas que fecham a frase, e não o endereço.
+const TRAILING_PUNCTUATION = /[.,;:!?'"”’]+$/;
+const CLOSERS: Record<string, string> = { ")": "(", "]": "[", "}": "{" };
 
-// Tira do fim a pontuação e o ")" que não abriu dentro do próprio link, como em
-// "(veja https://exemplo.com)".
+function count(text: string, character: string): number {
+  return text.split(character).length - 1;
+}
+
+// Tira do fim a pontuação, as aspas e o ")", "]" ou "}" que não abriu dentro do próprio link,
+// como em "(veja https://exemplo.com)" ou "[https://exemplo.com]".
 function trimEnd(candidate: string): string {
   let url = candidate.replace(TRAILING_PUNCTUATION, "");
-  while (url.endsWith(")")) {
-    const opened = (url.match(/\(/g) ?? []).length;
-    const closed = (url.match(/\)/g) ?? []).length;
-    if (closed <= opened) break;
+  for (;;) {
+    const closer = url.at(-1) ?? "";
+    const opener = CLOSERS[closer];
+    if (!opener || count(url, closer) <= count(url, opener)) return url;
     url = url.slice(0, -1).replace(TRAILING_PUNCTUATION, "");
   }
-  return url;
 }
 
 // Separa os links http(s) do texto da Mensagem (spec da F02, "Funções puras do histórico").

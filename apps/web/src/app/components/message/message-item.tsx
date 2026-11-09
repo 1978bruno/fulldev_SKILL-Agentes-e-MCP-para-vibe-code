@@ -18,7 +18,7 @@ type MessageItemProps = {
 // barra de ações entram na F02-T05 e na F06.
 export function MessageItem({ message, timeZone, compact = false, dayLabel }: MessageItemProps) {
   return (
-    <li className="flex flex-col">
+    <li data-message-id={message.id} data-layout={compact ? "compact" : "full"} className="flex flex-col">
       {dayLabel && <DayDivider label={dayLabel} />}
       {compact ? (
         <CompactRow message={message} timeZone={timeZone} />
@@ -34,6 +34,8 @@ type RowProps = { message: Message; timeZone: string };
 function CompactRow({ message, timeZone }: RowProps) {
   return (
     <div className="group flex gap-2 px-5 py-1">
+      {/* Sem o nome à vista, como no Figma; o leitor de tela ainda ouve de quem é. */}
+      <span className="sr-only">{message.author.name}</span>
       <div className="flex w-9 shrink-0 justify-end pt-1">
         <MessageTime
           message={message}

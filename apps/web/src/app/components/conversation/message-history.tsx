@@ -44,8 +44,10 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
     scrollRef.current?.setAttribute("data-ready", "");
   }, []);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  // Distância até o fim da área de rolagem, guardada antes de a página anterior entrar no começo.
-  const distanceFromBottom = useRef<number | null>(null);
+  // Âncora da rolagem, guardada antes de a página anterior entrar no começo: a Mensagem que abria
+  // a lista e a posição do fim dela na área visível. O fim, e não o topo, porque essa Mensagem
+  // pode virar compacta e perder o divisor quando a anterior chega, e encolhe por cima.
+  const anchor = useRef<{ id: string; bottom: number } | null>(null);
   // A forma e o divisor de cada Mensagem, com o dia de cada uma calculado uma vez por lista.
   const rows = useMemo(() => {
     const today = dayKey(renderedAt, timeZone);
@@ -70,21 +72,23 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
-    distanceFromBottom.current = null;
+    anchor.current = null;
   }, [lastId]);
 
   // Quando a página anterior entra no começo, a Mensagem que a Pessoa lia fica no mesmo lugar: a
-  // rolagem é devolvida pela medida da altura, sem depender do overflow-anchor do navegador.
+  // rolagem é devolvida pela posição da âncora, sem depender do overflow-anchor do navegador.
   useLayoutEffect(() => {
     const element = scrollRef.current;
-    if (!element || distanceFromBottom.current === null) return;
-    element.scrollTop = element.scrollHeight - distanceFromBottom.current;
-    distanceFromBottom.current = null;
+    const saved = anchor.current;
+    anchor.current = null;
+    if (!element || !saved) return;
+    const bottom = anchorBottom(element, saved.id);
+    if (bottom !== null) element.scrollTop += bottom - saved.bottom;
   }, [firstId]);
 
   // Uma carga que falhou não devolve a rolagem depois.
   useEffect(() => {
-    if (olderFailed) distanceFromBottom.current = null;
+    if (olderFailed) anchor.current = null;
   }, [olderFailed]);
 
   // Quem pediu as anteriores pelo teclado não perde o foco quando a última página chega e o botão
@@ -98,7 +102,8 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
 
   function requestOlder() {
     const element = scrollRef.current;
-    if (element) distanceFromBottom.current = element.scrollHeight - element.scrollTop;
+    const bottom = element && firstId ? anchorBottom(element, firstId) : null;
+    anchor.current = firstId && bottom !== null ? { id: firstId, bottom } : null;
     hadButtonFocus.current = document.activeElement === loadOlderButtonRef.current;
     loadOlder();
   }
@@ -177,4 +182,11 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
       />
     </div>
   );
+}
+
+// Posição do fim da Mensagem em relação ao topo da área de rolagem.
+function anchorBottom(container: HTMLElement, messageId: string): number | null {
+  const item = container.querySelector(`[data-message-id="${CSS.escape(messageId)}"]`);
+  if (!item) return null;
+  return item.getBoundingClientRect().bottom - container.getBoundingClientRect().top;
 }

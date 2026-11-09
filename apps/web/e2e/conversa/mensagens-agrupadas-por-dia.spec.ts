@@ -38,11 +38,11 @@ test.describe("Ler as Mensagens", () => {
     // Os divisores separam os dias e não contam como Mensagem.
     await expect(mensagens.getByText("Ontem", { exact: true })).toBeVisible();
     await expect(mensagens.getByText("Hoje", { exact: true })).toBeVisible();
-    // A segunda Mensagem seguida do mesmo autor é compacta: sem nome.
-    await expect(itens.nth(1)).toContainText(person.name);
+    // A segunda Mensagem seguida do mesmo autor é compacta: sem nome nem avatar à vista.
+    await expect(itens.nth(1)).toHaveAttribute("data-layout", "full");
     await expect(itens.nth(2)).toContainText("Logo em seguida");
-    await expect(itens.nth(2)).not.toContainText(person.name);
+    await expect(itens.nth(2)).toHaveAttribute("data-layout", "compact");
     // Com mais de 5 minutos, volta a forma completa.
-    await expect(itens.nth(3)).toContainText(person.name);
+    await expect(itens.nth(3)).toHaveAttribute("data-layout", "full");
   });
 });

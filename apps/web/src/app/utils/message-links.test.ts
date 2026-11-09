@@ -26,6 +26,19 @@ describe("splitLinks", () => {
     ]);
   });
 
+  it.each([
+    ["entre aspas simples", "veja 'https://exemplo.com/a'", "veja '", "'"],
+    ["entre aspas curvas", "veja “https://exemplo.com/a”", "veja “", "”"],
+    ["entre colchetes", "[https://exemplo.com/a]", "[", "]"],
+    ["entre chaves", "{https://exemplo.com/a}", "{", "}"],
+  ])("deixa fora o fechamento de um link %s", (_caso, text, before, after) => {
+    expect(splitLinks(text)).toEqual([
+      { kind: "text", text: before },
+      { kind: "link", href: "https://exemplo.com/a" },
+      { kind: "text", text: after },
+    ]);
+  });
+
   it("mantém o ) que abriu dentro do link", () => {
     expect(splitLinks("https://pt.wikipedia.org/wiki/Canal_(comunicação)")).toEqual([
       { kind: "link", href: "https://pt.wikipedia.org/wiki/Canal_(comunicação)" },
