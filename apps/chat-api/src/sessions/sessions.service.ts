@@ -88,7 +88,7 @@ export class SessionsService {
         expiresAt: LessThanOrEqual(now),
       });
       if (deleted.affected === 0 && (await this.isStillValid(session.id))) {
-        return session.person;
+        return { sessionId: session.id, person: session.person };
       }
       throw new UnauthenticatedError();
     }
