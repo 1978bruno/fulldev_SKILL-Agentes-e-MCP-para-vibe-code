@@ -88,6 +88,8 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
               <Input
                 id={ids.name}
                 value={name}
+                // Somente leitura no envio: o que vai para a API é o que está na tela.
+                readOnly={status === "sending"}
                 autoComplete="off"
                 spellCheck={false}
                 aria-invalid={nameError ? true : undefined}
@@ -104,6 +106,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
             <Input
               id={ids.topic}
               value={topic}
+              readOnly={status === "sending"}
               autoComplete="off"
               onChange={(event) => {
                 setTopic(normalizeTopicInput(event.target.value));
