@@ -5,15 +5,18 @@ export interface ConversationResponse {
   kind: ConversationKind;
   name: string | null;
   topic: string | null;
+  member_count: number;
 }
 
 export function toConversationResponse(
   conversation: Conversation,
+  memberCount: number,
 ): ConversationResponse {
   return {
     id: conversation.id,
     kind: conversation.kind,
     name: conversation.name,
     topic: conversation.topic,
+    member_count: memberCount,
   };
 }

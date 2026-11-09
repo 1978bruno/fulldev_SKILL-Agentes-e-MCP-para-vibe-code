@@ -2,16 +2,17 @@ import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
 import { authRoutes } from './support/auth-routes';
 import { conversationRoutes } from './support/conversation-routes';
 import { createTestApp } from './support/create-test-app';
-import { uniqueChannelName } from './support/unique-channel-name';
 
 type ConversationBody = {
   id: string;
   kind: string;
   name: string | null;
   topic: string | null;
+  member_count: number;
 };
 
 describe('conversas', () => {
@@ -30,28 +31,57 @@ describe('conversas', () => {
   const loggedIn = () => authRoutes.loggedIn(app);
 
   describe('GET /v1/conversations', () => {
-    it('lista só as Conversas de que a Pessoa é Membro, em ordem alfabética', async () => {
+    it('lista só as Conversas de que a Pessoa é Membro, na ordem alfabética do pt-BR', async () => {
       const { person, cookie } = await loggedIn();
-      const second = await conversationRoutes.createChannel(app, {
-        name: uniqueChannelName('b'),
-      });
-      const first = await conversationRoutes.createChannel(app, {
-        name: uniqueChannelName('a'),
-      });
+      const suffix = randomUUID();
+      const names = ['zebra', 'árvore', '_meio', 'abelha'].map(
+        (prefix) => `${prefix}-${suffix}`,
+      );
+      const channels: { id: string }[] = [];
+      for (const name of names) {
+        channels.push(await conversationRoutes.createChannel(app, { name }));
+      }
       const outside = await conversationRoutes.createChannel(app);
       await conversationRoutes.removeMembership(app, outside.id, person.id);
+      const ownIds = [...channels.map((channel) => channel.id), outside.id];
 
       const response = await request(server)
         .get('/v1/conversations')
         .set('Cookie', cookie);
 
       expect(response.status).toBe(200);
-      const ids = (
+      const listed = (
         response.body as { conversations: ConversationBody[] }
       ).conversations
-        .map((conversation) => conversation.id)
-        .filter((id) => [first.id, second.id, outside.id].includes(id));
-      expect(ids).toEqual([first.id, second.id]);
+        .filter((conversation) => ownIds.includes(conversation.id))
+        .map((conversation) => conversation.name);
+      // O banco (en_US.utf8) ignora o "_" e poria _meio entre árvore e zebra.
+      expect(listed).toEqual([
+        `_meio-${suffix}`,
+        `abelha-${suffix}`,
+        `árvore-${suffix}`,
+        `zebra-${suffix}`,
+      ]);
+    });
+
+    it('cada Conversa traz a quantidade de Membros', async () => {
+      const { cookie } = await loggedIn();
+      const channel = await conversationRoutes.createChannel(app);
+      const [{ count }] = await app
+        .get(DataSource)
+        .query<{ count: string }[]>(
+          'SELECT count(*) FROM conversation_members WHERE conversation_id = $1',
+          [channel.id],
+        );
+
+      const response = await request(server)
+        .get('/v1/conversations')
+        .set('Cookie', cookie);
+
+      const listed = (
+        response.body as { conversations: ConversationBody[] }
+      ).conversations.find((conversation) => conversation.id === channel.id);
+      expect(listed?.member_count).toBe(Number(count));
     });
 
     it('responde 401 sem Sessão', async () => {
@@ -80,6 +110,7 @@ describe('conversas', () => {
           kind: 'public_channel',
           name: channel.name,
           topic: 'Conversas do time',
+          member_count: expect.any(Number) as number,
         },
       });
     });
