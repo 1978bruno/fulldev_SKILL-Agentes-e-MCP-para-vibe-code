@@ -8,7 +8,6 @@ import {
   expiredSessionPath,
   isVerificationFailed,
   safeReturnPath,
-  VERIFICATION_FAILED_PARAM,
 } from "@/app/utils/return-path";
 
 export const metadata: Metadata = { title: "Entrar · Full Cycle Chat" };
@@ -31,10 +30,10 @@ async function LoginGate({
 }: {
   searchParams: PageProps<"/entrar">["searchParams"];
 }) {
-  const { para, [VERIFICATION_FAILED_PARAM]: verification } = await searchParams;
-  const returnPath = safeReturnPath(para);
+  const params = await searchParams;
+  const returnPath = safeReturnPath(params.para);
   const token = await readSessionToken();
-  if (token && !isVerificationFailed(verification)) {
+  if (token && !isVerificationFailed(params)) {
     const result = await getCurrentPerson(token);
     if (result.kind === "ok") redirect("/");
     if (result.kind === "unauthenticated") redirect(expiredSessionPath(returnPath));
