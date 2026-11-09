@@ -24,11 +24,27 @@ docker compose -f compose.yaml exec web <comando>
 | `pnpm exec tsc --noEmit` | Checagem de tipos |
 | `pnpm build` | Compila a aplicação para produção |
 
+Os testes de ponta a ponta rodam no contêiner `e2e` (`AGENTS.md` da raiz, "Subir e derrubar"), com a web e a API do chat de pé:
+
+```bash
+docker compose -f compose.yaml exec e2e <comando>
+```
+
+| Comando | O que faz |
+| --- | --- |
+| `npm run test:e2e` | Suíte do Playwright (`e2e/*.spec.ts`), só no Chromium e em modo headless |
+| `npx playwright cli <comando>` | O `playwright-cli` do pacote instalado, sem instalação global |
+
+A imagem do `e2e` tem npm, e não pnpm: os dois comandos só chamam o que o `pnpm install` do contêiner `web` instalou. A versão da imagem no `compose.yaml` é a mesma, exata, do `@playwright/test` no `package.json`; uma muda junto com a outra.
+
+**Como escrever e corrigir os testes:** pela skill `playwright-cli`, no fluxo planejar, gerar e corrigir (`references/test-generation.md`), sempre no contêiner `e2e`. O teste-semente é `e2e/seed.spec.ts`.
+
 ## Verificação completa
 
 1. `pnpm lint`
 2. `pnpm exec tsc --noEmit`
 3. `pnpm build`
+4. `npm run test:e2e`, no contêiner `e2e`, com a web e a API do chat de pé
 
 ## Server Components
 
