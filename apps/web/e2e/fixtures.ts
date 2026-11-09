@@ -46,8 +46,9 @@ export const test = base.extend<Fixtures>({
     await use(await insertChannel([person, otherPerson]));
   },
 
-  otherPage: async ({ browser, otherPerson }, use) => {
-    const context = await browser.newContext();
+  otherPage: async ({ browser, baseURL, otherPerson }, use) => {
+    // O baseURL explícito: o contexto novo não depende das opções que o runner injeta.
+    const context = await browser.newContext({ baseURL });
     const page = await context.newPage();
     await logIn(page, otherPerson);
     await use(page);
