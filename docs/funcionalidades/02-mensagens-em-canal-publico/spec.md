@@ -198,7 +198,10 @@ regravar o fuso é um `router.refresh()`.
   - Enquanto carrega, "Conversa / Estrutura / Histórico carregando" (21:1869). Se a Conversa ou a
     primeira página falham, "Conversa / Lista / Erro ao carregar" (21:4642), com "Tentar de novo";
     o cabeçalho mostra o nome quando a Conversa carregou.
-  - Conversa não encontrada: `notFound()` da rota, com a tela 21:1987 e status 404.
+  - Conversa não encontrada: `notFound()` da rota, com a tela 21:1987. O status HTTP fica 200: o
+    layout logado já começou a resposta no streaming (o `Suspense` da verificação da Sessão)
+    quando a página descobre que a Conversa não existe, e num app logado, sem indexação, o que
+    importa é a tela.
   - Ao abrir, a lista rola até a última Mensagem e o foco vai para a caixa de mensagem.
 - **Lista de Mensagens:** MessageItem completo (22:6386) ou compacto (22:7404), DayDivider e, no
   começo, ConversationIntro (21:4808). A lista é um `<ol>` com rótulo, dentro de uma área de

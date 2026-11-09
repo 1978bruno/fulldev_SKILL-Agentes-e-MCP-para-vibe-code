@@ -5,6 +5,8 @@ export type ErrorCode =
   | 'too_many_login_attempts'
   | 'email_already_exists'
   | 'person_not_found'
+  | 'conversation_not_found'
+  | 'channel_name_taken'
   | 'not_found'
   | 'payload_too_large'
   | 'request_rejected'
@@ -17,6 +19,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   too_many_login_attempts: 429,
   email_already_exists: 409,
   person_not_found: 404,
+  conversation_not_found: 404,
+  channel_name_taken: 409,
   not_found: 404,
   payload_too_large: 413,
   request_rejected: 400,

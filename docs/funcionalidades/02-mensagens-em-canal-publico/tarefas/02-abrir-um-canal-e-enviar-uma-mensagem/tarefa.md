@@ -50,7 +50,7 @@ histórico no cliente e o retorno do service HTTP do web. Referências:
 - [ ] **CA8** · `/conversas/<id>` mostra o ConversationHeader com `#`, nome e Tópico e a página
   mais recente em MessageItem completo (22:6386), com a última Mensagem visível acima da caixa e o
   foco na caixa. A hora sai no fuso padrão do LLD até a tarefa 04. Endereço desconhecido mostra a
-  tela 21:1987 com status 404.
+  tela 21:1987 (o status HTTP fica 200, como a spec explica em "Conversa").
 - [ ] **CA9** · No cliente, o histórico fica num `useSWRInfinite`, com a primeira página do Server
   Component como `fallbackData`. O cache guarda só as Mensagens gravadas, e a renderização recebe
   uma lista cronológica plana. As tarefas 03, 04 e 05 consomem essa forma.

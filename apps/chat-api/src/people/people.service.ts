@@ -1,7 +1,8 @@
 import { Propagation, TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
-import { EntityManager, QueryFailedError, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
+import { isUniqueViolation } from '../database/unique-violation';
 import { EmailAlreadyExistsError } from './email-already-exists.error';
 import { normalizeEmail } from './normalize-email';
 import { PasswordHasher } from './password-hasher';
@@ -11,13 +12,6 @@ export interface NewPerson {
   email: string;
   name: string;
   password: string;
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    error instanceof QueryFailedError &&
-    (error.driverError as { code?: string } | undefined)?.code === '23505'
-  );
 }
 
 @Injectable()
@@ -106,5 +100,16 @@ export class PeopleService {
 
   findById(id: string): Promise<Person | null> {
     return this.people.findOneBy({ id });
+  }
+
+  findByIds(ids: string[]): Promise<Person[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.people.findBy({ id: In(ids) });
+  }
+
+  // Todas as Pessoas do workspace, para a participação em Canal público (ADR 0024).
+  async listIds(): Promise<string[]> {
+    const people = await this.people.find({ select: { id: true } });
+    return people.map((person) => person.id);
   }
 }

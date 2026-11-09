@@ -41,8 +41,9 @@ docker compose -f compose.yaml exec chat-api <comando>
 | `pnpm accounts reset-password <e-mail>` | Troca a senha (lida do terminal) e revoga todas as Sessões da Pessoa |
 | `pnpm accounts revoke-sessions <e-mail>` | Apaga todas as Sessões da Pessoa |
 | `pnpm accounts purge-expired-sessions` | Apaga as Sessões vencidas |
+| `pnpm channels create <nome> ["<tópico>"]` | Comando de canais: cria um Canal público, com todas as Pessoas como Membros |
 
-O comando de contas precisa do terminal para ler a senha: rode com `docker compose -f compose.yaml exec chat-api ...`, que abre um TTY. As operações estão na spec da F01, "Comando de contas".
+O comando de contas precisa do terminal para ler a senha: rode com `docker compose -f compose.yaml exec chat-api ...`, que abre um TTY. As operações estão na spec da F01, "Comando de contas". As do comando de canais estão na spec da F02, "Comando de canais".
 
 O `pnpm lint` roda com `--fix`: corrige o que dá e aponta o resto. O `pnpm format` reescreve os arquivos com o Prettier.
 

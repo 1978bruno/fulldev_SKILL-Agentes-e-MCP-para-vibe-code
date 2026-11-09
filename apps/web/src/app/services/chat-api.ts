@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { cache } from "react";
 import { env } from "@/app/config/env";
 import { initials } from "@/app/utils/initials";
 
@@ -87,7 +88,11 @@ export async function login(email: string, password: string): Promise<LoginResul
   return { kind: "failure" };
 }
 
-export async function getCurrentPerson(token: string): Promise<CurrentPersonResult> {
+// Memorizada por requisição: o layout e a página da Conversa leem a mesma Pessoa sem nova
+// chamada à API.
+export const getCurrentPerson = cache(fetchCurrentPerson);
+
+async function fetchCurrentPerson(token: string): Promise<CurrentPersonResult> {
   const response = await request("/v1/sessions/current", {
     method: "GET",
     headers: { cookie: sessionCookieHeader(token) },
@@ -115,4 +120,159 @@ export async function logout(token: string): Promise<void> {
       `Saída sem confirmação da API do chat (status ${response?.status ?? "sem resposta"})`,
     );
   }
+}
+
+// Conversas e Mensagens (spec da F02, "Rotas").
+
+export type ConversationKind = "public_channel";
+
+export type Conversation = {
+  id: string;
+  kind: ConversationKind;
+  name: string;
+  topic: string | null;
+};
+
+type ApiMessage = {
+  id: string;
+  conversation_id: string;
+  client_id: string;
+  author: { id: string; name: string };
+  body: string;
+  created_at: string;
+};
+
+export type MessageAuthor = { id: string; name: string; initials: string };
+
+export type Message = {
+  id: string;
+  conversationId: string;
+  clientId: string;
+  author: MessageAuthor;
+  body: string;
+  createdAt: string;
+};
+
+export type MessagePage = { messages: Message[]; hasMore: boolean };
+
+function toMessage(message: ApiMessage): Message {
+  return {
+    id: message.id,
+    conversationId: message.conversation_id,
+    clientId: message.client_id,
+    author: { ...message.author, initials: initials(message.author.name) },
+    body: message.body,
+    createdAt: message.created_at,
+  };
+}
+
+export type ConversationsResult =
+  | { kind: "ok"; conversations: Conversation[] }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export type ConversationResult =
+  | { kind: "ok"; conversation: Conversation }
+  | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export type MessagePageResult =
+  | { kind: "ok"; page: MessagePage }
+  | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export type SendMessageResult =
+  | { kind: "ok"; message: Message }
+  | { kind: "invalid" }
+  | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+function authenticated(token: string): HeadersInit {
+  return { cookie: sessionCookieHeader(token) };
+}
+
+// Os casos de erro comuns às rotas de Conversa: 401 e 404 da conferência de acesso.
+function commonFailure(
+  response: Response | null,
+): { kind: "not_found" } | { kind: "unauthenticated" } | { kind: "failure" } {
+  if (response?.status === 401) return { kind: "unauthenticated" };
+  if (response?.status === 404) return { kind: "not_found" };
+  return { kind: "failure" };
+}
+
+function conversationPath(id: string, rest = ""): string {
+  return `/v1/conversations/${encodeURIComponent(id)}${rest}`;
+}
+
+export async function listConversations(token: string): Promise<ConversationsResult> {
+  const response = await request("/v1/conversations", {
+    method: "GET",
+    headers: authenticated(token),
+  });
+  if (response?.status === 200) {
+    const body = await jsonBody<{ conversations: Conversation[] }>(response);
+    if (body) return { kind: "ok", conversations: body.conversations };
+    return { kind: "failure" };
+  }
+  if (response?.status === 401) return { kind: "unauthenticated" };
+  return { kind: "failure" };
+}
+
+export async function getConversation(
+  token: string,
+  id: string,
+): Promise<ConversationResult> {
+  const response = await request(conversationPath(id), {
+    method: "GET",
+    headers: authenticated(token),
+  });
+  if (response?.status === 200) {
+    const body = await jsonBody<{ conversation: Conversation }>(response);
+    if (body) return { kind: "ok", conversation: body.conversation };
+    return { kind: "failure" };
+  }
+  return commonFailure(response);
+}
+
+export async function listLatestMessages(
+  token: string,
+  conversationId: string,
+): Promise<MessagePageResult> {
+  const response = await request(conversationPath(conversationId, "/messages"), {
+    method: "GET",
+    headers: authenticated(token),
+  });
+  if (response?.status === 200) {
+    const body = await jsonBody<{ messages: ApiMessage[]; has_more: boolean }>(response);
+    if (body) {
+      return {
+        kind: "ok",
+        page: { messages: body.messages.map(toMessage), hasMore: body.has_more },
+      };
+    }
+    return { kind: "failure" };
+  }
+  return commonFailure(response);
+}
+
+export async function sendMessage(
+  token: string,
+  conversationId: string,
+  message: { clientId: string; body: string },
+): Promise<SendMessageResult> {
+  const response = await request(conversationPath(conversationId, "/messages"), {
+    method: "POST",
+    headers: { ...authenticated(token), "content-type": "application/json" },
+    body: JSON.stringify({ client_id: message.clientId, body: message.body }),
+  });
+  if (response?.status === 201) {
+    const body = await jsonBody<{ message: ApiMessage }>(response);
+    if (body) return { kind: "ok", message: toMessage(body.message) };
+    return { kind: "failure" };
+  }
+  if (response?.status === 400) return { kind: "invalid" };
+  return commonFailure(response);
 }

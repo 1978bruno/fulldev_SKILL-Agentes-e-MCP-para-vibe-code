@@ -27,7 +27,7 @@ test.describe("Entrar", () => {
     ).toContainText("AS");
     await expect(
       page.getByRole("complementary", { name: "Barra lateral" }),
-    ).toHaveText("Full Cycle");
+    ).toContainText("Full Cycle");
     await expect(
       page.getByRole("heading", { level: 1, name: "Nenhuma conversa ainda" }),
     ).toBeVisible();
