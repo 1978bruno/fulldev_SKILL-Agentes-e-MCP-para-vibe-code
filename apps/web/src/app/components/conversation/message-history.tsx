@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SWRConfig } from "swr";
 import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
@@ -22,6 +30,7 @@ import { dayKey, labelForDay } from "@/app/utils/day-label";
 import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
+import { NewMessagesPill } from "./new-messages-pill";
 
 type MessageHistoryProps = {
   conversation: Conversation;
@@ -36,6 +45,9 @@ type MessageHistoryProps = {
 
 // Distância do topo em que o sentinela pede a página anterior (spec da F02, "Lista de Mensagens").
 const LOAD_OLDER_MARGIN_PX = 300;
+
+// Distância do fim da lista até a qual a Pessoa está "no fim" (LLD, "Valores e configuração").
+const END_OF_LIST_PX = 100;
 
 // Lista de Mensagens e caixa de mensagem de uma Conversa. O cache do SWR é desta montagem: abrir
 // a Conversa de novo começa da página que o servidor acabou de ler.
@@ -100,15 +112,78 @@ function History({
     });
   }, [messages, timeZone, renderedAt]);
   const firstId = messages[0]?.id;
-  const lastId = messages.at(-1)?.id;
 
-  // Ao abrir e a cada Mensagem nova no fim, a lista rola até a última. A posição guardada antes de
-  // uma carga de anteriores deixa de valer: a Pessoa agora está no fim.
-  useLayoutEffect(() => {
+  // Se a Pessoa está no fim da lista, medido a cada rolagem e a cada mudança de tamanho da lista,
+  // sempre antes de uma Mensagem nova entrar (o ResizeObserver só avisa depois dos efeitos de
+  // layout da renderização que a trouxe).
+  const isAtEnd = useRef(true);
+  const [hasNewBelow, setHasNewBelow] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+
+  const measureEnd = useCallback(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    isAtEnd.current =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= END_OF_LIST_PX;
+    if (isAtEnd.current) setHasNewBelow(false);
+  }, []);
+
+  const scrollToEnd = useCallback(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
     anchor.current = null;
-  }, [lastId]);
+    isAtEnd.current = true;
+    setHasNewBelow(false);
+  }, []);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    const list = listRef.current;
+    if (!element || !list) return;
+    const observer = new ResizeObserver(measureEnd);
+    observer.observe(element);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [measureEnd]);
+
+  // Os client_id enviados por esta aba: a Mensagem gravada que veio da própria caixa de mensagem já
+  // rolou a lista quando foi enviada, e não rola de novo nem mostra a pílula.
+  const sentHere = useRef(new Set<string>());
+  const newestPending = pending.at(-1)?.clientId;
+  useLayoutEffect(() => {
+    if (!newestPending || sentHere.current.has(newestPending)) return;
+    sentHere.current.add(newestPending);
+    scrollToEnd();
+  }, [newestPending, scrollToEnd]);
+
+  // Ao abrir, a lista rola até a última Mensagem. Depois, uma Mensagem gravada nova no fim, de
+  // outra Pessoa ou de outra aba, só rola a lista quando a Pessoa estava no fim; lendo mais acima,
+  // a lista fica parada e aparece a pílula (spec da F03, "Rolagem e pílula").
+  const newestSaved = saved.at(-1);
+  const newestSavedId = newestSaved?.id;
+  const newestSavedClientId = newestSaved?.clientId;
+  const seenNewest = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    const previous = seenNewest.current;
+    seenNewest.current = newestSavedId;
+    if (previous === undefined) return scrollToEnd();
+    if (!newestSavedId || newestSavedId <= previous) return;
+    if (newestSavedClientId && sentHere.current.has(newestSavedClientId)) return;
+    if (isAtEnd.current) scrollToEnd();
+    else setHasNewBelow(true);
+  }, [newestSavedId, newestSavedClientId, scrollToEnd]);
+
+  // Tentar de novo também é um envio desta aba: a lista vai ao fim, como no primeiro envio.
+  function retryAndFollow(message: PendingMessage) {
+    retry(message);
+    scrollToEnd();
+  }
+
+  // A pílula leva ao fim e passa o foco ao histórico, porque ela some.
+  function goToNewMessages() {
+    scrollToEnd();
+    scrollRef.current?.focus();
+  }
 
   // Quando a página anterior entra no começo, a Mensagem que a Pessoa lia fica no mesmo lugar: a
   // rolagem é devolvida pela posição da âncora, sem depender do overflow-anchor do navegador.
@@ -164,55 +239,63 @@ function History({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div
-        ref={scrollRef}
-        role="region"
-        aria-label={`Histórico de #${conversation.name}`}
-        // Marca o histórico em dia com o tempo real, que os testes esperam antes de agir.
-        data-synced={isSynced ? "" : undefined}
-        tabIndex={0}
-        className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
-      >
-        <div className="mt-auto" />
-        {hasOlder ? (
-          <div ref={sentinelRef} className="flex h-12 shrink-0 items-center justify-center">
-            {/* O botão fica montado durante a carga, para quem chegou pelo teclado não perder o
-                foco; só o conteúdo vira o indicador ("Conversa / Lista / Carregando anteriores"). */}
-            <button
-              ref={loadOlderButtonRef}
-              type="button"
-              onClick={requestOlder}
-              aria-busy={isLoadingOlder}
-              className={buttonVariants({ variant: "link", className: "text-small" })}
-            >
-              {isLoadingOlder ? (
-                <span className="text-fg-muted">
-                  <Spinner size="md" />
-                  <span className="sr-only">Carregando mensagens anteriores</span>
-                </span>
-              ) : (
-                "Carregar mensagens anteriores"
-              )}
-            </button>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          onScroll={measureEnd}
+          role="region"
+          aria-label={`Histórico de #${conversation.name}`}
+          // Marca o histórico em dia com o tempo real, que os testes esperam antes de agir.
+          data-synced={isSynced ? "" : undefined}
+          tabIndex={0}
+          className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
+        >
+          <div className="mt-auto" />
+          {hasOlder ? (
+            <div ref={sentinelRef} className="flex h-12 shrink-0 items-center justify-center">
+              {/* O botão fica montado durante a carga, para quem chegou pelo teclado não perder o
+                  foco; só o conteúdo vira o indicador ("Conversa / Lista / Carregando anteriores"). */}
+              <button
+                ref={loadOlderButtonRef}
+                type="button"
+                onClick={requestOlder}
+                aria-busy={isLoadingOlder}
+                className={buttonVariants({ variant: "link", className: "text-small" })}
+              >
+                {isLoadingOlder ? (
+                  <span className="text-fg-muted">
+                    <Spinner size="md" />
+                    <span className="sr-only">Carregando mensagens anteriores</span>
+                  </span>
+                ) : (
+                  "Carregar mensagens anteriores"
+                )}
+              </button>
+            </div>
+          ) : (
+            <ConversationIntro name={conversation.name} topic={conversation.topic} />
+          )}
+          <ol ref={listRef} aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
+            {rows.map(({ message, compact, dayLabel }) => (
+              <MessageItem
+                // Pela autora e pelo client_id, a Mensagem "enviando" vira a gravada no mesmo item.
+                key={`${message.author.id}:${message.clientId}`}
+                message={message}
+                timeZone={timeZone}
+                compact={compact}
+                dayLabel={dayLabel}
+                status={message.status ?? "sent"}
+                onRetry={message.status ? () => retryAndFollow(message as PendingMessage) : undefined}
+                onDiscard={message.status ? () => discard(message.clientId) : undefined}
+              />
+            ))}
+          </ol>
+        </div>
+        {hasNewBelow ? (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+            <NewMessagesPill onClick={goToNewMessages} />
           </div>
-        ) : (
-          <ConversationIntro name={conversation.name} topic={conversation.topic} />
-        )}
-        <ol aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
-          {rows.map(({ message, compact, dayLabel }) => (
-            <MessageItem
-              // Pela autora e pelo client_id, a Mensagem "enviando" vira a gravada no mesmo item.
-              key={`${message.author.id}:${message.clientId}`}
-              message={message}
-              timeZone={timeZone}
-              compact={compact}
-              dayLabel={dayLabel}
-              status={message.status ?? "sent"}
-              onRetry={message.status ? () => retry(message as PendingMessage) : undefined}
-              onDiscard={message.status ? () => discard(message.clientId) : undefined}
-            />
-          ))}
-        </ol>
+        ) : null}
       </div>
       {/* Lugar do "digitando", que entra na F03. */}
       <div className="h-5 shrink-0" />

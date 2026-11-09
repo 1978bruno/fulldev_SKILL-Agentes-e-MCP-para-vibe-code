@@ -89,3 +89,45 @@ O provedor do tempo real marca o estado da conexão em `data-realtime`, e os tes
   1. A Pessoa fica no Canal em comum; a outra abre um segundo Canal das duas e envia nele
   2. A Pessoa abre o segundo Canal pela barra lateral
     - expect: a Mensagem aparece uma vez
+
+### 4. Pílula de novas mensagens
+
+**File:** `e2e/tempo-real/pilula-de-novas-mensagens.spec.ts` e
+`e2e/acessibilidade/pilula-sem-violacoes.spec.ts`
+
+As duas Pessoas abrem o Canal em comum, com 40 Mensagens de histórico. "Lendo mais acima" é a
+lista levada a 600 px do fim, longe do topo, para não pedir as anteriores.
+
+#### 4.1. no fim, a Mensagem que chega rola a lista
+  1. Com a lista no fim, a outra Pessoa envia
+    - expect: a Mensagem fica à vista, a lista no fim, e não há pílula
+
+#### 4.2. lendo mais acima, a lista não se move e aparece a pílula
+  1. Ler mais acima e a outra Pessoa envia
+    - expect: a pílula aparece e a posição da rolagem é a mesma
+  2. Clicar na pílula
+    - expect: a Mensagem fica à vista e a pílula some
+
+#### 4.3. a pílula some ao rolar até o fim
+  1. Com a pílula na tela, rolar até o fim
+    - expect: a pílula some
+
+#### 4.4. a pílula pelo teclado leva ao fim
+  1. Com a pílula na tela, focar o histórico, Tab e Enter
+    - expect: a pílula recebe o foco, e o Enter leva ao fim
+
+#### 4.5. a Mensagem da própria Pessoa sempre rola até o fim
+  1. Ler mais acima e enviar
+    - expect: a Mensagem fica à vista e não há pílula
+
+#### 4.6. pilula-sem-violacoes
+  1. Com a pílula na tela, rodar o axe
+    - expect: nenhuma violação
+
+#### 4.7. descartar a própria Mensagem com falha não mostra a pílula
+  1. Um envio que falha (Server Action abortado) fica no fim; ler mais acima e descartá-lo
+    - expect: a Mensagem some e não há pílula
+
+#### 4.8. a Mensagem da própria Pessoa enviada por outra aba mostra a pílula
+  1. Ler mais acima numa aba e enviar pela outra aba da mesma Pessoa
+    - expect: a pílula aparece
