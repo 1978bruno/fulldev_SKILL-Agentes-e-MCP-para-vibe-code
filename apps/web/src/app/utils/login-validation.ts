@@ -5,7 +5,11 @@ export const PASSWORD_REQUIRED = "Informe sua senha.";
 
 // O mesmo teto da API do chat, para o cliente não aceitar o que ela recusa.
 const EMAIL_MAX_LENGTH = 254;
-const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Parte local sem espaço nem @; domínio em rótulos de letras, dígitos e hífen (sem começar nem
+// terminar com hífen), separados por um ponto, com o último rótulo só de letras: recusa
+// "ana@empresa..com" e "ana@empresa/com.br", que a API recusaria.
+const EMAIL_FORMAT =
+  /^[^\s@]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 
 export type LoginFieldErrors = { email?: string; password?: string };
 
