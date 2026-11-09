@@ -10,7 +10,7 @@ type SidebarRowProps = {
   name: string;
 };
 
-// Linha de Conversa da barra lateral (SidebarRow): h-7, raio item. A da Conversa aberta fica
+// Linha de Conversa da barra lateral (SidebarRow): h-7, ou 44 px abaixo de md, raio item. A da Conversa aberta fica
 // ativa, com o fundo de seleção e aria-current.
 export function SidebarRow({ href, name }: SidebarRowProps) {
   const isActive = usePathname() === href;
@@ -20,7 +20,7 @@ export function SidebarRow({ href, name }: SidebarRowProps) {
         href={href}
         aria-current={isActive ? "page" : undefined}
         className={cn(
-          "flex h-7 items-center gap-2 rounded-item px-2 text-body",
+          "flex h-11 items-center gap-2 rounded-item px-2 text-body md:h-7",
           isActive
             ? "bg-sidebar-active text-sidebar-on-active"
             : "text-sidebar-fg hover:bg-sidebar-hover",

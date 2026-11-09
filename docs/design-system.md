@@ -550,7 +550,7 @@ Estes detalhes não aparecem só olhando o desenho:
 - **TaskItem:** concluída tem título riscado e botão Reabrir.
 - **SidebarRow:** `h-7`, `rounded-item`; não lida em `font-black`; ativa com `sidebar-active`. **SidebarSection:** recolhida, o chevron gira -90°.
 - **SidebarAction (Agentes):** muda com o papel: `connect` (admin, nenhum conectado), `add` (admin, parte conectada), `manage` (admin, todos conectados), `view` (não admin).
-- **ConversationHeader:** `h-header`; o tópico some abaixo de 640 px.
+- **ConversationHeader:** `h-header`; o tópico some abaixo de 640 px. A propriedade `Menu` mostra o IconButton "Abrir navegação" no começo, só abaixo de 768 px (`md:hidden`).
 - **ProfilePanel:** `w-panel`.
 
 ## Ícones
@@ -589,7 +589,7 @@ Os breakpoints são os padrões do Tailwind, e o Figma registra o que acontece e
 | Breakpoint | Comportamento abaixo dele |
 | --- | --- |
 | `xl` (1280) | O painel de perfil sobrepõe a conversa em vez de dividir o espaço |
-| `md` (768) | Rail e sidebar viram drawer; as linhas passam a 44 px. Situação: o drawer ainda não existe; na F01, a Sidebar (só com o cabeçalho) some abaixo de `md`, e o drawer entra com a navegação da Sidebar (F02) |
+| `md` (768) | O Rail e a sidebar viram uma gaveta (Dialog do Radix, `NavigationDrawer`), e as linhas passam a 44 px. A gaveta abre pelo IconButton "Abrir navegação" (`icon/menu`), que fica no começo do ConversationHeader (propriedade `Menu` no Figma) e no topo da Home vazia. Ela fecha pelo Esc, pelo clique fora ou ao escolher um link. Frame: "Casca / Gaveta / Aberta" |
 | `sm` (640) | Painel de perfil em largura total; somem o tópico do cabeçalho e as dicas de teclado |
 
 `lg` (1024) e `2xl` (1536) não têm uso no produto. Escreva mobile-first com os prefixos do Tailwind (`md:`, `xl:`), sem media queries soltas no CSS.

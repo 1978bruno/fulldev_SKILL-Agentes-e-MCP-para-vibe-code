@@ -312,3 +312,47 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
   3. Voltar no navegador
     - expect: a linha ativa volta a ser a do primeiro
 
+### 8. Gaveta em telas estreitas
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 8.1. gaveta-em-tela-estreita
+
+**File:** `e2e/conversa/gaveta-em-tela-estreita.spec.ts`
+
+**Steps:**
+  1. Em 767, abrir a Conversa
+    - expect: o botão "Abrir navegação" aparece, e o Rail e a barra lateral não
+  2. Abrir a gaveta
+    - expect: o diálogo "Navegação" com o Rail e os Canais
+  3. Esc
+    - expect: a gaveta fecha e o foco volta ao botão
+  4. Abrir e clicar fora
+    - expect: a gaveta fecha
+  5. Abrir e escolher outro Canal
+    - expect: a URL muda e a gaveta fecha
+
+#### 8.2. sem-gaveta-em-tela-larga
+
+**File:** `e2e/conversa/gaveta-em-tela-estreita.spec.ts`
+
+**Steps:**
+  1. Em 1440, abrir a Conversa
+    - expect: sem o botão, com o Rail e a barra lateral
+
+#### 8.3. gaveta-na-home-vazia
+
+**File:** `e2e/conversa/gaveta-na-home-vazia.spec.ts`
+
+**Steps:**
+  1. Sem Canais, em 767, abrir a Home e o botão da gaveta
+    - expect: a gaveta com a seção "Canais"
+
+#### 8.4. gaveta-sem-violacoes
+
+**File:** `e2e/acessibilidade/gaveta-sem-violacoes.spec.ts`
+
+**Steps:**
+  1. Em 767, abrir a gaveta e analisar com o axe
+    - expect: nenhuma violação
+
