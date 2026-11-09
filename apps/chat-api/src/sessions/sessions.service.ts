@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
 import { RENEWAL_INTERVAL_DAYS } from '../config/session-values';
+import { LoginAttemptsService } from '../login-attempts/login-attempts.service';
+import { normalizeEmail } from '../people/normalize-email';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
 import { InvalidCredentialsError } from './invalid-credentials.error';
@@ -30,15 +32,33 @@ export class SessionsService {
   constructor(
     @InjectRepository(Session) private readonly sessions: Repository<Session>,
     private readonly people: PeopleService,
+    private readonly loginAttempts: LoginAttemptsService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
+  // Ordem do limite de tentativas (LLD, "Sessão e login"): e-mail normalizado, bloqueio,
+  // senha, e então a falha conta ou o acerto apaga a contagem.
   async login(email: string, password: string): Promise<LoginResult> {
-    const person = await this.people.verifyCredentials(email, password);
+    const normalized = normalizeEmail(email);
+    await this.loginAttempts.assertNotBlocked(normalized);
+    const person = await this.people.verifyCredentials(normalized, password);
     if (!person) {
+      await this.loginAttempts.recordFailure(normalized);
       throw new InvalidCredentialsError();
     }
-    return this.startSession(person);
+    // A Sessão vem antes de apagar a contagem: um login recusado porque a senha mudou enquanto
+    // ele conferia conta como falha e não zera as tentativas.
+    let result: LoginResult;
+    try {
+      result = await this.startSession(person);
+    } catch (error) {
+      if (error instanceof InvalidCredentialsError) {
+        await this.loginAttempts.recordFailure(normalized);
+      }
+      throw error;
+    }
+    await this.loginAttempts.clear(normalized);
+    return result;
   }
 
   // Cria a Sessão só se o hash da senha ainda for o que o login conferiu: um reset-password ao

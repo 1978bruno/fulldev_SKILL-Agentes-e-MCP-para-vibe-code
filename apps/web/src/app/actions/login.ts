@@ -14,6 +14,7 @@ export type LoginState =
   | { status: "idle" }
   | { status: "invalid_input"; fieldErrors: LoginFieldErrors }
   | { status: "invalid_credentials" }
+  | { status: "too_many_attempts" }
   | { status: "failure" };
 
 export async function login(
@@ -30,6 +31,9 @@ export async function login(
   const result = await loginToChat(email, password);
   if (result.kind === "invalid_credentials") {
     return { status: "invalid_credentials" };
+  }
+  if (result.kind === "too_many_attempts") {
+    return { status: "too_many_attempts" };
   }
   if (result.kind === "failure") {
     return { status: "failure" };

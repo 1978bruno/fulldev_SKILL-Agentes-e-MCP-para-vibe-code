@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { env } from "@/app/config/env";
 
 // Service HTTP da API do chat, usado só no servidor (Server Actions, Server Components e
@@ -10,6 +11,7 @@ export type Person = { id: string; name: string; email: string };
 export type LoginResult =
   | { kind: "ok"; token: string; person: Person }
   | { kind: "invalid_credentials" }
+  | { kind: "too_many_attempts" }
   | { kind: "failure" };
 
 export type CurrentPersonResult =
@@ -18,7 +20,10 @@ export type CurrentPersonResult =
   | { kind: "failure" };
 
 async function request(path: string, init: RequestInit): Promise<Response | null> {
+  // Chamada de tempo de requisição: o pré-render para aqui (o fetch e o tempo limite leem o
+  // relógio, o que o Next recusa durante o pré-render).
   try {
+    await connection();
     return await fetch(new URL(path, env.CHAT_API_URL), {
       ...init,
       cache: "no-store",
@@ -69,6 +74,9 @@ export async function login(email: string, password: string): Promise<LoginResul
   // tamanho mais estritos): essas credenciais não podem estar certas.
   if (code === "invalid_credentials" || code === "validation_failed") {
     return { kind: "invalid_credentials" };
+  }
+  if (code === "too_many_login_attempts") {
+    return { kind: "too_many_attempts" };
   }
   return { kind: "failure" };
 }

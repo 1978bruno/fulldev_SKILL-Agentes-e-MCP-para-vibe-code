@@ -18,7 +18,24 @@ export const agingRoutes = {
         [tokenHash, dates.lastUsedAt ?? null, dates.expiresAt ?? null],
       );
   },
+
+  async ageLoginAttempts(
+    app: INestApplication,
+    email: string,
+    dates: { firstFailedAt?: Date; blockedUntil?: Date },
+  ): Promise<void> {
+    await app
+      .get(DataSource)
+      .query(
+        'UPDATE login_attempts SET first_failed_at = COALESCE($2, first_failed_at), blocked_until = COALESCE($3, blocked_until) WHERE email = $1',
+        [email, dates.firstFailedAt ?? null, dates.blockedUntil ?? null],
+      );
+  },
 };
+
+export function minutesAgo(minutes: number): Date {
+  return new Date(Date.now() - minutes * 60 * 1000);
+}
 
 export function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);

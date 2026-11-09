@@ -14,6 +14,8 @@ const DETAILS: Record<ErrorCode, string> = {
   validation_failed: 'Os dados enviados são inválidos.',
   invalid_credentials: 'E-mail ou senha incorretos.',
   unauthenticated: 'Sessão ausente ou inválida.',
+  too_many_login_attempts:
+    'Muitas tentativas de entrar. Aguarde alguns minutos e tente de novo.',
   email_already_exists: 'Já existe uma Pessoa com esse e-mail.',
   person_not_found: 'Pessoa não encontrada.',
   not_found: 'Recurso não encontrado.',
@@ -32,6 +34,7 @@ interface Resolved {
   status: number;
   code: ErrorCode;
   detail: string;
+  retryAfterSeconds?: number;
 }
 
 @Catch()
@@ -41,7 +44,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
-    const { status, code, detail } = this.resolve(exception);
+    const { status, code, detail, retryAfterSeconds } = this.resolve(exception);
     const body = {
       type: 'about:blank',
       title: STATUS_CODES[status] ?? 'Error',
@@ -52,6 +55,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<unknown>();
     const adapter = this.httpAdapterHost.httpAdapter;
     adapter.setHeader(response, 'Content-Type', 'application/problem+json');
+    if (retryAfterSeconds !== undefined) {
+      adapter.setHeader(response, 'Retry-After', String(retryAfterSeconds));
+    }
     adapter.reply(response, JSON.stringify(body), status);
   }
 
@@ -61,6 +67,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         status: ERROR_STATUS[exception.code],
         code: exception.code,
         detail: exception.message,
+        retryAfterSeconds: exception.retryAfterSeconds,
       };
     }
     const status =
