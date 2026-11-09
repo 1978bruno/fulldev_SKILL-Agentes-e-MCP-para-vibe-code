@@ -23,12 +23,12 @@ export function UserMenu({ person }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-item" title={person.name}>
-        <Avatar name={person.name} seed={person.id} />
+        <Avatar initials={person.initials} seed={person.id} />
         <span className="sr-only">Menu de {person.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="end" className="w-72">
         <div className="flex items-center gap-3 px-4 pt-1 pb-2">
-          <Avatar name={person.name} seed={person.id} />
+          <Avatar initials={person.initials} seed={person.id} />
           <p className="min-w-0 flex-1 truncate text-body font-black text-fg">
             {person.name}
           </p>

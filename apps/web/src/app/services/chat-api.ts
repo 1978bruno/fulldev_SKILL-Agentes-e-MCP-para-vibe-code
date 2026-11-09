@@ -1,12 +1,21 @@
 import { connection } from "next/server";
 import { env } from "@/app/config/env";
+import { initials } from "@/app/utils/initials";
 
 // Service HTTP da API do chat, usado só no servidor (Server Actions, Server Components e
 // Route Handlers). Devolve uniões de resultado em vez de lançar.
 
 const TIMEOUT_MS = 5000;
 
-export type Person = { id: string; name: string; email: string };
+type ApiPerson = { id: string; name: string; email: string };
+
+// As iniciais saem aqui, no servidor, e seguem prontas para os componentes do cliente
+// (utils/initials.ts).
+export type Person = ApiPerson & { initials: string };
+
+function toPerson(person: ApiPerson): Person {
+  return { ...person, initials: initials(person.name) };
+}
 
 export type LoginResult =
   | { kind: "ok"; token: string; person: Person }
@@ -21,9 +30,10 @@ export type CurrentPersonResult =
 
 async function request(path: string, init: RequestInit): Promise<Response | null> {
   // Chamada de tempo de requisição: o pré-render para aqui (o fetch e o tempo limite leem o
-  // relógio, o que o Next recusa durante o pré-render).
+  // relógio, o que o Next recusa durante o pré-render). Fora do try: o sinal do Next que
+  // interrompe o pré-render não pode virar uma "falha da API".
+  await connection();
   try {
-    await connection();
     return await fetch(new URL(path, env.CHAT_API_URL), {
       ...init,
       cache: "no-store",
@@ -36,12 +46,8 @@ async function request(path: string, init: RequestInit): Promise<Response | null
 }
 
 async function errorCode(response: Response): Promise<string | undefined> {
-  try {
-    const body = (await response.json()) as { code?: unknown };
-    return typeof body.code === "string" ? body.code : undefined;
-  } catch {
-    return undefined;
-  }
+  const body = await jsonBody<{ code?: unknown }>(response);
+  return typeof body?.code === "string" ? body.code : undefined;
 }
 
 // O corpo também corre contra o tempo limite e pode chegar quebrado: vira failure, sem lançar.
@@ -65,9 +71,9 @@ export async function login(email: string, password: string): Promise<LoginResul
   });
   if (!response) return { kind: "failure" };
   if (response.status === 201) {
-    const body = await jsonBody<{ token: string; person: Person }>(response);
+    const body = await jsonBody<{ token: string; person: ApiPerson }>(response);
     if (!body) return { kind: "failure" };
-    return { kind: "ok", token: body.token, person: body.person };
+    return { kind: "ok", token: body.token, person: toPerson(body.person) };
   }
   const code = response.status < 500 ? await errorCode(response) : undefined;
   // Um 400 aqui é uma entrada que passou na validação da web e a API recusou (formato ou
@@ -88,19 +94,25 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   });
   if (!response) return { kind: "failure" };
   if (response.status === 200) {
-    const body = await jsonBody<{ person: Person }>(response);
+    const body = await jsonBody<{ person: ApiPerson }>(response);
     if (!body) return { kind: "failure" };
-    return { kind: "ok", person: body.person };
+    return { kind: "ok", person: toPerson(body.person) };
   }
   if (response.status === 401) return { kind: "unauthenticated" };
   return { kind: "failure" };
 }
 
-// Sair: apaga na API a Sessão apresentada. O resultado não muda nada para quem chama: o BFF
-// apaga o cookie de qualquer jeito (spec da F01, "Menu do avatar").
+// Sair: apaga na API a Sessão apresentada. O BFF apaga o cookie de qualquer jeito (spec da F01,
+// "Menu do avatar"); quando a API não confirma, a Sessão pode seguir válida no banco, e isso fica
+// no log.
 export async function logout(token: string): Promise<void> {
-  await request("/v1/sessions/current", {
+  const response = await request("/v1/sessions/current", {
     method: "DELETE",
     headers: { cookie: sessionCookieHeader(token) },
   });
+  if (response?.status !== 204 && response?.status !== 401) {
+    console.warn(
+      `Saída sem confirmação da API do chat (status ${response?.status ?? "sem resposta"})`,
+    );
+  }
 }

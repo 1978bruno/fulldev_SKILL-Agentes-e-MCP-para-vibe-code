@@ -18,10 +18,13 @@ export type Env = z.infer<typeof envSchema>;
 export function parseEnv(raw: Record<string, unknown>): Env {
   const result = envSchema.safeParse(raw);
   if (!result.success) {
-    const names = [
-      ...new Set(result.error.issues.map((issue) => String(issue.path[0]))),
-    ];
-    throw new Error(`Configuração inválida: ${names.join(', ')}`);
+    // O nome e o motivo de cada variável: "faltando" e "inválida" não se confundem.
+    const problems = result.error.issues.map(
+      (issue) => `${String(issue.path[0])} (${issue.message})`,
+    );
+    throw new Error(
+      `Configuração inválida: ${[...new Set(problems)].join(', ')}`,
+    );
   }
   return result.data;
 }

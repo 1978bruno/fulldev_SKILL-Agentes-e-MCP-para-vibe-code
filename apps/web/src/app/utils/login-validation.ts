@@ -5,10 +5,6 @@ import isEmail from "validator/lib/isEmail";
 export const EMAIL_INVALID = "Informe um e-mail válido, como nome@empresa.com.";
 export const PASSWORD_REQUIRED = "Informe sua senha.";
 
-// O mesmo teto e o mesmo isEmail (validator.js, com as opções padrão) do @IsEmail da API do
-// chat: o cliente aceita e recusa os mesmos endereços que ela.
-const EMAIL_MAX_LENGTH = 254;
-
 export type LoginFieldErrors = { email?: string; password?: string };
 
 export function validateLogin(input: {
@@ -17,7 +13,9 @@ export function validateLogin(input: {
 }): LoginFieldErrors {
   const errors: LoginFieldErrors = {};
   const email = input.email.trim();
-  if (!email || email.length > EMAIL_MAX_LENGTH || !isEmail(email)) {
+  // O mesmo isEmail (validator.js, com as opções padrão, que já limitam a 254 caracteres) do
+  // @IsEmail da API do chat: o cliente aceita e recusa os mesmos endereços que ela.
+  if (!isEmail(email)) {
     errors.email = EMAIL_INVALID;
   }
   if (!input.password) {

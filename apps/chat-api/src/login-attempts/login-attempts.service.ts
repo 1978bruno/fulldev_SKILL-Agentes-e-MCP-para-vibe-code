@@ -36,10 +36,12 @@ export class LoginAttemptsService {
   // Upsert atômico: o incremento mora no próprio UPDATE, para duas falhas simultâneas contarem
   // as duas. Uma falha depois de vencida a janela, ou depois de um bloqueio que já passou,
   // recomeça a contagem em 1; a de número LOGIN_ATTEMPTS dentro da janela bloqueia. O WHERE
-  // impede que uma falha que corre com o bloqueio o estenda.
+  // impede que uma falha que corre com o bloqueio o estenda. Uma falha do banco aqui fica no log
+  // e não troca o 401 de credencial errada por um 500.
   async recordFailure(email: string): Promise<void> {
-    await this.attempts.query(
-      `INSERT INTO login_attempts (id, email, failed_count, first_failed_at, blocked_until)
+    await this.bestEffort('contar a tentativa de login', () =>
+      this.attempts.query(
+        `INSERT INTO login_attempts (id, email, failed_count, first_failed_at, blocked_until)
        VALUES ($1, $2, 1, now(), CASE WHEN 1 >= $3 THEN now() + $5::interval END)
        ON CONFLICT (email) DO UPDATE SET
          failed_count = CASE
@@ -57,17 +59,35 @@ export class LoginAttemptsService {
            ELSE NULL END,
          updated_at = now()
        WHERE login_attempts.blocked_until IS NULL OR login_attempts.blocked_until <= now()`,
-      [randomUUIDv7(), email, LOGIN_ATTEMPTS, LOGIN_WINDOW, LOGIN_BLOCK],
+        [randomUUIDv7(), email, LOGIN_ATTEMPTS, LOGIN_WINDOW, LOGIN_BLOCK],
+      ),
     );
   }
 
   // Um login certo fora do bloqueio apaga a contagem. A condição protege um bloqueio que outra
-  // tentativa gravou enquanto este login conferia a senha.
+  // tentativa gravou enquanto este login conferia a senha. Roda com a Sessão já criada: uma falha
+  // do banco aqui fica no log e não vira um 500 para um login certo.
   async clear(email: string): Promise<void> {
-    await this.attempts.query(
-      `DELETE FROM login_attempts
-        WHERE email = $1 AND (blocked_until IS NULL OR blocked_until <= now())`,
-      [email],
+    await this.bestEffort('zerar as tentativas de login', () =>
+      this.attempts.query(
+        `DELETE FROM login_attempts
+          WHERE email = $1 AND (blocked_until IS NULL OR blocked_until <= now())`,
+        [email],
+      ),
     );
+  }
+
+  private async bestEffort(
+    action: string,
+    work: () => Promise<unknown>,
+  ): Promise<void> {
+    try {
+      await work();
+    } catch (error) {
+      this.logger.error(
+        `Falha ao ${action}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 }

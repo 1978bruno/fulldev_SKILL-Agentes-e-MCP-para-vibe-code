@@ -56,4 +56,70 @@ describe('TtyPasswordPrompt', () => {
 
     await expect(second).resolves.toBe('senha-nova');
   });
+
+  it('no terminal, setas e teclas de controle não entram na senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha');
+    input.write('\u001b[D');
+    input.write('\u0004-certa\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
+
+  it('no terminal, uma seta no meio do texto não entra na senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha\u001b[D\u001bOA-certa\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
+
+  it('no terminal, uma sequência de escape partida entre pedaços não entra na senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha\u001b[');
+    input.write('D-certa\u001b[3');
+    input.write('~\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
+
+  it('no terminal, uma colagem entre colchetes vale só o texto colado', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('\u001b[200~senha-certa\u001b[201~\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
+
+  it('no terminal, Esc sozinho não come a letra digitada depois', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('\u001b');
+    input.write('O');
+    input.write('lá\r');
+
+    await expect(answer).resolves.toBe('Olá');
+  });
+
+  it('no terminal, uma sequência incompleta não engole o Enter', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha\u001b[12\r');
+
+    await expect(answer).resolves.toBe('senha');
+  });
 });

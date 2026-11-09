@@ -10,8 +10,6 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.BASE_URL ?? "http://web:3000",
-    headless: true,
-    viewport: { width: 1440, height: 900 },
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } }],
