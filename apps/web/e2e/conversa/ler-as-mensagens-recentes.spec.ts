@@ -17,7 +17,7 @@ test.describe("Ler as Mensagens", () => {
     await page.goto(`/conversas/${channel.id}`);
 
     await expect(page.getByRole("heading", { level: 1, name: channel.name })).toBeVisible();
-    await expect(page.getByText("Conversas do time")).toBeVisible();
+    await expect(page.locator("header").getByText("Conversas do time")).toBeVisible();
     const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
     const itens = mensagens.getByRole("listitem");
     await expect(itens).toHaveCount(3);

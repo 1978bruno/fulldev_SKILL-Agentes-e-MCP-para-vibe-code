@@ -1,0 +1,15 @@
+import type { Locator, Page } from "@playwright/test";
+
+// O histórico da Conversa depois de hidratado: antes disso, rolar não pede as anteriores, e a
+// abertura leva a lista de volta ao fim.
+export async function readyHistory(page: Page, channelName: string): Promise<Locator> {
+  const history = page.getByRole("region", { name: `Histórico de #${channelName}` });
+  await history.and(page.locator("[data-ready]")).waitFor();
+  return history;
+}
+
+export async function scrollHistoryToTop(history: Locator): Promise<void> {
+  await history.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+}
