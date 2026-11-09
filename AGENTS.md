@@ -119,6 +119,10 @@ A pasta da tarefa só recebe, além da tarefa e do plano, registros da própria 
 - O status de cada funcionalidade (planejada → PRD pronto → spec pronta → em andamento → concluída) mora no roadmap, `docs/roadmap.md`, que também é dono da lista de funcionalidades.
 - O status da tarefa (a fazer → em andamento → concluída) fica num campo Status no topo do `tarefa.md` dela. Ela passa a "em andamento" no commit de plano, e a "concluída" no PR que a entrega. Uma funcionalidade passa a "em andamento" no primeiro commit de plano de uma tarefa dela, e a "concluída" no PR da última tarefa dela.
 
+**Verificação completa**
+
+É a sequência de comandos que fecha uma tarefa, rodada uma vez antes de abrir o PR, para cada projeto que a tarefa tocou. Os comandos de cada projeto estão na seção "Verificação completa" do `AGENTS.md` dele. Uma tarefa que cria um comando que a verificação deve rodar (uma suíte de testes nova, por exemplo) o acrescenta a essa seção.
+
 ## Convenções de Git
 
 - **Branch principal:** `main`. Nunca faça commit direto nela.
