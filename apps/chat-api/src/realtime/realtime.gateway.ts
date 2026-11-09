@@ -51,10 +51,11 @@ export class RealtimeGateway
     this.stopListening = this.sessions.onSessionEnded((sessionId) =>
       this.endSession(server, sessionRoom(sessionId)),
     );
-    this.recheckTimer = setInterval(
-      () => void this.recheckSessions(),
-      SESSION_RECHECK_INTERVAL_MS,
-    );
+    this.recheckTimer = setInterval(() => {
+      this.recheckSessions().catch((error: unknown) =>
+        this.logger.error('Falha na reconferência das Sessões', error),
+      );
+    }, SESSION_RECHECK_INTERVAL_MS);
     this.recheckTimer.unref();
     const cookieName = this.config.get('SESSION_COOKIE_NAME', { infer: true });
     server.use((socket, next) => {
@@ -173,24 +174,28 @@ export class RealtimeGateway
     this.stopListening?.();
   }
 
-  // Reconfere a Sessão de cada socket, pelo mesmo authenticate do REST, que também a renova. A
-  // Sessão revogada ou vencida encerra o socket; outra falha, como o banco fora, mantém o socket
-  // até a próxima volta.
+  // Reconfere as Sessões das abas conectadas, uma vez por Sessão e uma de cada vez, para não
+  // disputar o pool do banco com as requisições. Usa o mesmo authenticate do REST, que também a
+  // renova. A Sessão revogada ou vencida encerra as abas dela; outra falha, como o banco fora, as
+  // mantém até a próxima volta.
   async recheckSessions(): Promise<void> {
-    const sockets = await this.server.fetchSockets();
-    await Promise.all(
-      sockets.map(async (socket) => {
-        try {
-          await this.sessions.authenticate(socket.data.sessionToken);
-        } catch (error) {
-          if (error instanceof UnauthenticatedError) {
-            this.endSession(this.server, socket.id);
-            return;
-          }
+    const tokens = new Map<string, string>();
+    for (const socket of this.server.sockets.sockets.values()) {
+      if (socket.data.sessionId) {
+        tokens.set(socket.data.sessionId, socket.data.sessionToken);
+      }
+    }
+    for (const [sessionId, token] of tokens) {
+      try {
+        await this.sessions.authenticate(token);
+      } catch (error) {
+        if (error instanceof UnauthenticatedError) {
+          this.endSession(this.server, sessionRoom(sessionId));
+        } else {
           this.logger.error('Falha ao reconferir a Sessão no WebSocket', error);
         }
-      }),
-    );
+      }
+    }
   }
 
   // Avisa a aba de que a Sessão acabou e a desconecta.

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
@@ -33,6 +33,7 @@ export type SessionEndedListener = (sessionId: string) => void;
 
 @Injectable()
 export class SessionsService {
+  private readonly logger = new Logger(SessionsService.name);
   private readonly endedListeners = new Set<SessionEndedListener>();
 
   constructor(
@@ -126,7 +127,14 @@ export class SessionsService {
   // Sair apaga só a Sessão apresentada; as outras da mesma Pessoa continuam valendo.
   async logout(sessionId: string): Promise<void> {
     await this.sessions.delete({ id: sessionId });
-    this.endedListeners.forEach((listener) => listener(sessionId));
+    // A Sessão já acabou: um ouvinte que falha vai para o log e não derruba o sair.
+    this.endedListeners.forEach((listener) => {
+      try {
+        listener(sessionId);
+      } catch (error) {
+        this.logger.error('Falha ao avisar o fim da Sessão', error);
+      }
+    });
   }
 
   onSessionEnded(listener: SessionEndedListener): () => void {

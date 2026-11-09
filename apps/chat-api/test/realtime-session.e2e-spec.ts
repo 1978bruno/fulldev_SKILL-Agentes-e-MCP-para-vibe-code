@@ -9,6 +9,7 @@ import { authRoutes } from './support/auth-routes';
 import {
   collectEvents,
   listenTestApp,
+  nextDisconnection,
   realtimeRoutes,
   settle,
   TestSocket,
@@ -38,10 +39,6 @@ describe('Sessão no WebSocket', () => {
     return socket;
   }
 
-  function disconnection(socket: TestSocket): Promise<string> {
-    return new Promise((resolve) => socket.once('disconnect', resolve));
-  }
-
   async function sessionDates(token: string) {
     const [row] = await app
       .get(DataSource)
@@ -59,7 +56,7 @@ describe('Sessão no WebSocket', () => {
     const leaving = await connected(first);
     const staying = await connected(second);
     const ended = collectEvents(leaving, 'session.ended');
-    const disconnected = disconnection(leaving);
+    const disconnected = nextDisconnection(leaving);
 
     await request(app.getHttpServer() as App)
       .delete('/v1/sessions/current')
@@ -76,7 +73,7 @@ describe('Sessão no WebSocket', () => {
     const { person, token } = await authRoutes.loggedIn(app);
     const socket = await connected(token);
     const ended = collectEvents(socket, 'session.ended');
-    const disconnected = disconnection(socket);
+    const disconnected = nextDisconnection(socket);
     await app
       .get(DataSource)
       .query('DELETE FROM sessions WHERE person_id = $1', [person.id]);

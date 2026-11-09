@@ -11,6 +11,7 @@ import { io, type Socket } from "socket.io-client";
 import type { Message } from "@/app/services/chat-api";
 import { messageFromEvent } from "@/app/utils/message-event";
 import { rememberMessage } from "@/app/utils/recent-messages";
+import { hasAskedToLeave } from "@/app/utils/leaving";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 export type RealtimeSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -95,15 +96,15 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       retryDelay = RETRY_MIN_MS;
       setStatus("connected");
     });
-    socket.on("disconnect", (reason) => {
-      // O servidor só desconecta quando a Sessão acabou (LLD, "Sessão e login", "WebSocket").
-      if (reason === "io server disconnect") {
-        void redirectToExpiredSession();
-        return;
-      }
+    socket.on("disconnect", () => {
+      lastSync.current = null;
       setStatus("disconnected");
     });
-    socket.on("session.ended", () => void redirectToExpiredSession());
+    // A Sessão acabou (LLD, "Sessão e login", "WebSocket"): como um 401 do REST. Na aba que pediu
+    // para sair, quem navega é o próprio sair.
+    socket.on("session.ended", () => {
+      if (!hasAskedToLeave()) void redirectToExpiredSession();
+    });
     socket.on("connect_error", (error) => {
       if (error.message === UNAUTHENTICATED) {
         void redirectToExpiredSession();
