@@ -386,7 +386,7 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | Rota | Acesso | Lê | Ações | Situação |
 | --- | --- | --- | --- | --- |
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
-| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe: redireciona para a primeira Conversa da lista. Alteração `planejada`: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa |
+| `/` (Home) | Sessão | Pessoa da Sessão, lista de Conversas e cookie da última Conversa | Sair | existe: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista; sem Conversas, a Home vazia; com a lista em falha, o erro com "Tentar de novo" |
 | `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; o resto a detalhar |
 | Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | existe: a lista; não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |

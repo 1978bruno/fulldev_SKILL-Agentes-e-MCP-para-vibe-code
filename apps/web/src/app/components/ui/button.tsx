@@ -38,7 +38,7 @@ export function buttonVariants({
   return cn(buttonClasses(variants), className);
 }
 
-type ButtonProps = React.ComponentProps<"button"> &
+export type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonClasses> & {
     icon?: LucideIcon;
     loading?: boolean;

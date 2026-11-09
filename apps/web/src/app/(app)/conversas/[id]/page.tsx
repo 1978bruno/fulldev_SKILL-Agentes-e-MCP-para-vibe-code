@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { MessageHistory } from "@/app/components/conversation/message-history";
+import { RememberConversation } from "@/app/components/conversation/remember-conversation";
 import { getConversation, getCurrentPerson, listMessages } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
 import { readTimeZone } from "@/app/services/time-zone-cookie";
@@ -38,6 +39,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   const timeZone = await readTimeZone();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      <RememberConversation conversationId={conversation.id} />
       <ConversationHeader name={conversation.name} topic={conversation.topic} />
       <MessageHistory
         key={conversation.id}

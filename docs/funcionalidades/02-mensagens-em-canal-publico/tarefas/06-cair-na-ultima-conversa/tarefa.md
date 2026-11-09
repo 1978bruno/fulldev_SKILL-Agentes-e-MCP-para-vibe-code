@@ -1,6 +1,6 @@
 # 06: Cair na última Conversa ao entrar
 
-**Status:** a fazer
+**Status:** concluída
 
 **O que construir:** ao chegar na Home, a Pessoa cai no último Canal que abriu naquele navegador.
 Na primeira visita, ou se aquele Canal não está mais na lista dela, cai no primeiro da lista, e
@@ -15,16 +15,16 @@ não carrega, aparece o erro. Referências:
 
 **Bloqueada por:** 02 (Abrir um Canal criado por comando e enviar uma Mensagem)
 
-- [ ] **CA1** · Ao abrir uma Conversa, o cliente grava o cookie da última Conversa com os atributos
+- [x] **CA1** · Ao abrir uma Conversa, o cliente grava o cookie da última Conversa com os atributos
   do LLD ("Cookies do cliente").
-- [ ] **CA2** · A Home redireciona para a Conversa do cookie quando ela está na lista da Pessoa;
+- [x] **CA2** · A Home redireciona para a Conversa do cookie quando ela está na lista da Pessoa;
   senão, para a primeira da lista; sem nenhuma, mostra "Home / Vazio" (19:1645).
-- [ ] **CA3** · Enquanto decide, a Home mostra "Home / Carregando" (19:1533). Se a lista falha, ela
+- [x] **CA3** · Enquanto decide, a Home mostra "Home / Carregando" (19:1533). Se a lista falha, ela
   mostra "Conversa / Erro ao carregar a lista" (26:46375), com "Tentar de novo".
-- [ ] **CA4** · O Playwright prova a volta à última Conversa, a primeira da lista na primeira
+- [x] **CA4** · O Playwright prova a volta à última Conversa, a primeira da lista na primeira
   visita e com um cookie de Conversa que não está na lista, e a Home vazia de uma Pessoa sem
   Canais. A checagem com `@axe-core/playwright` na Home vazia passa sem violações.
-- [ ] **CA5** · A verificação do agente com o `playwright-cli`, com a falha provocada só nas rotas
+- [x] **CA5** · A verificação do agente com o `playwright-cli`, com a falha provocada só nas rotas
   de Conversas e a verificação da Sessão funcionando, como a spec descreve ("Verificações do
   agente"), confere o erro da Home e o "Tentar de novo" depois de desfazer a falha, e fica
   registrada na pasta desta
