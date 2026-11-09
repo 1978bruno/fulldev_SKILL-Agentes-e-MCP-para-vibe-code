@@ -1,7 +1,7 @@
 ---
 paths:
-  - "apps/api/src/**/*.ts"
-  - "apps/api/test/**/*.ts"
+  - "apps/chat-api/src/**/*.ts"
+  - "apps/chat-api/test/**/*.ts"
 ---
 
 ## Idioma

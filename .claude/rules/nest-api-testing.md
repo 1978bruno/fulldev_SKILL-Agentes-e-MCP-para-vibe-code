@@ -1,8 +1,8 @@
 ---
 paths:
-  - "apps/api/src/**/*.spec.ts"
-  - "apps/api/src/**/*.int-spec.ts"
-  - "apps/api/test/**/*.ts"
+  - "apps/chat-api/src/**/*.spec.ts"
+  - "apps/chat-api/src/**/*.int-spec.ts"
+  - "apps/chat-api/test/**/*.ts"
 ---
 
 edit ou lendo o arquivo

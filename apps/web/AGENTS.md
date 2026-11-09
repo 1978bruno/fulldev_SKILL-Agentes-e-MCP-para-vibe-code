@@ -33,15 +33,15 @@ Todo componente nasce como Server Component. O `"use client"` precisa de um moti
 O código fica em `src/`.
 
 ```
-app/         Contém os Server Components, páginas, layouts e rotas da aplicação.
-  queries/   Contém os arquivos de consultas (queries) da aplicação.
-  actions/   Contém os arquivos de ações do servidor (Server Actions) da aplicação.
-  components/ Contém os componentes reutilizáveis da aplicação.
-  hooks/      Contém os hooks personalizados da aplicação.
-  utils/      Contém funções utilitárias da aplicação.
-  services/   Contém os arquivos de serviços da aplicação.
-public/      Arquivos estáticos, como imagens e fontes.
-styles/      Arquivos de estilo globais.
+src/
+  app/          Server Components, páginas, layouts e rotas da aplicação; o CSS global fica em `globals.css`.
+    queries/    Arquivos de consultas (queries) da aplicação.
+    actions/    Arquivos de ações do servidor (Server Actions) da aplicação.
+    components/ Componentes reutilizáveis da aplicação.
+    hooks/      Hooks personalizados da aplicação.
+    utils/      Funções utilitárias da aplicação.
+    services/   Arquivos de serviços da aplicação.
+public/         Arquivos estáticos, como imagens e fontes (fora de `src/`).
 ```
 
 ## API Externas

@@ -32,7 +32,7 @@ O ambiente de desenvolvimento usa o `compose.yaml`, na raiz, com quatro serviço
 | --- | --- | --- | --- |
 | `web` | Frontend em Next.js | `http://localhost:3000` | `http://web:3000` |
 | `chat-api` | API em NestJS, REST e WebSocket | `http://localhost:3001` | `http://chat-api:3000` |
-| `postgres` | PostgreSQL, com os bancos `chat` e `vendas` | `localhost:5432` | `postgres:5432` |
+| `postgres` | PostgreSQL, com os bancos `chat`, `agents` e `business` | `localhost:5432` | `postgres:5432` |
 | `s3` | Emulador do S3 (`seaweedfs`) | `http://localhost:8333` | `http://s3:8333` |
 
 Os contêineres `web` e `chat-api` instalam as dependências ao subir e depois ficam parados, sem iniciar a aplicação. Os comandos rodam neles com `docker compose -f compose.yaml exec <serviço> <comando>` e os de cada projeto estão no `AGENTS.md` dele.

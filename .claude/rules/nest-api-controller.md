@@ -1,6 +1,6 @@
 ---
 paths:
-  - "apps/api/src/**/*.controller.ts"
+  - "apps/chat-api/src/**/*.controller.ts"
 ---
 
 O controller adapta o HTTP: recebe a requisição, valida a entrada pelo DTO, chama o service e devolve o resultado. Ele não decide nada.
