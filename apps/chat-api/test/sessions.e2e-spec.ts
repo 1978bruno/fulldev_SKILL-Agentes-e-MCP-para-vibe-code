@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -151,7 +152,10 @@ describe('sessões', () => {
 
       expect(response.status).toBe(200);
       const [row] = await sessionRowsOf(person.id);
-      const expectedExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      const ttlDays = app
+        .get(ConfigService)
+        .getOrThrow<number>('SESSION_TTL_DAYS');
+      const expectedExpiry = Date.now() + ttlDays * 24 * 60 * 60 * 1000;
       expect(Math.abs(row.expires_at.getTime() - expectedExpiry)).toBeLessThan(
         10_000,
       );

@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
-import { createHash } from 'node:crypto';
 import { DataSource } from 'typeorm';
+import { hashSessionToken } from '../../src/sessions/session-token';
 
 // Atalhos da base de testes para os testes de tempo: envelhecem as linhas no banco no Arrange,
 // sem relógio falso e sem overrideProvider (spec da F01, "Decisões de teste").
@@ -10,7 +10,7 @@ export const agingRoutes = {
     token: string,
     dates: { lastUsedAt?: Date; expiresAt?: Date },
   ): Promise<void> {
-    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const tokenHash = hashSessionToken(token);
     await app
       .get(DataSource)
       .query(

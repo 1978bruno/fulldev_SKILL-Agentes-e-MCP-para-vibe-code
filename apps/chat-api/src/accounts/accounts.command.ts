@@ -65,28 +65,22 @@ export class AccountsCommand {
       this.output.error(`E-mail inválido: ${email.trim()}`);
       return 1;
     }
-    const password = await this.prompt.ask('Senha: ');
-    if (!password) {
-      this.output.error('A senha não pode ser vazia.');
-      return 1;
-    }
+    const password = await this.askNewPassword('Senha: ');
+    if (!password) return 1;
     const person = await this.people.create({ email, name, password });
     this.output.info(`Pessoa criada: ${person.email} (${person.id}).`);
     return 0;
   }
 
-  // Revoga primeiro e troca a senha depois: uma falha entre as duas escritas deixa a Pessoa sem
-  // Sessões e com a senha antiga, e nunca a senha nova com Sessões antigas.
+  // Troca a senha primeiro e revoga depois: as Sessões abertas até a troca, inclusive uma criada
+  // com a senha antiga enquanto o hash novo era calculado, caem na revogação.
   private async resetPassword([email]: string[]): Promise<number> {
     const person = await this.requirePerson(email, 'reset-password <e-mail>');
     if (!person) return 1;
-    const password = await this.prompt.ask('Senha nova: ');
-    if (!password) {
-      this.output.error('A senha não pode ser vazia.');
-      return 1;
-    }
-    const revoked = await this.sessions.revokeAll(person.id);
+    const password = await this.askNewPassword('Senha nova: ');
+    if (!password) return 1;
     await this.people.changePassword(person.id, password);
+    const revoked = await this.sessions.revokeAll(person.id);
     this.output.info(
       `Senha trocada para ${person.email}; ${revoked} Sessão(ões) revogada(s).`,
     );
@@ -118,5 +112,20 @@ export class AccountsCommand {
     const person = await this.people.findByEmail(email);
     if (!person) throw new PersonNotFoundError(normalizeEmail(email));
     return person;
+  }
+
+  // A senha é digitada sem eco: pede duas vezes, para um erro de digitação não travar a conta.
+  private async askNewPassword(question: string): Promise<string | null> {
+    const password = await this.prompt.ask(question);
+    if (!password) {
+      this.output.error('A senha não pode ser vazia.');
+      return null;
+    }
+    const confirmation = await this.prompt.ask('Confirme a senha: ');
+    if (confirmation !== password) {
+      this.output.error('As senhas não conferem.');
+      return null;
+    }
+    return password;
   }
 }
