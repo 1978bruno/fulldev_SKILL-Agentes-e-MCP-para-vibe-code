@@ -101,12 +101,14 @@ export class EventsStore {
     event: StoredEvent | ((personId: string) => StoredEvent),
   ): Promise<Map<string, string>> {
     const minId = `${Date.now() - EVENTS_RETENTION_MS}-0`;
+    // A carga única é serializada uma vez só, para todos os streams.
     const shared = typeof event === 'function' ? null : JSON.stringify(event);
     const pipeline = this.redis.multi().get(EPOCH_KEY);
     for (const personId of personIds) {
       const data =
-        shared ??
-        JSON.stringify((event as (id: string) => StoredEvent)(personId));
+        typeof event === 'function'
+          ? JSON.stringify(event(personId))
+          : (shared as string);
       pipeline.addCommand([
         'XADD',
         streamKey(personId),

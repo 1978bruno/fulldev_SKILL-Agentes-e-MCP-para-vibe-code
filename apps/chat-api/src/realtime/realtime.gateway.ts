@@ -31,6 +31,12 @@ const UNAUTHENTICATED: HandshakeErrorCode = 'unauthenticated';
 
 // WebSocket da API do chat (spec da F03, "Conexão" e "Sessão no WebSocket"). O handshake verifica a
 // Sessão pelo mesmo authenticate do guard REST e põe o socket nas salas da Pessoa e da Sessão.
+
+// Os eventos guardados por Pessoa que a reconexão reenvia (StoredEventPayloads, em chat-events).
+const STORED_EVENT_NAMES = new Set<string>([
+  'message.created',
+  'conversation.member_added',
+]);
 @WebSocketGateway()
 export class RealtimeGateway
   implements OnGatewayInit, OnGatewayConnection, OnModuleDestroy
@@ -97,9 +103,10 @@ export class RealtimeGateway
         socket.emit('sync', { cursor: result.cursor, reset: true });
         return;
       }
-      // Todos os eventos guardados voltam, na ordem do stream (message.created e
-      // conversation.member_added).
+      // Os eventos guardados voltam na ordem do stream; um nome desconhecido, de uma versão
+      // anterior ou posterior, fica de fora.
       for (const event of result.events) {
+        if (!STORED_EVENT_NAMES.has(event.name)) continue;
         socket.emit(event.name as 'message.created', {
           ...(event.payload as MessageCreatedEvent),
           event_id: event.cursor,

@@ -25,37 +25,23 @@ export class MembershipsService {
     creatorId: string,
     newChannel: NewChannel,
   ): Promise<ConversationSummary> {
-    const { created, ...summary } = await this.conversations.createChannel(
-      creatorId,
-      newChannel,
-    );
-    if (created) {
-      await this.publishMemberAdded(summary, (memberIds) => memberIds);
-    }
+    const { created, memberIds, ...summary } =
+      await this.conversations.createChannel(creatorId, newChannel);
+    if (created) this.publishMemberAdded(summary, memberIds, memberIds);
     return summary;
   }
 
   // Publica sem prender a resposta: a gravação já aconteceu, e a falha vai para o log, como no envio
   // de Mensagem.
-  private async publishMemberAdded(
+  private publishMemberAdded(
     summary: ConversationSummary,
-    addedFrom: (memberIds: string[]) => string[],
-  ): Promise<void> {
-    try {
-      const memberIds = await this.conversations.listMemberIds(
-        summary.conversation.id,
+    memberIds: string[],
+    addedIds: string[],
+  ): void {
+    this.publisher
+      .memberAdded(memberIds, toConversationResponse(summary), addedIds)
+      .catch((error: unknown) =>
+        this.logger.error('Falha ao publicar a participação gravada', error),
       );
-      void this.publisher
-        .memberAdded(
-          memberIds,
-          toConversationResponse(summary),
-          addedFrom(memberIds),
-        )
-        .catch((error: unknown) =>
-          this.logger.error('Falha ao publicar a participação gravada', error),
-        );
-    } catch (error) {
-      this.logger.error('Falha ao publicar a participação gravada', error);
-    }
   }
 }

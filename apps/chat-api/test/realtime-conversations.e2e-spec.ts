@@ -1,9 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import type { ConversationMemberAddedEvent } from 'chat-events';
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { authRoutes } from './support/auth-routes';
+import { conversationRoutes } from './support/conversation-routes';
 import {
   collectEvents,
   listenTestApp,
@@ -13,24 +12,14 @@ import {
   TestSocket,
   waitForCount,
 } from './support/realtime-routes';
-import { uniqueChannelName } from './support/unique-channel-name';
 
 type ConversationBody = ConversationMemberAddedEvent['conversation'];
 
-function createChannel(
+const createChannel = (
   app: INestApplication,
   cookie: string,
-  body: { kind?: string; name?: string; clientId?: string } = {},
-) {
-  return request(app.getHttpServer() as App)
-    .post('/v1/conversations')
-    .set('Cookie', cookie)
-    .send({
-      kind: body.kind ?? 'public_channel',
-      name: body.name ?? uniqueChannelName(),
-      client_id: body.clientId ?? randomUUID(),
-    });
-}
+  body: { kind?: string; clientId?: string } = {},
+) => conversationRoutes.createChannelByRest(app, cookie, body);
 
 // Os eventos de um Canal: outros testes criam Canais públicos ao mesmo tempo.
 function eventsOf(

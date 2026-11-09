@@ -51,6 +51,15 @@ export interface ConversationMemberAddedEvent {
   person_ids: string[];
 }
 
+/**
+ * Os eventos guardados por Pessoa e reenviados na reconexão, com a carga de cada um sem o cursor,
+ * que é de cada Pessoa (spec da F03, "Eventos por Pessoa e reconexão").
+ */
+export interface StoredEventPayloads {
+  "message.created": Omit<MessageCreatedEvent, "event_id">;
+  "conversation.member_added": Omit<ConversationMemberAddedEvent, "event_id">;
+}
+
 export interface SyncEvent {
   /** Cursor atual da Pessoa, que a aba manda no próximo handshake. */
   cursor: string | null;

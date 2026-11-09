@@ -6,11 +6,9 @@
 // de todas e guarda o evento no stream de cada uma. Fora da suíte; roda no contêiner chat-api:
 //   pnpm exec ts-node test/measure/channel-latency.ts
 import '../support/test-env';
-import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { authRoutes } from '../support/auth-routes';
+import { conversationRoutes } from '../support/conversation-routes';
 import { listenTestApp, realtimeRoutes } from '../support/realtime-routes';
 import { uniqueChannelName } from '../support/unique-channel-name';
 
@@ -47,13 +45,9 @@ async function main(): Promise<void> {
   const latencies: number[] = [];
   for (let index = 0; index < CHANNELS; index += 1) {
     const startedAt = performance.now();
-    const response = await request(app.getHttpServer() as App)
-      .post('/v1/conversations')
-      .set('Cookie', people[index % SOCKETS].cookie)
-      .send({
-        kind: 'public_channel',
+    const response = await conversationRoutes
+      .createChannelByRest(app, people[index % SOCKETS].cookie, {
         name: uniqueChannelName('medicao'),
-        client_id: randomUUID(),
       })
       .expect(201);
     const { id } = (response.body as { conversation: { id: string } })
@@ -73,6 +67,11 @@ async function main(): Promise<void> {
   const sorted = latencies.toSorted((a, b) => a - b);
   const expected = SOCKETS * CHANNELS;
   console.log(`Chegadas: ${sorted.length} de ${expected}`);
+  if (sorted.length === 0) {
+    sockets.forEach((socket) => socket.disconnect());
+    await app.close();
+    return;
+  }
   console.log(`p50: ${percentile(sorted, 50).toFixed(1)} ms`);
   console.log(`p95: ${percentile(sorted, 95).toFixed(1)} ms`);
   console.log(`p99: ${percentile(sorted, 99).toFixed(1)} ms`);

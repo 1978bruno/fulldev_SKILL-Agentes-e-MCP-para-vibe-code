@@ -20,6 +20,28 @@ export const conversationRoutes = {
       .createPublicChannel(options.name ?? uniqueChannelName(), options.topic);
   },
 
+  // Pelo REST, como a web: o Canal é criado e publicado.
+  createChannelByRest(
+    app: INestApplication,
+    cookie: string,
+    body: {
+      kind?: string;
+      name?: string;
+      topic?: string;
+      clientId?: string;
+    } = {},
+  ): request.Test {
+    return request(app.getHttpServer() as App)
+      .post('/v1/conversations')
+      .set('Cookie', cookie)
+      .send({
+        kind: body.kind ?? 'public_channel',
+        name: body.name ?? uniqueChannelName(),
+        topic: body.topic,
+        client_id: body.clientId ?? randomUUID(),
+      });
+  },
+
   // Pelo REST, como a web: a Mensagem é gravada e publicada.
   sendMessage(
     app: INestApplication,

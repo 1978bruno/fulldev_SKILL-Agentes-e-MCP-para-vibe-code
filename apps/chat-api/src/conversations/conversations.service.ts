@@ -44,6 +44,8 @@ export interface ConversationSummary {
 export interface CreatedChannel extends ConversationSummary {
   // Falso quando o client_id já tinha criado o Canal: o reenvio não grava nem publica nada.
   created: boolean;
+  // As Pessoas que entraram agora, todas as Membros do Canal novo; vazio no reenvio.
+  memberIds: string[];
 }
 
 export type PublicChannelSummary = {
@@ -142,7 +144,7 @@ export class ConversationsService {
     });
     if (existing) {
       const [summary] = await this.withMemberCounts([existing]);
-      return { ...summary, created: false };
+      return { ...summary, created: false, memberIds: [] };
     }
     // O público inclui todas as Pessoas; o privado, só quem o criou.
     const memberIds =
@@ -151,7 +153,7 @@ export class ConversationsService {
       createdBy: creatorId,
       clientId,
     });
-    return { ...summary, created: true };
+    return { ...summary, created: true, memberIds };
   }
 
   // Cria o Canal público pelo comando de canais, sem criador nem client_id.

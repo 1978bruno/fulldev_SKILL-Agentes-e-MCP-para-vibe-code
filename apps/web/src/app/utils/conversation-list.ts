@@ -9,13 +9,13 @@ export function applyMemberAdded(
   conversation: Conversation,
   personIds: readonly string[],
   selfId: string,
-): Conversation[] {
-  const index = list.findIndex((item) => item.id === conversation.id);
-  if (index >= 0) {
-    return list.map((item, position) =>
-      position === index ? { ...item, memberCount: conversation.memberCount } : item,
+): readonly Conversation[] {
+  if (list.some((item) => item.id === conversation.id)) {
+    return list.map((item) =>
+      item.id === conversation.id ? { ...item, memberCount: conversation.memberCount } : item,
     );
   }
-  if (!personIds.includes(selfId)) return [...list];
+  // Uma Conversa de que a Pessoa não é Membro: a lista fica a mesma, sem nova renderização.
+  if (!personIds.includes(selfId)) return list;
   return [...list, conversation].sort((a, b) => compareNames(a.name, b.name));
 }
