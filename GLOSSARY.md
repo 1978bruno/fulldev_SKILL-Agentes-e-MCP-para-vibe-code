@@ -19,9 +19,14 @@ Onde as Mensagens acontecem: um Canal ou uma Conversa direta.
 _Avoid_: chat, sala
 
 **Canal**:
-Conversa com nome e Tópico, pública, com todo o workspace como Membro, ou privada, só com os
-convidados.
-_Avoid_: grupo
+Conversa com nome e Tópico, pública, com todo o workspace como Membro, ou privada, só com quem a
+criou e quem um Membro adicionou a ela. Adicionar ao Canal torna a Pessoa Membro na hora, sem
+aceite.
+_Avoid_: grupo; convidar ou convite, para adicionar ao Canal
+
+**Convite**:
+O chamado, por e-mail, para quem ainda não tem conta criar a própria e entrar no workspace.
+_Avoid_: convite para Canal
 
 **Conversa direta**:
 Conversa entre duas Pessoas, sem nome.

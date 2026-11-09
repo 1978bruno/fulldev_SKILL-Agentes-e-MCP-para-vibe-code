@@ -166,6 +166,12 @@ novas tentativas e idempotência").
   trava transacional do Postgres (`pg_advisory_xact_lock`, chave fixa), para uma conta e um Canal
   criados ao mesmo tempo não deixarem a Pessoa fora do Canal; a gravação tolera a participação que
   já existe ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)).
+- **Criação de Canal pelo produto:** unicidade em (criador, identificador gerado no cliente). A
+  criação toma a mesma trava da participação em Canal público, nos dois tipos de Canal, e confere
+  primeiro o identificador: se ele já existe, a API devolve o Canal já criado, com o mesmo status
+  de sucesso, e não publica evento. Só depois confere o nome, único entre todos os Canais.
+- **Adicionar ao Canal privado:** a gravação tolera a participação que já existe, e só as Pessoas
+  adicionadas agora geram evento.
 - **Ação de bot:** unicidade em (identificador de pedido, tipo de ação). Tipos: resposta, pergunta
   ao usuário, aviso de início, entrega do PDF, criação de tarefa. A repetição devolve o que já foi
   gravado, sem nova mensagem, tarefa ou notificação.
@@ -248,7 +254,7 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 | Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
 | Chat | Sessões | existe (`sessions`) |
 | Chat | Tentativas de login por e-mail | existe (`login_attempts`) |
-| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | existe: Canal público (`conversations`, `conversation_members`) |
+| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | existe: Canal público (`conversations`, `conversation_members`); Canal privado, criador e identificador da criação `planejados` ([spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Conversas") |
 | Chat | Conversas diretas | tipo de Conversa (ADR 0024); a detalhar |
 | Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | existe: autor pessoa e texto (`messages`); autor bot, citação e marca a detalhar |
 | Chat | Menções | a detalhar |
@@ -297,8 +303,14 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
+| API do chat: `POST /v1/conversations` | planejada | Criar Canal sem duplicar ("Concorrência e idempotência"): [spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id/members` | planejada | Membros da Conversa: spec da F04, seção "Rotas" |
+| API do chat: `POST /v1/conversations/:id/members` | planejada | Adicionar ao Canal privado: spec da F04, seção "Rotas" |
+| API do chat: `GET /v1/people` | planejada | Busca de Pessoas pelo nome, fora dos Membros de uma Conversa: spec da F04, seções "Busca de Pessoas" e "Rotas" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended`; `conversation.member_added` `planejado` (F04) | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos"; o evento da F04: spec da F04, seção "Tempo real" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
+| BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | planejada | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
+| BFF: Server Actions `createChannel` e `addMembers` | planejada | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
@@ -420,15 +432,15 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
 | `/` (Home) | Sessão | Pessoa da Sessão, lista de Conversas e cookie da última Conversa | Sair | existe: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista; sem Conversas, a Home vazia; com a lista em falha, o erro com "Tentar de novo" |
 | `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; tempo real e "digitando" planejados (F03); o resto a detalhar |
-| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | existe: a lista; não lidas e menções a detalhar |
+| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa; criar Canal | existe: a lista; a lista no cliente, atualizada pelo tempo real, e o diálogo "Criar canal" `planejados` (F04); não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
-| A definir | Sessão | — | Criar canal; convidar para canal privado | a detalhar |
+| Lista de Membros e passo "Adicionar pessoas" (diálogos sobre a Conversa) | Sessão; só Membro; adicionar só em Canal privado | Membros; busca de Pessoas | Adicionar ao Canal privado | planejada (F04) |
 | A definir | Sessão; conectar e desconectar só para administrador | Agentes e estado de conexão | Conectar e desconectar agente | a detalhar |
 
 **Leituras e tempo real.** A página carrega pelos Server Components. No cliente, o SWR guarda as
-leituras que o tempo real altera (mensagens, não lidas, notificações), e cada evento do WebSocket
+leituras que o tempo real altera (mensagens, lista de Conversas, não lidas, notificações), e cada evento do WebSocket
 atualiza esse cache direto, sem nova requisição. A primeira página do histórico vem do Server
 Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota do BFF
 `GET /api/conversations/:id/messages`, porque um Server Action, além de usar POST, roda em série.
@@ -509,6 +521,9 @@ Component, como `fallbackData` do cache; as anteriores vêm do cliente pela rota
 | Distância do fim da lista | 100 px: até ela, a Mensagem nova rola a lista | Web | Constante |
 | Tempo limite da consulta ao Banco de negócio | A definir | Serviço de agentes e Worker | A definir |
 | Tamanho da página | Padrão 50, máximo 100 | API do chat | Constante |
+| Limite da busca de Pessoas | 20 Pessoas por busca (spec da F04) | API do chat | Constante |
+| Espera da busca de Pessoas | 200 ms sem digitar antes de buscar (spec da F04) | Web | Constante |
+| Pessoas por adição ao Canal | Até 100 por pedido (spec da F04) | API do chat e web | Constante |
 | Tamanho máximo da Mensagem | 4000 caracteres, contados em pontos de código Unicode (Figma, MessageComposer) | API do chat, banco e web | Constante |
 | Intervalo da forma compacta | 5 min (PRD da F02, história 3) | Web | Constante |
 | Fuso padrão | `America/Sao_Paulo`, usado sem o cookie de fuso | Web | Constante |
