@@ -1,6 +1,6 @@
 # 09: Comando de canais completo e conta nova nos Canais
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** quem opera a instalação troca o Tópico de um Canal e lista os Canais que
 existem. A conta que cria pelo comando de contas já entra em todos os Canais públicos, sem outro
