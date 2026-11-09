@@ -122,8 +122,11 @@ export function LoginForm({ returnPath }: LoginFormProps) {
     startTransition(() => formAction(formData));
   }
 
+  // Os erros do Server Action valem só até a próxima validação no cliente ou o próximo envio.
   const serverErrors =
-    state.status === "invalid_input" ? state.fieldErrors : {};
+    state.status === "invalid_input" && !hasErrors(clientErrors) && !isPending
+      ? state.fieldErrors
+      : {};
   const emailError = clientErrors.email ?? serverErrors.email;
   const passwordError =
     clientErrors.password ??
