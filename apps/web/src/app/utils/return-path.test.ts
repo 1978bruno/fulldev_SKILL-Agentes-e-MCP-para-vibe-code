@@ -14,15 +14,10 @@ describe("safeReturnPath", () => {
     ["absoluto", "https://outro-site.com/"],
     ["com // no começo", "//outro-site.com"],
     ["com /\\ no começo", "/\\outro-site.com"],
-  ])("leva à Home um valor %s", (_caso, value) => {
-    expect(safeReturnPath(value)).toBe("/");
-  });
-
-  it.each([
     ["com tabulação que vira //", "/\t/outro-site.com"],
     ["com quebra de linha que vira //", "/\n/outro-site.com"],
     ["que a normalização transforma em //", "/a/..//outro-site.com"],
-  ])("leva à Home um caminho %s", (_caso, value) => {
+  ])("leva à Home um valor %s", (_caso, value) => {
     expect(safeReturnPath(value)).toBe("/");
   });
 });

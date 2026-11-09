@@ -70,15 +70,14 @@ describe('transação entre módulos', () => {
   });
 
   async function countRows(email: string) {
-    const [people] = await dataSource.query<{ count: string }[]>(
-      'SELECT count(*) FROM people WHERE email = $1',
+    const [row] = await dataSource.query<
+      { people: string; attempts: string }[]
+    >(
+      `SELECT (SELECT count(*) FROM people WHERE email = $1) AS people,
+              (SELECT count(*) FROM login_attempts WHERE email = $1) AS attempts`,
       [email],
     );
-    const [attempts] = await dataSource.query<{ count: string }[]>(
-      'SELECT count(*) FROM login_attempts WHERE email = $1',
-      [email],
-    );
-    return { people: Number(people.count), attempts: Number(attempts.count) };
+    return { people: Number(row.people), attempts: Number(row.attempts) };
   }
 
   it('desfaz as gravações de dois módulos quando a operação falha', async () => {

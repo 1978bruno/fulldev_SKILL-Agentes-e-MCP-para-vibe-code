@@ -7,9 +7,7 @@ import { ClsModule } from 'nestjs-cls';
 import { Env } from '../config/env.schema';
 import { buildDataSourceOptions } from './database.options';
 
-// A transação passa de um service a outro pelo contexto do CLS (LLD, "Transações"): quem orquestra
-// marca o método com @Transactional(), e quem participa acessa o banco pelo TransactionHost. No
-// HTTP, o middleware abre o contexto; fora dele, quem chama envolve a execução com ClsService.run.
+// Transação entre módulos pelo CLS: regras no AGENTS.md da API, "Transações".
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({

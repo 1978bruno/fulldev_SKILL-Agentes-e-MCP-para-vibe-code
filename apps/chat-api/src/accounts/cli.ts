@@ -17,8 +17,7 @@ async function main(): Promise<void> {
       new TtyPasswordPrompt(),
       { info: console.log, error: console.error },
     );
-    // Fora do HTTP, o contexto do CLS (DatabaseModule) é aberto aqui, para toda operação do
-    // comando rodar num contexto só.
+    // Contexto do CLS fora do HTTP (AGENTS.md da API, "Transações").
     process.exitCode = await app
       .get(ClsService)
       .run(() => command.run(process.argv.slice(2)));
