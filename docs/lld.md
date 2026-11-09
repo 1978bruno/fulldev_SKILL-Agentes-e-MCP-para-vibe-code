@@ -51,7 +51,7 @@ docs/             HLD, LLD, ADRs, brief
 | --- | --- | --- |
 | Frontend/BFF | Next.js com App Router | Next.js: HLD, seção 5 ([ADR 0002](adr/0002-next-bff-websocket-direto.md)); App Router: a definir |
 | Mutações do navegador ao BFF | Server Actions | Checagem de `Origin` do próprio Next contra CSRF, formulário que funciona por teclado e nenhuma rota REST a manter para o navegador |
-| Leituras no cliente que o tempo real altera | SWR | A definir |
+| Leituras no cliente que o tempo real altera | SWR | O cache recebe os eventos do WebSocket direto, sem nova requisição, e a primeira página vem do servidor como `fallbackData` ("Cliente", "Leituras e tempo real") |
 | Tempo real, no servidor e no cliente | Socket.IO | [ADR 0019](adr/0019-socket-io-tempo-real.md) |
 | Cliente do Redis na API do chat | `redis` (node-redis) | Cliente oficial do Redis |
 | API do chat | NestJS | HLD, seção 5 |
@@ -307,9 +307,9 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id/members` | planejada | Membros da Conversa: spec da F04, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/members` | planejada | Adicionar ao Canal privado: spec da F04, seção "Rotas" |
 | API do chat: `GET /v1/people` | planejada | Busca de Pessoas pelo nome, fora dos Membros de uma Conversa: spec da F04, seções "Busca de Pessoas" e "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended`; `conversation.member_added` `planejado` (F04) | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos"; o evento da F04: spec da F04, seção "Tempo real" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` e `conversation.member_added` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos"; o evento da F04: spec da F04, seção "Tempo real" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
-| BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | planejada | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
+| BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | existe: `GET /api/conversations`; as outras `planejadas` | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
 | BFF: Server Actions `createChannel` e `addMembers` | existe: `createChannel`; `addMembers` `planejado` | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -432,7 +432,7 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
 | `/` (Home) | Sessão | Pessoa da Sessão, lista de Conversas e cookie da última Conversa | Sair | existe: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista; sem Conversas, a Home vazia; com a lista em falha, o erro com "Tentar de novo" |
 | `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; tempo real e "digitando" planejados (F03); o resto a detalhar |
-| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa; criar Canal | existe: a lista e o diálogo "Criar canal"; a lista no cliente, atualizada pelo tempo real, `planejada` (F04); não lidas e menções a detalhar |
+| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa; criar Canal | existe: a lista, no cliente e atualizada pelo tempo real, e o diálogo "Criar canal"; não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
