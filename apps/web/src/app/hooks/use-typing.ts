@@ -18,29 +18,9 @@ import {
 export function useTypingAnnouncer(conversationId: string) {
   const { socket } = useRealtime();
   const lastAnnouncedAt = useRef<number | null>(null);
+  const currentText = useRef("");
 
-  useEffect(() => {
-    if (!socket) return;
-    const rearm = () => {
-      lastAnnouncedAt.current = null;
-    };
-    const open = () =>
-      socket.emit("conversation.open", { conversation_id: conversationId }, rearm);
-    if (socket.connected) open();
-    socket.on("connect", open);
-    socket.on("disconnect", rearm);
-    return () => {
-      socket.off("connect", open);
-      socket.off("disconnect", rearm);
-      if (lastAnnouncedAt.current !== null) {
-        socket.emit("typing.stop", { conversation_id: conversationId });
-      }
-      rearm();
-      socket.emit("conversation.close", { conversation_id: conversationId });
-    };
-  }, [socket, conversationId]);
-
-  const onTextChange = useCallback(
+  const announce = useCallback(
     (text: string) => {
       const now = Date.now();
       const announcement = shouldAnnounce(text, lastAnnouncedAt.current, now);
@@ -53,6 +33,40 @@ export function useTypingAnnouncer(conversationId: string) {
       }
     },
     [socket, conversationId],
+  );
+
+  useEffect(() => {
+    if (!socket) return;
+    const rearm = () => {
+      lastAnnouncedAt.current = null;
+    };
+    // Com a Conversa aberta no socket, quem já estava escrevendo avisa de novo: o aviso mandado
+    // antes de a aba entrar na sala se perdeu.
+    const open = () =>
+      socket.emit("conversation.open", { conversation_id: conversationId }, () => {
+        rearm();
+        announce(currentText.current);
+      });
+    if (socket.connected) open();
+    socket.on("connect", open);
+    socket.on("disconnect", rearm);
+    return () => {
+      socket.off("connect", open);
+      socket.off("disconnect", rearm);
+      if (lastAnnouncedAt.current !== null) {
+        socket.emit("typing.stop", { conversation_id: conversationId });
+      }
+      rearm();
+      socket.emit("conversation.close", { conversation_id: conversationId });
+    };
+  }, [socket, conversationId, announce]);
+
+  const onTextChange = useCallback(
+    (text: string) => {
+      currentText.current = text;
+      announce(text);
+    },
+    [announce],
   );
 
   return { onTextChange };
