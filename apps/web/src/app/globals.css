@@ -220,9 +220,12 @@ body {
   line-height: var(--text-body--line-height);
 }
 
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+/* Na camada base, para os utilitários (como o foco do campo, sem o contorno global) a vencerem. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
