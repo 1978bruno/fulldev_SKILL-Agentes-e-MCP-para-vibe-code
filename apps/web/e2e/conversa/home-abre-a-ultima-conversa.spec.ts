@@ -3,6 +3,7 @@
 import { expect, test } from "../fixtures";
 import { readyHistory } from "../support/conversation-page";
 import { insertChannel } from "../support/database";
+import { browserCookie, LAST_CONVERSATION_COOKIE } from "../support/session-cookie";
 
 test.describe("Canal ao entrar", () => {
   test("home-abre-a-ultima-conversa", async ({ page, person, loggedInPage }) => {
@@ -14,9 +15,9 @@ test.describe("Canal ao entrar", () => {
     await page.goto(`/conversas/${second.id}`);
     await readyHistory(page, second.name);
     await expect
-      .poll(async () => (await page.context().cookies()).find((c) => c.name === "fc_last_conversation"))
+      .poll(() => browserCookie(page, LAST_CONVERSATION_COOKIE))
       .toMatchObject({ value: second.id, path: "/", sameSite: "Lax" });
-    const cookie = (await page.context().cookies()).find((c) => c.name === "fc_last_conversation")!;
+    const cookie = (await browserCookie(page, LAST_CONVERSATION_COOKIE))!;
     const days = (cookie.expires * 1000 - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(399);
 

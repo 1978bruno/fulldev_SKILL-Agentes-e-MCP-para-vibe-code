@@ -3,6 +3,7 @@
 import { expect, test } from "../fixtures";
 import { messageList, readyHistory } from "../support/conversation-page";
 import { insertMessages } from "../support/database";
+import { browserCookie } from "../support/session-cookie";
 
 test.use({ timezoneId: "Asia/Tokyo" });
 
@@ -27,7 +28,7 @@ test.describe("Ler as Mensagens", () => {
 
     // O cookie de fuso fica com o fuso do navegador, e a hora sai nele (20:40).
     await expect
-      .poll(async () => (await page.context().cookies()).find((c) => c.name === "fc_tz")?.value)
+      .poll(async () => (await browserCookie(page, "fc_tz"))?.value)
       .toBe("Asia%2FTokyo");
     await expect(messageList(page, channel.name).getByRole("listitem").first()).toContainText(
       "20:40",

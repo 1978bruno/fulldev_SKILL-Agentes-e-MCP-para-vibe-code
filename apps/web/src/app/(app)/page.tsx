@@ -10,11 +10,11 @@ import { expiredSessionPath } from "@/app/utils/return-path";
 // na lista da Pessoa; senão, para a primeira da lista; sem nenhuma, "Home / Vazio".
 export default async function HomePage() {
   const token = await readSessionToken();
-  const result = token ? await listConversations(token) : ({ kind: "unauthenticated" } as const);
+  if (!token) redirect(expiredSessionPath("/"));
+  const [result, lastId] = await Promise.all([listConversations(token), readLastConversation()]);
   if (result.kind === "unauthenticated") redirect(expiredSessionPath("/"));
   if (result.kind === "failure") return <ConversationListError />;
 
-  const lastId = await readLastConversation();
   const target =
     result.conversations.find((conversation) => conversation.id === lastId) ??
     result.conversations[0];
