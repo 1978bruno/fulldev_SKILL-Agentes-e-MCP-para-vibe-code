@@ -1,6 +1,6 @@
 # 03: Histórico até a primeira Mensagem
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a Pessoa rola o Canal para cima e as Mensagens anteriores vão carregando,
 sem a Mensagem que ela lia sair do lugar, até chegar ao começo do Canal. Pelo teclado, faz o mesmo
