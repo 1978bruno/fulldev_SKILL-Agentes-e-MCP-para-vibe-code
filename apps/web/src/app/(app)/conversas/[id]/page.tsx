@@ -3,6 +3,7 @@ import { ConversationHeader } from "@/app/components/conversation/conversation-h
 import { MessageHistory } from "@/app/components/conversation/message-history";
 import { getConversation, listMessages } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
+import { readTimeZone } from "@/app/services/time-zone-cookie";
 import { expiredSessionPath } from "@/app/utils/return-path";
 
 // Uma Conversa: o cabeçalho e a página mais recente do histórico, lidos no servidor (spec da F02,
@@ -26,6 +27,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
+  const timeZone = await readTimeZone();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ConversationHeader name={conversation.name} topic={conversation.topic} />
@@ -33,6 +35,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         key={conversation.id}
         conversation={conversation}
         initialPage={pageResult.page}
+        timeZone={timeZone}
+        renderedAt={new Date().toISOString()}
       />
     </div>
   );

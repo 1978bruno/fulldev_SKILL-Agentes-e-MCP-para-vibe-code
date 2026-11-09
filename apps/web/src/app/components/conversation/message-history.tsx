@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
 import { SWRConfig } from "swr";
 import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
 import type { Conversation, MessagePage } from "@/app/services/chat-api";
+import { dayKey, labelForDay } from "@/app/utils/day-label";
+import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
 import { MessageComposer } from "./message-composer";
 
 type MessageHistoryProps = {
   conversation: Conversation;
   initialPage: MessagePage;
+  // Fuso das horas e dos dias, e o instante da renderização no servidor, que é o "agora" de
+  // "Hoje" e "Ontem" dos dois lados, para a hidratação não divergir.
+  timeZone: string;
+  renderedAt: string;
 };
 
 // Distância do topo em que o sentinela pede a página anterior (spec da F02, "Lista de Mensagens").
@@ -28,7 +34,7 @@ export function MessageHistory(props: MessageHistoryProps) {
   );
 }
 
-function History({ conversation, initialPage }: MessageHistoryProps) {
+function History({ conversation, initialPage, timeZone, renderedAt }: MessageHistoryProps) {
   const { messages, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
     useMessageHistory(conversation.id, initialPage);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,8 +44,26 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
     scrollRef.current?.setAttribute("data-ready", "");
   }, []);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  // Distância até o fim da área de rolagem, guardada antes de a página anterior entrar no começo.
-  const distanceFromBottom = useRef<number | null>(null);
+  // Âncora da rolagem, guardada antes de a página anterior entrar no começo: a Mensagem que abria
+  // a lista e a posição do fim dela na área visível. O fim, e não o topo, porque essa Mensagem
+  // pode virar compacta e perder o divisor quando a anterior chega, e encolhe por cima.
+  const anchor = useRef<{ id: string; bottom: number } | null>(null);
+  // A forma e o divisor de cada Mensagem, com o dia de cada uma calculado uma vez por lista.
+  const rows = useMemo(() => {
+    const today = dayKey(renderedAt, timeZone);
+    const withDays = messages.map((message) => ({
+      ...message,
+      day: dayKey(message.createdAt, timeZone),
+    }));
+    return withDays.map((message, index) => {
+      const previous = withDays[index - 1];
+      return {
+        message,
+        compact: isCompact(previous, message),
+        dayLabel: previous?.day === message.day ? undefined : labelForDay(message.day, today),
+      };
+    });
+  }, [messages, timeZone, renderedAt]);
   const firstId = messages[0]?.id;
   const lastId = messages.at(-1)?.id;
 
@@ -48,21 +72,23 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
-    distanceFromBottom.current = null;
+    anchor.current = null;
   }, [lastId]);
 
   // Quando a página anterior entra no começo, a Mensagem que a Pessoa lia fica no mesmo lugar: a
-  // rolagem é devolvida pela medida da altura, sem depender do overflow-anchor do navegador.
+  // rolagem é devolvida pela posição da âncora, sem depender do overflow-anchor do navegador.
   useLayoutEffect(() => {
     const element = scrollRef.current;
-    if (!element || distanceFromBottom.current === null) return;
-    element.scrollTop = element.scrollHeight - distanceFromBottom.current;
-    distanceFromBottom.current = null;
+    const saved = anchor.current;
+    anchor.current = null;
+    if (!element || !saved) return;
+    const bottom = anchorBottom(element, saved.id);
+    if (bottom !== null) element.scrollTop += bottom - saved.bottom;
   }, [firstId]);
 
   // Uma carga que falhou não devolve a rolagem depois.
   useEffect(() => {
-    if (olderFailed) distanceFromBottom.current = null;
+    if (olderFailed) anchor.current = null;
   }, [olderFailed]);
 
   // Quem pediu as anteriores pelo teclado não perde o foco quando a última página chega e o botão
@@ -76,7 +102,8 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
 
   function requestOlder() {
     const element = scrollRef.current;
-    if (element) distanceFromBottom.current = element.scrollHeight - element.scrollTop;
+    const bottom = element && firstId ? anchorBottom(element, firstId) : null;
+    anchor.current = firstId && bottom !== null ? { id: firstId, bottom } : null;
     hadButtonFocus.current = document.activeElement === loadOlderButtonRef.current;
     loadOlder();
   }
@@ -107,7 +134,7 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
         role="region"
         aria-label={`Histórico de #${conversation.name}`}
         tabIndex={0}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
+        className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
       >
         <div className="mt-auto" />
         {hasOlder ? (
@@ -135,8 +162,14 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
           <ConversationIntro name={conversation.name} topic={conversation.topic} />
         )}
         <ol aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
-          {messages.map((message) => (
-            <MessageItem key={message.id} message={message} />
+          {rows.map(({ message, compact, dayLabel }) => (
+            <MessageItem
+              key={message.id}
+              message={message}
+              timeZone={timeZone}
+              compact={compact}
+              dayLabel={dayLabel}
+            />
           ))}
         </ol>
       </div>
@@ -149,4 +182,11 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
       />
     </div>
   );
+}
+
+// Posição do fim da Mensagem em relação ao topo da área de rolagem.
+function anchorBottom(container: HTMLElement, messageId: string): number | null {
+  const item = container.querySelector(`[data-message-id="${CSS.escape(messageId)}"]`);
+  if (!item) return null;
+  return item.getBoundingClientRect().bottom - container.getBoundingClientRect().top;
 }

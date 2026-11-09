@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { BfcacheReload } from "@/app/components/bfcache-reload";
 import { AppLoading } from "@/app/components/session/app-loading";
 import { SessionError } from "@/app/components/session/session-error";
+import { TimeZoneSync } from "@/app/components/session/time-zone-sync";
 import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
 import { getCurrentPerson } from "@/app/services/chat-api";
@@ -44,6 +45,7 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen">
       <BfcacheReload />
+      <TimeZoneSync />
       <Rail person={result.person} />
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col bg-surface">{children}</main>

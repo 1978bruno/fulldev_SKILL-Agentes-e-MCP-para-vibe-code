@@ -6,6 +6,9 @@ O que é coberto é da spec da F02 ([spec.md](../../../docs/funcionalidades/02-m
 
 ## Visão geral
 
+O `playwright.config.ts` fixa o fuso do navegador em `America/Sao_Paulo`, o fuso padrão, e as horas
+esperadas nos testes ficam nele.
+
 A Pessoa vê os Canais públicos de que é Membro na barra lateral, abre um, lê as Mensagens e envia
 outras. Cada teste cria a própria Pessoa pela fixture `person` e os próprios Canais, direto no
 banco, com nome de prefixo `e2e-` e só as participações que o teste passa (`memberChannel` ou
@@ -59,6 +62,34 @@ banco, com nome de prefixo `e2e-` e só as participações que o teste passa (`m
     - expect: o título com o nome do Canal e o Tópico
     - expect: três itens na lista "Mensagens em #<nome>", com nome, hora no fuso padrão (08:40) e texto
     - expect: a última Mensagem visível e o foco na caixa de mensagem
+
+#### 2.2. mensagens-agrupadas-por-dia
+
+**File:** `e2e/conversa/mensagens-agrupadas-por-dia.spec.ts`
+
+**Steps:**
+  1. Abrir um Canal com uma Mensagem de ontem e três de hoje da Pessoa (meio-dia, +2 min, +30 min)
+    - expect: 4 itens, e os divisores "Ontem" e "Hoje" na lista
+    - expect: a de +2 min é compacta, sem o nome; a de +30 min volta à forma completa
+
+#### 2.3. links-e-texto-puro
+
+**File:** `e2e/conversa/links-e-texto-puro.spec.ts`
+
+**Steps:**
+  1. Abrir um Canal com "Veja https://example.com/docs." e um texto com `<b>` e `<img onerror>`
+    - expect: o link `https://example.com/docs`, sem o ponto, com `target="_blank"` e `rel="noopener noreferrer"`
+    - expect: a marcação aparece como texto, sem `<b>` nem `<img>` na lista, e o `onerror` não roda
+
+#### 2.4. hora-no-fuso-do-navegador
+
+**File:** `e2e/conversa/hora-no-fuso-do-navegador.spec.ts`
+
+**Steps:**
+  1. Com o navegador em `Asia/Tokyo`, abrir um Canal com uma Mensagem às 11:40 UTC
+    - expect: o cookie `fc_tz` vale `Asia/Tokyo`, e a hora é 20:40
+  2. Recarregar
+    - expect: a hora continua 20:40, sem aviso de hidratação no console
 
 ### 3. Enviar uma Mensagem
 
