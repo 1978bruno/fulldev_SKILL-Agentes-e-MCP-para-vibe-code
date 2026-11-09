@@ -1,15 +1,24 @@
 import { redirect } from "next/navigation";
+import { ConversationListError } from "@/app/components/conversation/conversation-list-error";
 import { EmptyState } from "@/app/components/ui/empty-state";
 import { listConversations } from "@/app/services/chat-api";
+import { readLastConversation } from "@/app/services/last-conversation-cookie";
 import { readSessionToken } from "@/app/services/session-cookie";
+import { expiredSessionPath } from "@/app/utils/return-path";
 
-// Home: vai para o primeiro Canal da lista; sem nenhum, "Home / Vazio". A última Conversa
-// visitada, o carregamento e o erro da lista entram na F02-T06.
+// Home (PRD da F02, história 2): vai para a última Conversa aberta naquele navegador, se ela está
+// na lista da Pessoa; senão, para a primeira da lista; sem nenhuma, "Home / Vazio".
 export default async function HomePage() {
   const token = await readSessionToken();
-  const result = token ? await listConversations(token) : null;
-  const first = result?.kind === "ok" ? result.conversations[0] : undefined;
-  if (first) redirect(`/conversas/${first.id}`);
+  const result = token ? await listConversations(token) : ({ kind: "unauthenticated" } as const);
+  if (result.kind === "unauthenticated") redirect(expiredSessionPath("/"));
+  if (result.kind === "failure") return <ConversationListError />;
+
+  const lastId = await readLastConversation();
+  const target =
+    result.conversations.find((conversation) => conversation.id === lastId) ??
+    result.conversations[0];
+  if (target) redirect(`/conversas/${target.id}`);
 
   return (
     <div className="flex flex-1 items-center justify-center">

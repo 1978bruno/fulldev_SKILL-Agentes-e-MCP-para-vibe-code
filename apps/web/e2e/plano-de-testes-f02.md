@@ -168,6 +168,24 @@ banco, com nome de prefixo `e2e-` e só as participações que o teste passa (`m
   1. Logada, com dois Canais, abrir `/`
     - expect: a URL é a do primeiro Canal em ordem alfabética
 
+#### 4.1.1. home-abre-a-ultima-conversa
+
+**File:** `e2e/conversa/home-abre-a-ultima-conversa.spec.ts`
+
+**Steps:**
+  1. Com dois Canais, abrir o segundo
+    - expect: o cookie `fc_last_conversation` com o id dele, `Path=/`, `SameSite=Lax` e 400 dias
+  2. Abrir a Home
+    - expect: a URL é a do segundo Canal
+
+#### 4.1.2. home-ignora-conversa-fora-da-lista
+
+**File:** `e2e/conversa/home-ignora-conversa-fora-da-lista.spec.ts`
+
+**Steps:**
+  1. Com dois Canais e um cookie com uma Conversa que não está na lista, abrir a Home
+    - expect: a URL é a do primeiro Canal em ordem alfabética
+
 #### 4.2. entrar-pelo-endereco-do-canal
 
 **File:** `e2e/conversa/entrar-pelo-endereco-do-canal.spec.ts`
