@@ -42,6 +42,19 @@ export const authRoutes = {
     return (response.body as { token: string }).token;
   },
 
+  // Pessoa nova, já com uma Sessão.
+  async loggedIn(
+    app: INestApplication,
+    overrides: { name?: string } = {},
+  ): Promise<{ person: Person; token: string; cookie: string }> {
+    const { person, email, password } = await authRoutes.createPerson(
+      app,
+      overrides,
+    );
+    const token = await authRoutes.login(app, email, password);
+    return { person, token, cookie: authRoutes.sessionCookie(token) };
+  },
+
   sessionCookie(token: string): string {
     return `${SESSION_COOKIE_NAME}=${token}`;
   },

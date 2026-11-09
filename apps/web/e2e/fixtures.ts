@@ -55,7 +55,7 @@ export const test = base.extend<Fixtures>({
 });
 
 // Entra pelo formulário da tela Entrar.
-async function logIn(page: Page, person: TestPerson): Promise<void> {
+export async function logIn(page: Page, person: TestPerson): Promise<void> {
   await page.goto("/entrar");
   await waitForLoginForm(page);
   await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);

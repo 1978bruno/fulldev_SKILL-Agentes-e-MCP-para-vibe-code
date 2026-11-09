@@ -33,33 +33,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   afterInit(server: RealtimeServer): void {
     const cookieName = this.config.get('SESSION_COOKIE_NAME', { infer: true });
     server.use((socket, next) => {
-      const token = readSessionCookie(
-        socket.handshake.headers.cookie,
-        cookieName,
-      );
-      this.sessions.authenticate(token).then(
-        ({ person, sessionId }) => {
-          socket.data.person = person;
-          socket.data.sessionId = sessionId;
-          next();
-        },
-        (error: unknown) => {
-          if (!(error instanceof UnauthenticatedError)) {
-            this.logger.error(
-              'Falha ao verificar a Sessão no handshake',
-              error,
-            );
-          }
-          // Outra falha também recusa, com outra mensagem: o cliente tenta de novo.
-          next(
-            new Error(
-              error instanceof UnauthenticatedError
-                ? UNAUTHENTICATED
-                : 'internal_error',
-            ),
-          );
-        },
-      );
+      void this.authenticateSocket(socket, cookieName, next);
     });
   }
 
@@ -68,5 +42,31 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       personRoom(socket.data.person.id),
       sessionRoom(socket.data.sessionId),
     ]);
+  }
+
+  // Grava a Pessoa e a Sessão no socket, ou recusa o handshake.
+  private async authenticateSocket(
+    socket: RealtimeSocket,
+    cookieName: string,
+    next: (error?: Error) => void,
+  ): Promise<void> {
+    const token = readSessionCookie(
+      socket.handshake.headers.cookie,
+      cookieName,
+    );
+    try {
+      const { person, sessionId } = await this.sessions.authenticate(token);
+      socket.data.person = person;
+      socket.data.sessionId = sessionId;
+      next();
+    } catch (error) {
+      if (error instanceof UnauthenticatedError) {
+        next(new Error(UNAUTHENTICATED));
+        return;
+      }
+      // Outra falha também recusa, com outra mensagem: o cliente tenta de novo.
+      this.logger.error('Falha ao verificar a Sessão no handshake', error);
+      next(new Error('internal_error'));
+    }
   }
 }

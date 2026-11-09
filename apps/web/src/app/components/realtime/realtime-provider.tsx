@@ -73,8 +73,6 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
         retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
       }
     });
-    setStatus("connecting");
-
     return () => {
       clearTimeout(retryTimer);
       socket.removeAllListeners();

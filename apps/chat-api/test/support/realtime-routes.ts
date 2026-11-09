@@ -3,20 +3,18 @@ import type { ClientToServerEvents, ServerToClientEvents } from 'chat-events';
 import { AddressInfo, Server } from 'node:net';
 import { io, Socket } from 'socket.io-client';
 import { createTestApp } from './create-test-app';
-import { SESSION_COOKIE_NAME } from './auth-routes';
+import { authRoutes } from './auth-routes';
 
 export type TestSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 // Mesma origem do WEB_ORIGIN do ambiente (compose.yaml).
-export const WEB_ORIGIN = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
-
-export interface ListeningTestApp {
-  app: INestApplication;
-  url: string;
-}
+const WEB_ORIGIN = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
 
 // A aplicação ouvindo em 127.0.0.1 numa porta livre, para os testes do WebSocket.
-export async function listenTestApp(): Promise<ListeningTestApp> {
+export async function listenTestApp(): Promise<{
+  app: INestApplication;
+  url: string;
+}> {
   const app = await createTestApp();
   await app.listen(0, '127.0.0.1');
   const server = app.getHttpServer() as Server;
@@ -33,17 +31,17 @@ export interface ConnectOptions {
 // Atalhos da base de testes para o WebSocket, no Arrange, sem asserção.
 export const realtimeRoutes = {
   // Um socket ainda sem conectar, com o cookie e a origem que o teste pede.
-  socket(url: string, options: ConnectOptions = {}): TestSocket {
+  socket(
+    url: string,
+    { token, origin = WEB_ORIGIN, cursor }: ConnectOptions = {},
+  ): TestSocket {
     const headers: Record<string, string> = {};
-    if (options.token) {
-      headers.cookie = `${SESSION_COOKIE_NAME}=${options.token}`;
-    }
-    const origin = options.origin === undefined ? WEB_ORIGIN : options.origin;
+    if (token) headers.cookie = authRoutes.sessionCookie(token);
     if (origin !== null) headers.origin = origin;
     return io(url, {
       transports: ['websocket'],
       extraHeaders: headers,
-      auth: options.cursor ? { cursor: options.cursor } : {},
+      auth: cursor ? { cursor } : {},
       reconnection: false,
       autoConnect: false,
       forceNew: true,

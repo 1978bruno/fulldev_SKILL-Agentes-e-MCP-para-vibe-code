@@ -1,6 +1,6 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
-import { expect, test } from "../fixtures";
+import { expect, logIn, test } from "../fixtures";
 import { insertChannel } from "../support/database";
 import { openRealtimeSockets, waitForRealtime } from "../support/realtime";
 
@@ -10,12 +10,8 @@ test.describe("Conexão em tempo real", () => {
     const sockets = openRealtimeSockets(page);
     const first = await insertChannel([person], { name: `e2e-a-${person.id}` });
     const second = await insertChannel([person], { name: `e2e-b-${person.id}` });
-    await page.goto("/entrar");
-    await page.locator("form[data-ready]").waitFor();
-    await page.getByRole("textbox", { name: "E-mail" }).fill(person.email);
-    await page.getByLabel("Senha").fill(person.password);
-    await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page).toHaveURL(`/conversas/${first.id}`, { timeout: 15_000 });
+    await logIn(page, person);
+    await expect(page).toHaveURL(`/conversas/${first.id}`);
     await waitForRealtime(page);
 
     // 2. Trocar de Canal pela barra lateral

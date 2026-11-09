@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { RealtimeGateway } from '../src/realtime/realtime.gateway';
+import { personRoom, sessionRoom } from '../src/realtime/realtime-socket';
 import { agingRoutes, minutesAgo } from './support/aging-routes';
 import { authRoutes } from './support/auth-routes';
 import {
@@ -25,11 +26,7 @@ describe('conexão do WebSocket', () => {
     await app.close();
   });
 
-  async function loggedIn(): Promise<{ personId: string; token: string }> {
-    const { person, email, password } = await authRoutes.createPerson(app);
-    const token = await authRoutes.login(app, email, password);
-    return { personId: person.id, token };
-  }
+  const loggedIn = () => authRoutes.loggedIn(app);
 
   async function connect(
     options: Parameters<typeof realtimeRoutes.connect>[1],
@@ -49,15 +46,17 @@ describe('conexão do WebSocket', () => {
   });
 
   it('põe o socket nas salas da Pessoa e da Sessão', async () => {
-    const { personId, token } = await loggedIn();
+    const { person, token } = await loggedIn();
     const { socket } = await connect({ token });
     const server = app.get(RealtimeGateway).server;
 
-    const [inPersonRoom] = await server.in(`person:${personId}`).fetchSockets();
+    const [inPersonRoom] = await server
+      .in(personRoom(person.id))
+      .fetchSockets();
     const [remote] = await server.in(socket.id!).fetchSockets();
 
     expect(inPersonRoom?.id).toBe(socket.id);
-    expect(remote.rooms).toContain(`session:${remote.data.sessionId}`);
+    expect(remote.rooms).toContain(sessionRoom(remote.data.sessionId));
   });
 
   it('recusa sem cookie com unauthenticated', async () => {
