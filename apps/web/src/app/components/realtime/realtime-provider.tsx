@@ -11,7 +11,7 @@ import { io, type Socket } from "socket.io-client";
 import type { Message } from "@/app/services/chat-api";
 import { messageFromEvent } from "@/app/utils/message-event";
 import { rememberMessage } from "@/app/utils/recent-messages";
-import { hasAskedToLeave } from "@/app/utils/leaving";
+import { clearLeaving, hasAskedToLeave } from "@/app/utils/leaving";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 export type RealtimeSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -77,6 +77,8 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
   const recent = useRef(new Map<string, readonly Message[]>());
 
   useEffect(() => {
+    // Uma conexão nova é de uma Sessão nova: a marca de quem saiu na anterior não vale mais.
+    clearLeaving();
     const socket: RealtimeSocket = io(url, {
       transports: ["websocket"],
       withCredentials: true,
@@ -96,15 +98,21 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       retryDelay = RETRY_MIN_MS;
       setStatus("connected");
     });
-    socket.on("disconnect", () => {
+    // A Sessão acabou (LLD, "Cliente", "Sessão no cliente"): o session.ended ou a desconexão pelo
+    // servidor, que vem logo depois dele, levam a "Entrar" uma vez só, como um 401 do REST. Na aba
+    // que pediu para sair, quem navega é o próprio sair.
+    let isEnding = false;
+    const endSession = () => {
+      if (isEnding || hasAskedToLeave()) return;
+      isEnding = true;
+      void redirectToExpiredSession();
+    };
+    socket.on("disconnect", (reason) => {
       lastSync.current = null;
+      if (reason === "io server disconnect") return endSession();
       setStatus("disconnected");
     });
-    // A Sessão acabou (LLD, "Sessão e login", "WebSocket"): como um 401 do REST. Na aba que pediu
-    // para sair, quem navega é o próprio sair.
-    socket.on("session.ended", () => {
-      if (!hasAskedToLeave()) void redirectToExpiredSession();
-    });
+    socket.on("session.ended", endSession);
     socket.on("connect_error", (error) => {
       if (error.message === UNAUTHENTICATED) {
         void redirectToExpiredSession();

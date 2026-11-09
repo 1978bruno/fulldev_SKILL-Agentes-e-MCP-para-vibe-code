@@ -88,11 +88,13 @@ describe('Sessão no WebSocket', () => {
     const { token } = await authRoutes.loggedIn(app);
     const socket = await connected(token);
     const ended = collectEvents(socket, 'session.ended');
+    const disconnected = nextDisconnection(socket);
     await agingRoutes.ageSession(app, token, { expiresAt: minutesAgo(1) });
 
     await app.get(RealtimeGateway).recheckSessions();
 
     await waitForCount(ended, 1);
+    expect(await disconnected).toBe('io server disconnect');
   });
 
   it('a reconferência renova a Sessão que vale', async () => {

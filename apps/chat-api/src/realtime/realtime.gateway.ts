@@ -51,10 +51,18 @@ export class RealtimeGateway
     this.stopListening = this.sessions.onSessionEnded((sessionId) =>
       this.endSession(server, sessionRoom(sessionId)),
     );
+    // Uma volta lenta não se sobrepõe à seguinte: a próxima só começa quando esta termina.
+    let isRechecking = false;
     this.recheckTimer = setInterval(() => {
-      this.recheckSessions().catch((error: unknown) =>
-        this.logger.error('Falha na reconferência das Sessões', error),
-      );
+      if (isRechecking) return;
+      isRechecking = true;
+      this.recheckSessions()
+        .catch((error: unknown) =>
+          this.logger.error('Falha na reconferência das Sessões', error),
+        )
+        .finally(() => {
+          isRechecking = false;
+        });
     }, SESSION_RECHECK_INTERVAL_MS);
     this.recheckTimer.unref();
     const cookieName = this.config.get('SESSION_COOKIE_NAME', { infer: true });
