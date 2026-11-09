@@ -173,6 +173,12 @@ function History({
     else setHasNewBelow(true);
   }, [newestSavedId, newestSavedClientId, scrollToEnd]);
 
+  // Tentar de novo também é um envio desta aba: a lista vai ao fim, como no primeiro envio.
+  function retryAndFollow(message: PendingMessage) {
+    retry(message);
+    scrollToEnd();
+  }
+
   // A pílula leva ao fim e passa o foco ao histórico, porque ela some.
   function goToNewMessages() {
     scrollToEnd();
@@ -279,7 +285,7 @@ function History({
                 compact={compact}
                 dayLabel={dayLabel}
                 status={message.status ?? "sent"}
-                onRetry={message.status ? () => retry(message as PendingMessage) : undefined}
+                onRetry={message.status ? () => retryAndFollow(message as PendingMessage) : undefined}
                 onDiscard={message.status ? () => discard(message.clientId) : undefined}
               />
             ))}
