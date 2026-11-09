@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 describe('subida da API', () => {
   it('a API não sobe sem DATABASE_URL e diz o nome da variável', () => {
-    const env: NodeJS.ProcessEnv = { ...process.env, PORT: '0' };
+    const env: NodeJS.ProcessEnv = { ...process.env };
     delete env.DATABASE_URL;
 
     const result = spawnSync('pnpm', ['exec', 'ts-node', 'src/main.ts'], {
