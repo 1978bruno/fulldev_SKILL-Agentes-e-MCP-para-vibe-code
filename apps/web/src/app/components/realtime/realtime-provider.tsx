@@ -29,7 +29,7 @@ type RealtimeContextValue = {
   // Assina os eventos da aba; devolve a função que cancela.
   subscribe: (listener: RealtimeListener) => () => void;
   // As Mensagens de uma Conversa recebidas desde a conexão (spec da F03, "Conexão por aba").
-  recentMessages: (conversationId: string) => Message[];
+  recentMessages: (conversationId: string) => readonly Message[];
 };
 
 const RealtimeContext = createContext<RealtimeContextValue>({
@@ -62,7 +62,7 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     socket: RealtimeSocket | null;
   }>({ status: "connecting", socket: null });
   const listeners = useRef(new Set<RealtimeListener>());
-  const recent = useRef(new Map<string, Message[]>());
+  const recent = useRef(new Map<string, readonly Message[]>());
 
   useEffect(() => {
     const socket: RealtimeSocket = io(url, {
@@ -120,7 +120,7 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
   }, []);
 
   const recentMessages = useCallback(
-    (conversationId: string) => recent.current.get(conversationId) ?? [],
+    (conversationId: string): readonly Message[] => recent.current.get(conversationId) ?? [],
     [],
   );
 

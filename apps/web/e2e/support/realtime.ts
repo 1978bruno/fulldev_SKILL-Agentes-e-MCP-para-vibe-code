@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { composer } from "./conversation-page";
 
 // Espera o socket da aba conectado: o provedor do tempo real marca o estado em data-realtime.
 export async function waitForRealtime(page: Page): Promise<void> {
@@ -24,7 +25,7 @@ export function openRealtimeSockets(page: Page): { count: () => number } {
 
 // Escreve e envia uma Mensagem pela caixa de mensagem do Canal aberto.
 export async function sendFromComposer(page: Page, channelName: string, text: string): Promise<void> {
-  const composer = page.getByRole("textbox", { name: `Mensagem para #${channelName}` });
-  await composer.fill(text);
-  await composer.press("Enter");
+  const box = composer(page, channelName);
+  await box.fill(text);
+  await box.press("Enter");
 }

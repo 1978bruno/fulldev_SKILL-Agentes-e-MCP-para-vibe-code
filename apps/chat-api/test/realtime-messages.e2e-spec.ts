@@ -1,8 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import type { MessageCreatedEvent } from 'chat-events';
 import { randomUUID } from 'node:crypto';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { authRoutes } from './support/auth-routes';
 import { conversationRoutes } from './support/conversation-routes';
 import {
@@ -37,15 +35,10 @@ describe('Mensagens em tempo real', () => {
     return socket;
   }
 
-  function send(
-    cookie: string,
-    conversationId: string,
-    clientId = randomUUID(),
-  ) {
-    return request(app.getHttpServer() as App)
-      .post(`/v1/conversations/${conversationId}/messages`)
-      .set('Cookie', cookie)
-      .send({ client_id: clientId, body: 'Chegou na hora' });
+  function send(cookie: string, conversationId: string, clientId?: string) {
+    return conversationRoutes.sendMessage(app, cookie, conversationId, {
+      clientId,
+    });
   }
 
   it('emite message.created para os Membros depois de gravar', async () => {

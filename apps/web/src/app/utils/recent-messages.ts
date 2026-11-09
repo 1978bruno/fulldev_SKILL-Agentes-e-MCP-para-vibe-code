@@ -1,4 +1,5 @@
 import type { Message } from "@/app/services/chat-api";
+import { insertById } from "./message-pages";
 
 // Quantas Mensagens recebidas o provedor guarda por Conversa (spec da F03, "Cliente").
 export const RECENT_MESSAGES_LIMIT = 100;
@@ -10,10 +11,9 @@ export function rememberMessage(
   recent: readonly Message[],
   message: Message,
   limit = RECENT_MESSAGES_LIMIT,
-): Message[] {
-  if (recent.some((existing) => existing.id === message.id)) return [...recent];
-  const position = recent.findLastIndex((existing) => existing.id < message.id) + 1;
-  return recent.toSpliced(position, 0, message).slice(-limit);
+): readonly Message[] {
+  if (recent.some((existing) => existing.id === message.id)) return recent;
+  return insertById(recent, message).slice(-limit);
 }
 
 // As Mensagens mais novas que `newestId`, ou todas sem ele.

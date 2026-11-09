@@ -61,7 +61,12 @@ function History({
     currentPerson,
     appendSaved,
   );
-  useRealtimeMessages(conversation.id, initialPage, { appendSaved, dropDelivered, reloadLatest });
+  useRealtimeMessages(conversation.id, initialPage, {
+    currentPersonId: currentPerson.id,
+    appendSaved,
+    dropDelivered,
+    reloadLatest,
+  });
   // As pendentes vêm sempre depois das gravadas, e passam pelo mesmo agrupamento.
   const messages = useMemo<(Message & { status?: PendingStatus })[]>(
     () => [...saved, ...pending],

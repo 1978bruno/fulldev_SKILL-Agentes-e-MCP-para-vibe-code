@@ -18,6 +18,16 @@ export function messageList(page: Page, channelName: string): Locator {
   return page.getByRole("list", { name: `Mensagens em #${channelName}` });
 }
 
+// Os itens da lista de Mensagens com o texto dado.
+export function messageItem(page: Page, channelName: string, text: string): Locator {
+  return messageList(page, channelName).getByRole("listitem").filter({ hasText: text });
+}
+
+// A caixa de mensagem do Canal.
+export function composer(page: Page, channelName: string): Locator {
+  return page.getByRole("textbox", { name: `Mensagem para #${channelName}` });
+}
+
 export function conversationIntro(page: Page, channelName: string): Locator {
   return page.getByRole("heading", { name: `Este é o começo do canal #${channelName}` });
 }

@@ -4,9 +4,15 @@
 // "ß" vira "SS".
 // O services/chat-api.ts as calcula no servidor, para o que é renderizado lá. O cliente as calcula
 // só para as Mensagens que chegam pelo tempo real, que nunca passam pela hidratação.
-const graphemes = new Intl.Segmenter("pt-BR", { granularity: "grapheme" });
+// Sem Intl.Segmenter (navegador antigo), cai no primeiro ponto de código, que ainda não parte um
+// caractere fora do BMP.
+const graphemes =
+  typeof Intl.Segmenter === "function"
+    ? new Intl.Segmenter("pt-BR", { granularity: "grapheme" })
+    : null;
 
 function firstGrapheme(text: string): string {
+  if (!graphemes) return Array.from(text)[0] ?? "";
   return graphemes.segment(text)[Symbol.iterator]().next().value?.segment ?? "";
 }
 

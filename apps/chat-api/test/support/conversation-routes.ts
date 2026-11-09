@@ -1,4 +1,7 @@
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import request from 'supertest';
+import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { ConversationsService } from '../../src/conversations/conversations.service';
 import { Conversation } from '../../src/conversations/conversation.entity';
@@ -15,6 +18,22 @@ export const conversationRoutes = {
     return app
       .get(ConversationsService)
       .createPublicChannel(options.name ?? uniqueChannelName(), options.topic);
+  },
+
+  // Pelo REST, como a web: a Mensagem é gravada e publicada.
+  sendMessage(
+    app: INestApplication,
+    cookie: string,
+    conversationId: string,
+    options: { clientId?: string; body?: string } = {},
+  ): request.Test {
+    return request(app.getHttpServer() as App)
+      .post(`/v1/conversations/${conversationId}/messages`)
+      .set('Cookie', cookie)
+      .send({
+        client_id: options.clientId ?? randomUUID(),
+        body: options.body ?? 'Chegou na hora',
+      });
   },
 
   async removeMembership(

@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { messageList } from "../support/conversation-page";
+import { messageItem } from "../support/conversation-page";
 import { insertChannel } from "../support/database";
 import { sendFromComposer, waitForRealtime } from "../support/realtime";
 
@@ -23,12 +23,12 @@ test.describe("Mensagem de outra Conversa", () => {
     // 2. A outra Pessoa envia no segundo Canal, e a primeira o abre pela barra lateral
     await sendFromComposer(otherPage, second.name, "No outro Canal");
     await expect(
-      messageList(otherPage, second.name).getByRole("listitem").filter({ hasText: "No outro Canal" }),
+      messageItem(otherPage, second.name, "No outro Canal"),
     ).toHaveCount(1);
     await page.getByRole("region", { name: "Canais" }).getByRole("link", { name: second.name }).click();
 
     await expect(
-      messageList(page, second.name).getByRole("listitem").filter({ hasText: "No outro Canal" }),
+      messageItem(page, second.name, "No outro Canal"),
     ).toHaveCount(1);
   });
 });

@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { messageList } from "../support/conversation-page";
+import { messageItem } from "../support/conversation-page";
 import { sendFromComposer, waitForRealtime } from "../support/realtime";
 
 test.describe("Mensagens chegando sem recarregar", () => {
@@ -20,9 +20,7 @@ test.describe("Mensagens chegando sem recarregar", () => {
     // 2. A outra Pessoa envia uma Mensagem
     await sendFromComposer(otherPage, sharedChannel.name, "Chegou sem recarregar");
 
-    const item = messageList(page, sharedChannel.name).getByRole("listitem").filter({
-      hasText: "Chegou sem recarregar",
-    });
+    const item = messageItem(page, sharedChannel.name, "Chegou sem recarregar");
     await expect(item).toHaveCount(1);
     await expect(item).toContainText(otherPerson.name);
   });
@@ -41,13 +39,9 @@ test.describe("Mensagens chegando sem recarregar", () => {
     // 2. Enviar pela segunda aba
     await sendFromComposer(secondTab, memberChannel.name, "Da outra aba");
 
-    const inFirst = messageList(page, memberChannel.name).getByRole("listitem").filter({
-      hasText: "Da outra aba",
-    });
+    const inFirst = messageItem(page, memberChannel.name, "Da outra aba");
     await expect(inFirst).toHaveCount(1);
-    const inSecond = messageList(secondTab, memberChannel.name).getByRole("listitem").filter({
-      hasText: "Da outra aba",
-    });
+    const inSecond = messageItem(secondTab, memberChannel.name, "Da outra aba");
     await expect(inSecond).toHaveCount(1);
     await expect(inSecond).not.toContainText("Enviando");
   });

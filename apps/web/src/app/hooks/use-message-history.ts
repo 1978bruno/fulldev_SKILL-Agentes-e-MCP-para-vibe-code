@@ -4,31 +4,29 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react"
 import useSWRInfinite from "swr/infinite";
 import type { Message, MessagePage } from "@/app/services/chat-api";
 import { appendToLatestPage, flattenPages } from "@/app/utils/message-pages";
+import { rememberMessage } from "@/app/utils/recent-messages";
+
+// Quantas Mensagens gravadas nesta abertura o histórico guarda para devolver ao cache.
+const SAVED_LIMIT = 100;
 import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 type PageKey = readonly ["messages", string, string | null];
 
-// Uma página anterior pela rota do BFF. A Sessão recusada leva a "Entrar"; a Conversa que deixou
-// de existir para a Pessoa recarrega a página, que mostra "Conversa não encontrada"; outra falha
-// vira erro do SWR, e o link "Carregar mensagens anteriores" tenta de novo.
-async function fetchOlderPage([, conversationId, before]: PageKey): Promise<MessagePage> {
+// Uma página do histórico pela rota do BFF: a mais recente sem `before`, ou a anterior a ele. A
+// Sessão recusada leva a "Entrar"; numa página anterior, a Conversa que deixou de existir para a
+// Pessoa recarrega a página, que mostra "Conversa não encontrada"; outra falha vira erro (do SWR,
+// e o link "Carregar mensagens anteriores" tenta de novo).
+async function fetchPage(conversationId: string, before?: string): Promise<MessagePage> {
+  const query = before ? `?before=${encodeURIComponent(before)}` : "";
   const response = await fetch(
-    `/api/conversations/${encodeURIComponent(conversationId)}/messages?before=${encodeURIComponent(before ?? "")}`,
+    `/api/conversations/${encodeURIComponent(conversationId)}/messages${query}`,
   );
   if (response.status === 401) return redirectToExpiredSession();
-  if (response.status === 404) {
+  if (response.status === 404 && before) {
     window.location.reload();
     return new Promise<never>(() => {});
   }
-  if (!response.ok) throw new Error("Não foi possível carregar as mensagens anteriores.");
-  return (await response.json()) as MessagePage;
-}
-
-// A página mais recente pela rota do BFF, sem `before`.
-async function fetchLatestPage(conversationId: string): Promise<MessagePage> {
-  const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/messages`);
-  if (response.status === 401) return redirectToExpiredSession();
-  if (!response.ok) throw new Error("Não foi possível recarregar as mensagens.");
+  if (!response.ok) throw new Error("Não foi possível carregar as mensagens.");
   return (await response.json()) as MessagePage;
 }
 
@@ -51,7 +49,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
       const oldest = previous?.messages[0];
       return previous?.hasMore && oldest ? ["messages", conversationId, oldest.id] : null;
     },
-    (key) => (key[2] === null ? Promise.resolve(latestPage.current) : fetchOlderPage(key)),
+    (key) => (key[2] === null ? Promise.resolve(latestPage.current) : fetchPage(key[1], key[2])),
     {
       fallbackData: [initialPage],
       revalidateOnMount: false,
@@ -74,13 +72,14 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     void setSize(pages.length + 1);
   }, [hasOlder, isLoadingOlder, pages.length, setSize]);
 
-  // As Mensagens gravadas nesta abertura. Uma carga de anteriores que começou antes de uma delas
-  // entrar no cache pode terminar depois e gravar as páginas sem ela; aqui ela volta.
-  const sent = useRef<Message[]>([]);
+  // As últimas Mensagens gravadas nesta abertura, pelo envio ou pelo tempo real. Uma carga de
+  // anteriores que começou antes de uma delas entrar no cache pode terminar depois e gravar as
+  // páginas sem ela; aqui ela volta.
+  const saved = useRef<readonly Message[]>([]);
 
-  const appendSent = useCallback(
+  const appendSaved = useCallback(
     (message: Message) => {
-      sent.current.push(message);
+      saved.current = rememberMessage(saved.current, message, SAVED_LIMIT);
       void mutate((current) => appendToLatestPage(current ?? [initialPage], message), {
         revalidate: false,
       });
@@ -90,7 +89,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
 
   useEffect(() => {
     const present = new Set(messages.map((message) => message.id));
-    const missing = sent.current.filter((message) => !present.has(message.id));
+    const missing = saved.current.filter((message) => !present.has(message.id));
     if (missing.length === 0) return;
     void mutate(
       (current) => missing.reduce(appendToLatestPage, current ?? [initialPage]),
@@ -101,14 +100,20 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
   // Com o reset do tempo real, o cache vira só a página mais recente, lida de novo pela rota do BFF,
   // como ao abrir a Conversa (spec da F03, "Mensagens no histórico"). Uma falha deixa o cache como
   // está.
+  const reloadRequest = useRef(0);
   const reloadLatest = useCallback(async () => {
+    // Dois resets seguidos: só a resposta do último vale.
+    const request = ++reloadRequest.current;
     let page: MessagePage;
     try {
-      page = await fetchLatestPage(conversationId);
+      page = await fetchPage(conversationId);
     } catch {
       return;
     }
+    if (request !== reloadRequest.current) return;
     latestPage.current = page;
+    // A página nova já traz as gravadas até aqui.
+    saved.current = [];
     await setSize(1);
     await mutate([page], { revalidate: false });
   }, [conversationId, mutate, setSize]);
@@ -119,8 +124,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     isLoadingOlder,
     olderFailed: Boolean(error),
     loadOlder,
-    // A Mensagem gravada, pelo envio ou pelo tempo real, entra no cache do mesmo jeito.
-    appendSaved: appendSent,
+    appendSaved,
     reloadLatest,
   };
 }

@@ -6,10 +6,7 @@
 // da suíte; roda no contêiner chat-api, no banco de testes:
 //   pnpm exec ts-node test/measure/message-latency.ts
 import '../support/test-env';
-import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { authRoutes } from '../support/auth-routes';
 import { conversationRoutes } from '../support/conversation-routes';
 import { listenTestApp, realtimeRoutes } from '../support/realtime-routes';
@@ -46,13 +43,12 @@ async function main(): Promise<void> {
   }
 
   const latencies: number[] = [];
-  const server = app.getHttpServer() as App;
   for (let index = 0; index < MESSAGES; index += 1) {
     const startedAt = performance.now();
-    const response = await request(server)
-      .post(`/v1/conversations/${channel.id}/messages`)
-      .set('Cookie', people[index % SOCKETS].cookie)
-      .send({ client_id: randomUUID(), body: `Medição ${index}` })
+    const response = await conversationRoutes
+      .sendMessage(app, people[index % SOCKETS].cookie, channel.id, {
+        body: `Medição ${index}`,
+      })
       .expect(201);
     const { id } = (response.body as { message: { id: string } }).message;
     const deadline = performance.now() + 5000;

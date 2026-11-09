@@ -6,6 +6,7 @@ import type { Message, MessagePage } from "@/app/services/chat-api";
 import { newerThan } from "@/app/utils/recent-messages";
 
 type Handlers = {
+  currentPersonId: string;
   appendSaved: (message: Message) => void;
   dropDelivered: (message: Message) => void;
   reloadLatest: () => Promise<void>;
@@ -17,14 +18,15 @@ type Handlers = {
 export function useRealtimeMessages(
   conversationId: string,
   initialPage: MessagePage,
-  { appendSaved, dropDelivered, reloadLatest }: Handlers,
+  { currentPersonId, appendSaved, dropDelivered, reloadLatest }: Handlers,
 ) {
   const { subscribe, recentMessages } = useRealtime();
 
   const receive = useEffectEvent((message: Message) => {
     if (message.conversationId !== conversationId) return;
     appendSaved(message);
-    dropDelivered(message);
+    // Só a Mensagem da própria Pessoa pode estar entre as pendentes.
+    if (message.author.id === currentPersonId) dropDelivered(message);
   });
   const onSync = useEffectEvent((reset: boolean) => {
     if (reset) void reloadLatest();
