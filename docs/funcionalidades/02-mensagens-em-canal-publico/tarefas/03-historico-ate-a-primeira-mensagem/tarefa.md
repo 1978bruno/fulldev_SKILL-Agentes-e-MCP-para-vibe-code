@@ -1,6 +1,6 @@
 # 03: Histórico até a primeira Mensagem
 
-**Status:** em andamento
+**Status:** concluída
 
 **O que construir:** a Pessoa rola o Canal para cima e as Mensagens anteriores vão carregando,
 sem a Mensagem que ela lia sair do lugar, até chegar ao começo do Canal. Pelo teclado, faz o mesmo
@@ -17,30 +17,30 @@ pelo link "Carregar mensagens anteriores". Referências:
 
 **Bloqueada por:** 02 (Abrir um Canal criado por comando e enviar uma Mensagem)
 
-- [ ] **CA1** · `GET /v1/conversations/:id/messages` aceita `before` e `limit` como o LLD
+- [x] **CA1** · `GET /v1/conversations/:id/messages` aceita `before` e `limit` como o LLD
   ("Interfaces"), devolve as Mensagens anteriores em ordem cronológica e `has_more`. `before`
   malformado e `limit` fora da faixa recebem `validation_failed`.
-- [ ] **CA2** · A rota do BFF `GET /api/conversations/:id/messages` repassa `before` à API pelo
+- [x] **CA2** · A rota do BFF `GET /api/conversations/:id/messages` repassa `before` à API pelo
   service HTTP e responde 401 sem Sessão, o que leva o cliente a "Entrar" com o `?para=` da
   Conversa.
-- [ ] **CA3** · Um sentinela no topo da lista carrega a página anterior ao chegar a 300 px da área
+- [x] **CA3** · Um sentinela no topo da lista carrega a página anterior ao chegar a 300 px da área
   visível, com o indicador 21:6830. Depois de acrescentar a página, a Mensagem que estava visível
   continua no mesmo lugar da tela, pela medida da altura antes e depois.
-- [ ] **CA4** · O link "Carregar mensagens anteriores" (21:6069) carrega a mesma página e é
+- [x] **CA4** · O link "Carregar mensagens anteriores" (21:6069) carrega a mesma página e é
   alcançável pelo teclado. A área de rolagem recebe foco e rola pelas setas e por Page Up e Page
   Down.
-- [ ] **CA5** · Se a carga das anteriores falha, as Mensagens já carregadas ficam, e o link volta a
+- [x] **CA5** · Se a carga das anteriores falha, as Mensagens já carregadas ficam, e o link volta a
   aparecer para tentar de novo.
-- [ ] **CA6** · Sem mais Mensagens, o topo mostra "Este é o começo do canal #nome" com o Tópico
+- [x] **CA6** · Sem mais Mensagens, o topo mostra "Este é o começo do canal #nome" com o Tópico
   (ConversationIntro, 21:4808). Um Canal sem Mensagens mostra só isso.
-- [ ] **CA7** · Os testes de ponta a ponta da API provam CA1: as páginas encadeadas cobrem o
+- [x] **CA7** · Os testes de ponta a ponta da API provam CA1: as páginas encadeadas cobrem o
   histórico inteiro sem repetir nem pular Mensagens, além do `has_more` verdadeiro e falso e do
   padrão e do máximo do `tamanho da página`.
-- [ ] **CA8** · O Playwright prova abrir nas mais recentes, rolar até o topo carregando as
+- [x] **CA8** · O Playwright prova abrir nas mais recentes, rolar até o topo carregando as
   anteriores sem mudar a Mensagem visível, o link pelo teclado e o começo do Canal, com um
   histórico montado pela fixture de Mensagens.
-- [ ] **CA9** · A `medicao-p95.md` desta pasta registra o p95 da primeira página e de uma página do
+- [x] **CA9** · A `medicao-p95.md` desta pasta registra o p95 da primeira página e de uma página do
   meio, direto na API, e o tempo até as Mensagens aparecerem na tela, num Canal com 100 mil
   Mensagens, contra o critério do PRD (história 4). O Canal da medição é apagado depois.
-- [ ] **CA10** · A validação visual de "Carregando anteriores", "Carregar mensagens anteriores" e
+- [x] **CA10** · A validação visual de "Carregando anteriores", "Carregar mensagens anteriores" e
   "Início do canal", nos dois temas, está registrada na pasta desta tarefa.
