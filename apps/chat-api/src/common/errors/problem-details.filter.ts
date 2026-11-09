@@ -12,6 +12,9 @@ import { ERROR_STATUS, ErrorCode } from './error-code';
 
 const DETAILS: Record<ErrorCode, string> = {
   validation_failed: 'Os dados enviados são inválidos.',
+  invalid_credentials: 'E-mail ou senha incorretos.',
+  unauthenticated: 'Sessão ausente ou inválida.',
+  email_already_exists: 'Já existe uma Pessoa com esse e-mail.',
   not_found: 'Recurso não encontrado.',
   payload_too_large: 'O corpo da requisição é grande demais.',
   request_rejected: 'A requisição foi recusada.',
