@@ -1,6 +1,6 @@
 # 07: Recuperar o que se perdeu sem recarregar
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** depois de uma queda de até 5 minutos, a Pessoa vê na Conversa aberta as
 Mensagens que chegaram no meio, na ordem, sem duplicar e sem recarregar a página. Se algo se perdeu
