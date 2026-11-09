@@ -1,6 +1,5 @@
 import { cva } from "class-variance-authority";
 import { cn } from "@/app/utils/cn";
-import { initials } from "@/app/utils/initials";
 
 const COLORS = [
   "bg-avatar-1",
@@ -32,19 +31,20 @@ function colorFor(seed: string): string {
 }
 
 type AvatarProps = {
-  name: string;
+  // Já calculadas no servidor (utils/initials.ts).
+  initials: string;
   seed: string;
   size?: "sm" | "md";
   className?: string;
 };
 
-export function Avatar({ name, seed, size, className }: AvatarProps) {
+export function Avatar({ initials, seed, size, className }: AvatarProps) {
   return (
     <span
       className={cn(avatarVariants({ size }), colorFor(seed), className)}
       aria-hidden
     >
-      {initials(name)}
+      {initials}
     </span>
   );
 }
