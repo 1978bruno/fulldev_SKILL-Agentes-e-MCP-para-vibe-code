@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f03.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { composer } from "../support/conversation-page";
+import { composer, typingNotice } from "../support/conversation-page";
 import { openSharedChannel } from "../support/realtime";
 
 test.describe("Digitando", () => {
@@ -13,10 +13,10 @@ test.describe("Digitando", () => {
     sharedChannel,
   }) => {
     // 1. A outra Pessoa escreve sem enviar
-    await openSharedChannel(page, otherPage, sharedChannel, person);
+    await openSharedChannel(page, otherPage, sharedChannel, person, { history: 0 });
     const box = composer(otherPage, sharedChannel.name);
     await box.pressSequentially("Já respondo");
-    const typing = page.getByText(`${otherPerson.name} está digitando…`);
+    const typing = typingNotice(page, otherPerson.name);
 
     await expect(typing).toBeVisible();
 
@@ -34,9 +34,9 @@ test.describe("Digitando", () => {
     sharedChannel,
   }) => {
     // 1. A outra Pessoa escreve e para
-    await openSharedChannel(page, otherPage, sharedChannel, person);
+    await openSharedChannel(page, otherPage, sharedChannel, person, { history: 0 });
     await composer(otherPage, sharedChannel.name).pressSequentially("Pensando");
-    const typing = page.getByText(`${otherPerson.name} está digitando…`);
+    const typing = typingNotice(page, otherPerson.name);
     await expect(typing).toBeVisible();
 
     await expect(typing).toHaveCount(0, { timeout: 8_000 });
@@ -49,12 +49,12 @@ test.describe("Digitando", () => {
     sharedChannel,
   }) => {
     // 1. A Pessoa escreve numa aba, com outra aba dela aberta no mesmo Canal
-    await openSharedChannel(page, otherPage, sharedChannel, person);
+    await openSharedChannel(page, otherPage, sharedChannel, person, { history: 0 });
     const secondTab = await page.context().newPage();
     await secondTab.goto(`/conversas/${sharedChannel.id}`);
     await composer(page, sharedChannel.name).pressSequentially("Só eu");
 
-    await expect(otherPage.getByText(`${person.name} está digitando…`)).toBeVisible();
+    await expect(typingNotice(otherPage, person.name)).toBeVisible();
     await expect(page.getByText("está digitando…")).toHaveCount(0);
     await expect(secondTab.getByText("está digitando…")).toHaveCount(0);
   });

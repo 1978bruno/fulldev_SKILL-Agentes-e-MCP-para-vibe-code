@@ -120,16 +120,12 @@ export function settle(ms = 300): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Abre a Conversa no socket e devolve a confirmação.
+// Abre a Conversa no socket e devolve a confirmação; falha se ela não chega em 2 s.
 export function openConversation(
   socket: TestSocket,
   conversationId: string,
 ): Promise<ConversationOpenResult> {
-  return new Promise((resolve) => {
-    socket.emit(
-      'conversation.open',
-      { conversation_id: conversationId },
-      resolve,
-    );
-  });
+  return socket
+    .timeout(2000)
+    .emitWithAck('conversation.open', { conversation_id: conversationId });
 }

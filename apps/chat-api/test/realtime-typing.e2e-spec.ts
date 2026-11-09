@@ -146,4 +146,22 @@ describe('"digitando" em tempo real', () => {
     await settle();
     expect(received).toHaveLength(0);
   });
+
+  it('sair da Conversa avisa que parou de digitar', async () => {
+    const [typistMember, readerMember] = await members(2);
+    const channel = await conversationRoutes.createChannel(app);
+    const typist = await withOpenConversation(typistMember, channel.id);
+    const reader = await withOpenConversation(readerMember, channel.id);
+    const stopped = collectEvents(reader.socket, 'typing.stop');
+    typist.socket.emit('typing.start', { conversation_id: channel.id });
+
+    typist.socket.emit('conversation.close', { conversation_id: channel.id });
+
+    expect(await waitForCount(stopped, 1)).toEqual([
+      {
+        conversation_id: channel.id,
+        person: { id: typist.person.id, name: typist.person.name },
+      },
+    ]);
+  });
 });

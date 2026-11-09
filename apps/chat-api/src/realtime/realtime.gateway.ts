@@ -60,11 +60,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     @ConnectedSocket() socket: RealtimeSocket,
     @MessageBody() event: ConversationRef,
   ): Promise<ConversationOpenResult> {
-    const conversationId = event?.conversation_id;
+    const conversationId = conversationIdOf(event) ?? '';
+    socket.data.requestedConversationId = conversationId;
     try {
       await this.conversations.getForMember(
         socket.data.person.id,
-        typeof conversationId === 'string' ? conversationId : '',
+        conversationId,
       );
     } catch (error) {
       if (error instanceof ConversationNotFoundError) {
@@ -72,9 +73,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       }
       throw error;
     }
-    const previous = socket.data.conversationId;
-    if (previous && previous !== conversationId) {
-      await socket.leave(conversationRoom(previous));
+    // Outra abertura, ou o fechamento, chegou enquanto esta conferia a participação.
+    if (socket.data.requestedConversationId !== conversationId) {
+      return { ok: true };
+    }
+    if (socket.data.conversationId !== conversationId) {
+      await this.leaveConversation(socket);
     }
     socket.data.conversationId = conversationId;
     await socket.join(conversationRoom(conversationId));
@@ -86,9 +90,28 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     @ConnectedSocket() socket: RealtimeSocket,
     @MessageBody() event: ConversationRef,
   ): Promise<void> {
-    if (socket.data.conversationId !== event?.conversation_id) return;
+    const conversationId = conversationIdOf(event);
+    if (!conversationId) return;
+    if (socket.data.requestedConversationId === conversationId) {
+      socket.data.requestedConversationId = undefined;
+    }
+    if (socket.data.conversationId === conversationId) {
+      await this.leaveConversation(socket);
+    }
+  }
+
+  // Sai da sala da Conversa aberta. Quem estava digitando nela deixa de estar para os outros, sem
+  // esperar o prazo vencer.
+  private async leaveConversation(socket: RealtimeSocket): Promise<void> {
+    const conversationId = socket.data.conversationId;
+    if (!conversationId) return;
+    this.relayTyping(
+      socket,
+      { conversation_id: conversationId },
+      'typing.stop',
+    );
     socket.data.conversationId = undefined;
-    await socket.leave(conversationRoom(event.conversation_id));
+    await socket.leave(conversationRoom(conversationId));
   }
 
   @SubscribeMessage('typing.start')
@@ -114,16 +137,13 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     event: ConversationRef,
     name: 'typing.start' | 'typing.stop',
   ): void {
-    const conversationId = event?.conversation_id;
-    if (
-      typeof conversationId !== 'string' ||
-      !socket.rooms.has(conversationRoom(conversationId))
-    ) {
-      return;
-    }
+    const conversationId = conversationIdOf(event);
+    if (!conversationId) return;
+    const room = conversationRoom(conversationId);
+    if (!socket.rooms.has(room)) return;
     const { id, name: personName } = socket.data.person;
     socket
-      .to(conversationRoom(conversationId))
+      .to(room)
       .except(personRoom(id))
       .emit(name, {
         conversation_id: conversationId,
@@ -158,4 +178,12 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       next(new Error('internal_error'));
     }
   }
+}
+
+// O id da Conversa de um evento da aba, que pode chegar sem carga ou com outro tipo.
+function conversationIdOf(
+  event: ConversationRef | undefined,
+): string | undefined {
+  const conversationId = event?.conversation_id;
+  return typeof conversationId === 'string' ? conversationId : undefined;
 }

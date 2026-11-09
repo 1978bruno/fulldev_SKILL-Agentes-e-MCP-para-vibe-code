@@ -10,50 +10,52 @@ import {
   TYPING_EXPIRY_MS,
 } from "@/app/utils/typing";
 
-// Abre a Conversa no socket da aba (spec da F03, "Digitando"): ao montar e a cada conexão, e fecha
-// ao desmontar.
-export function useOpenConversation(conversationId: string) {
-  const { socket } = useRealtime();
-  useEffect(() => {
-    if (!socket) return;
-    const open = () =>
-      socket.emit("conversation.open", { conversation_id: conversationId }, () => {});
-    if (socket.connected) open();
-    socket.on("connect", open);
-    return () => {
-      socket.off("connect", open);
-      socket.emit("conversation.close", { conversation_id: conversationId });
-    };
-  }, [socket, conversationId]);
-}
-
-// Os avisos de quem escreve: a caixa de mensagem chama `onTextChange` a cada mudança do texto e
-// `onSent` ao enviar; trocar de Conversa avisa que parou.
+// A Conversa aberta no socket da aba e os avisos de quem escreve nela (spec da F03, "Digitando").
+// A Conversa é aberta ao montar e a cada conexão, e fechada ao desmontar, depois do aviso de que
+// parou. A caixa de mensagem chama `onTextChange` a cada mudança do texto, inclusive o
+// esvaziamento depois do envio. A confirmação da abertura e a queda rearmam o aviso: um aviso
+// mandado antes de a aba entrar na sala se perde, e o próximo não pode esperar o intervalo.
 export function useTypingAnnouncer(conversationId: string) {
   const { socket } = useRealtime();
   const lastAnnouncedAt = useRef<number | null>(null);
 
-  const stop = useCallback(() => {
-    if (lastAnnouncedAt.current === null) return;
-    lastAnnouncedAt.current = null;
-    socket?.emit("typing.stop", { conversation_id: conversationId });
+  useEffect(() => {
+    if (!socket) return;
+    const rearm = () => {
+      lastAnnouncedAt.current = null;
+    };
+    const open = () =>
+      socket.emit("conversation.open", { conversation_id: conversationId }, rearm);
+    if (socket.connected) open();
+    socket.on("connect", open);
+    socket.on("disconnect", rearm);
+    return () => {
+      socket.off("connect", open);
+      socket.off("disconnect", rearm);
+      if (lastAnnouncedAt.current !== null) {
+        socket.emit("typing.stop", { conversation_id: conversationId });
+      }
+      rearm();
+      socket.emit("conversation.close", { conversation_id: conversationId });
+    };
   }, [socket, conversationId]);
 
   const onTextChange = useCallback(
     (text: string) => {
-      const announcement = shouldAnnounce(text, lastAnnouncedAt.current, Date.now());
-      if (announcement === "stop") return stop();
-      if (announcement === "start") {
-        lastAnnouncedAt.current = Date.now();
+      const now = Date.now();
+      const announcement = shouldAnnounce(text, lastAnnouncedAt.current, now);
+      if (announcement === "stop") {
+        lastAnnouncedAt.current = null;
+        socket?.emit("typing.stop", { conversation_id: conversationId });
+      } else if (announcement === "start") {
+        lastAnnouncedAt.current = now;
         socket?.emit("typing.start", { conversation_id: conversationId });
       }
     },
-    [socket, conversationId, stop],
+    [socket, conversationId],
   );
 
-  useEffect(() => stop, [stop]);
-
-  return { onTextChange, onSent: stop };
+  return { onTextChange };
 }
 
 // Quem está digitando na Conversa, em ordem de chegada. Cada aviso (re)arma o prazo da
@@ -62,11 +64,10 @@ export function useTypingAnnouncer(conversationId: string) {
 export function useTypingPeople(conversationId: string): readonly Typer[] {
   const { socket } = useRealtime();
   const [typers, setTypers] = useState<readonly Typer[]>([]);
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   useEffect(() => {
     if (!socket) return;
-    const pending = timers.current;
+    const pending = new Map<string, ReturnType<typeof setTimeout>>();
     const remove = (personId: string) => {
       clearTimeout(pending.get(personId));
       pending.delete(personId);
@@ -76,7 +77,7 @@ export function useTypingPeople(conversationId: string): readonly Typer[] {
       if (conversation_id !== conversationId) return;
       clearTimeout(pending.get(person.id));
       pending.set(person.id, setTimeout(() => remove(person.id), TYPING_EXPIRY_MS));
-      setTypers((current) => addTyper(current, { id: person.id, name: person.name }));
+      setTypers((current) => addTyper(current, person));
     };
     const onStop = ({ conversation_id, person }: { conversation_id: string; person: Typer }) => {
       if (conversation_id === conversationId) remove(person.id);

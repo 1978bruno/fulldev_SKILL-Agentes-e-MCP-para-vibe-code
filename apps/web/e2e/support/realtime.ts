@@ -31,15 +31,16 @@ export async function sendFromComposer(page: Page, channelName: string, text: st
   await box.press("Enter");
 }
 
-// As duas Pessoas no Canal em comum, com histórico para rolar, conectadas; devolve o histórico da
-// primeira.
+// As duas Pessoas no Canal em comum, conectadas, com histórico para rolar (sem ele, `history: 0`);
+// devolve o histórico da primeira.
 export async function openSharedChannel(
   page: Page,
   otherPage: Page,
   channel: TestChannel,
   person: TestPerson,
+  { history = 40 }: { history?: number } = {},
 ) {
-  await insertHistory(channel, person, 40);
+  if (history > 0) await insertHistory(channel, person, history);
   await page.goto(`/conversas/${channel.id}`);
   await otherPage.goto(`/conversas/${channel.id}`);
   await waitForRealtime(page);
