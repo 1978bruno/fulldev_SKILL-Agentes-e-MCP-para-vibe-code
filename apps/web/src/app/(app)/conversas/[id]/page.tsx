@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
+import { ConversationHeaderSkeleton } from "@/app/components/conversation/conversation-header-skeleton";
 import { HistoryError } from "@/app/components/conversation/history-error";
 import { HistoryLoading } from "@/app/components/conversation/history-loading";
 import { MessageHistory } from "@/app/components/conversation/message-history";
@@ -28,12 +29,16 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
 
   // As três leituras começam juntas; só a da Conversa segura o cabeçalho.
   const history = Promise.all([getCurrentPerson(token), listMessages(token, id)]);
+  // Se a página sair antes de esperar o histórico, a falha dele não fica sem tratamento; quem o
+  // espera recebe a mesma rejeição.
+  history.catch(() => {});
   const conversationResult = await getConversation(token, id);
   if (conversationResult.kind === "unauthenticated") redirect(expiredSessionPath(path));
   if (conversationResult.kind === "not_found") notFound();
   if (conversationResult.kind !== "ok") {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
+        <ConversationHeaderSkeleton />
         <HistoryError />
       </div>
     );
@@ -70,7 +75,6 @@ async function ConversationHistory({ conversation, history, path }: Conversation
   const { id: authorId, name, initials } = personResult.person;
   return (
     <MessageHistory
-      key={conversation.id}
       conversation={conversation}
       initialPage={pageResult.page}
       timeZone={timeZone}
