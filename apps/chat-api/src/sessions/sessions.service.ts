@@ -1,13 +1,12 @@
-import { randomUUIDv7 } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { Env } from '../config/env.schema';
+import { RENEWAL_INTERVAL_DAYS } from '../config/session-values';
 import { PeopleService } from '../people/people.service';
 import { Person } from '../people/person.entity';
 import { InvalidCredentialsError } from './invalid-credentials.error';
-import { RENEWAL_INTERVAL_DAYS } from './session-renewal';
 import { Session } from './session.entity';
 import { generateSessionToken, hashSessionToken } from './session-token';
 import { UnauthenticatedError } from './unauthenticated.error';
@@ -37,28 +36,26 @@ export class SessionsService {
     return this.startSession(person);
   }
 
-  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu. O FOR SHARE trava a
-  // linha da Pessoa: um reset-password que troca a senha ao mesmo tempo faz esta inserção esperar
-  // e reavaliar o hash (e não inserir), e a troca que começa depois espera a inserção terminar,
-  // para a revogação que vem em seguida apagar a Sessão.
+  // Cria a Sessão só se o hash da senha ainda for o que o login conferiu: um reset-password ao
+  // mesmo tempo não deixa uma Sessão aberta com a senha antiga.
   async startSession(person: Person): Promise<LoginResult> {
     const token = generateSessionToken();
     const now = new Date();
-    const inserted = await this.sessions.query<{ id: string }[]>(
-      `INSERT INTO sessions (id, person_id, token_hash, expires_at, last_used_at)
-       SELECT $1, id, $2, $3, $4 FROM people WHERE id = $5 AND password_hash = $6
-       FOR SHARE
-       RETURNING id`,
-      [
-        randomUUIDv7(),
-        hashSessionToken(token),
-        this.expiresFrom(now),
-        now,
-        person.id,
-        person.passwordHash,
-      ],
+    const created = await this.people.withPasswordUnchanged(
+      person,
+      (manager) => {
+        const sessions = manager.getRepository(Session);
+        return sessions.save(
+          sessions.create({
+            personId: person.id,
+            tokenHash: hashSessionToken(token),
+            expiresAt: this.expiresFrom(now),
+            lastUsedAt: now,
+          }),
+        );
+      },
     );
-    if (inserted.length === 0) {
+    if (!created) {
       throw new InvalidCredentialsError();
     }
     return { token, person };
