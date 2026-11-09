@@ -1,6 +1,6 @@
 # 01: Conexão em tempo real autenticada
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** cada aba logada abre um WebSocket direto na API do chat e fica conectada
 enquanto a Pessoa troca de Conversa. Sem Sessão, ou de outra origem, a conexão é recusada e a aba

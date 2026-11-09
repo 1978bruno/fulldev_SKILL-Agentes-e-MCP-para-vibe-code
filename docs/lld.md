@@ -130,7 +130,8 @@ novas tentativas e idempotência").
   vencida só leva a um 401. `Lax` não atrapalha o WebSocket, porque `app.` e `api.` são o mesmo
   site.
 - **CSRF:** sem token anti-CSRF. As mutações do navegador são Server Actions, que conferem o
-  cabeçalho `Origin`; o handshake do WebSocket confere a origem contra `WEB_ORIGIN`.
+  cabeçalho `Origin`; o handshake do WebSocket confere a origem contra `WEB_ORIGIN`, no
+  `allowRequest` do Socket.IO, porque o transporte `websocket` não passa por CORS.
 - **Identificador de sessão:** token aleatório de 32 bytes, entregue ao BFF uma vez, ao entrar.
   O Banco do chat guarda só o SHA-256 dele, então um vazamento do banco não dá Sessões válidas. O
   token nunca vai para o log.
@@ -542,7 +543,7 @@ substitui cada serviço de produção segue o HLD, seção 9, "Implantação e a
 | `chat-api` | `apps/chat-api/Dockerfile.dev` (Node 26, pnpm 11) | 3001 (3000 no contêiner) | API do chat |
 | `postgres` | `postgres:18` | 5432 | Banco do chat, dos agentes e de negócio |
 | `s3` | `chrislusf/seaweedfs:4.52` (`weed mini`) | 8333 | Substituto do armazenamento compatível com S3, com o bucket `reports` |
-| `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://web:3000` e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
+| `e2e` | Imagem oficial do Playwright, na mesma versão do `@playwright/test` do `web` | — | Roda os testes de ponta a ponta do `web` contra `http://localhost:3000`, encaminhado para a web, e o `playwright-cli`; sobe só pelo `profile` e fica parado, como `web` e `chat-api` |
 
 O Redis entra com a F03 (`redis:8`, porta 6379, eventos de reconexão), `planejado`. Entram
 depois os serviços `agents` e `worker`, quando `apps/agents` existir.
@@ -589,6 +590,11 @@ usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário,
   mesmo contêiner. O `playwright-cli` é o do `@playwright/test` instalado no `web`, sem instalação
   global, e o relatório HTML não abre sozinho (`PLAYWRIGHT_HTML_OPEN=never` no ambiente do
   serviço).
+- **Endereços no contêiner `e2e`:** o navegador do teste abre a web e a API por `localhost`, como o
+  da máquina: um encaminhador de portas em Node, que o serviço sobe junto, liga `localhost:3000` a
+  `web:3000` e `localhost:3001` a `chat-api:3000`. Com os nomes dos serviços, o cookie de sessão,
+  gravado para o host da web, não iria ao WebSocket da API, que é outro host; em `localhost` os
+  cookies valem para as duas portas.
 - **Dados dos testes da web:** o Playwright roda contra o ambiente de desenvolvimento, no banco
   `chat`. Cada teste cria a própria Pessoa, com e-mail de prefixo `e2e-` no domínio `teste.local`,
   e as Pessoas de teste ficam no banco até serem apagadas pelo prefixo ou por um `down -v`.
