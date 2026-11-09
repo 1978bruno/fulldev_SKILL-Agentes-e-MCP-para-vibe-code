@@ -26,10 +26,7 @@ export class MessagesController {
     @Param('conversationId') conversationId: string,
     @Query() query: ListMessagesQuery,
   ): Promise<{ messages: MessageResponse[]; has_more: boolean }> {
-    const page = await this.messages.listPage(person.id, conversationId, {
-      before: query.before,
-      limit: query.limit,
-    });
+    const page = await this.messages.listPage(person.id, conversationId, query);
     return {
       messages: page.messages.map(toMessageResponse),
       has_more: page.hasMore,

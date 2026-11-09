@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { SWRConfig } from "swr";
 import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
@@ -63,13 +63,11 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
     if (element) distanceFromBottom.current = element.scrollHeight - element.scrollTop;
     loadOlder();
   }
-  const requestOlderRef = useRef(requestOlder);
-  useLayoutEffect(() => {
-    requestOlderRef.current = requestOlder;
-  });
+  const onSentinelVisible = useEffectEvent(requestOlder);
 
   // O sentinela no topo pede a página anterior quando chega perto da área visível. Depois de uma
-  // falha, ele espera o link.
+  // falha, ele espera o link. O observer é recriado a cada vez que volta a observar, o que já
+  // confere de novo se o sentinela está à vista.
   const canObserve = hasOlder && !isLoadingOlder && !olderFailed;
   useEffect(() => {
     const root = scrollRef.current;
@@ -77,13 +75,13 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
     if (!canObserve || !root || !sentinel) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) requestOlderRef.current();
+        if (entries.some((entry) => entry.isIntersecting)) onSentinelVisible();
       },
       { root, rootMargin: `${LOAD_OLDER_MARGIN_PX}px 0px 0px 0px` },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [canObserve, firstId]);
+  }, [canObserve]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

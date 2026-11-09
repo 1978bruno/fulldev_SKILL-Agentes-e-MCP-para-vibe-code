@@ -2,6 +2,7 @@
 // seed: e2e/seed.spec.ts
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "../fixtures";
+import { messageList } from "../support/conversation-page";
 import { insertChannel, insertMessages, insertPerson } from "../support/database";
 
 test.describe("Acessibilidade", () => {
@@ -15,7 +16,7 @@ test.describe("Acessibilidade", () => {
       { author: person, body: "Bom dia!", at: new Date("2026-11-09T11:41:00Z") },
     ]);
     await page.goto(`/conversas/${channel.id}`);
-    await expect(page.getByRole("list", { name: `Mensagens em #${channel.name}` })).toBeVisible();
+    await expect(messageList(page, channel.name)).toBeVisible();
 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });

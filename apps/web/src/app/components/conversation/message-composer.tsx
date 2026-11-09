@@ -7,7 +7,7 @@ import { IconButton } from "@/app/components/ui/icon-button";
 import { Kbd } from "@/app/components/ui/kbd";
 import type { Message } from "@/app/services/chat-api";
 import { newClientId } from "@/app/utils/client-id";
-import { expiredSessionPath } from "@/app/utils/return-path";
+import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 type MessageComposerProps = {
   conversationId: string;
@@ -39,7 +39,7 @@ export function MessageComposer({
         // Só esvazia se a Pessoa não escreveu mais nada enquanto o envio corria.
         setText((current) => (current === body ? "" : current));
       } else if (result.kind === "unauthenticated") {
-        window.location.assign(expiredSessionPath(window.location.pathname));
+        await redirectToExpiredSession();
       }
     });
   }

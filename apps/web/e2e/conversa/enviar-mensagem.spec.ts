@@ -1,13 +1,14 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
+import { messageList } from "../support/conversation-page";
 
 test.describe("Enviar uma Mensagem", () => {
   test("enviar-mensagem", async ({ page, person, memberChannel: channel, loggedInPage }) => {
     void loggedInPage;
     await page.goto(`/conversas/${channel.id}`);
     const caixa = page.getByRole("textbox", { name: `Mensagem para #${channel.name}` });
-    const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
+    const mensagens = messageList(page, channel.name);
 
     // 1. Uma linha, Shift+Enter, outra linha e Enter
     await caixa.pressSequentially("linha um");

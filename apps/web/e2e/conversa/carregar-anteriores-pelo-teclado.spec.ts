@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { readyHistory } from "../support/conversation-page";
+import { conversationIntro, messageList, readyHistory } from "../support/conversation-page";
 import { insertHistory } from "../support/database";
 
 test.describe("Histórico até a primeira Mensagem", () => {
@@ -28,7 +28,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     await insertHistory(channel, person, 60);
     await page.goto(`/conversas/${channel.id}`);
     const historico = await readyHistory(page, channel.name);
-    const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
+    const mensagens = messageList(page, channel.name);
     const caixa = page.getByRole("textbox", { name: `Mensagem para #${channel.name}` });
     await expect(caixa).toBeFocused();
 
@@ -56,7 +56,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
 
     await expect(mensagens.getByRole("listitem")).toHaveCount(60);
     await expect(
-      page.getByRole("heading", { name: `Este é o começo do canal #${channel.name}` }),
+      conversationIntro(page, channel.name),
     ).toBeVisible();
   });
 });

@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { MessageHistory } from "@/app/components/conversation/message-history";
-import { getConversation, listLatestMessages } from "@/app/services/chat-api";
+import { getConversation, listMessages } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
 import { expiredSessionPath } from "@/app/utils/return-path";
 
@@ -15,7 +15,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
 
   const [conversationResult, pageResult] = await Promise.all([
     getConversation(token, id),
-    listLatestMessages(token, id),
+    listMessages(token, id),
   ]);
   if (conversationResult.kind === "unauthenticated" || pageResult.kind === "unauthenticated") {
     redirect(expiredSessionPath(path));

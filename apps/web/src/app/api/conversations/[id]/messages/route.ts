@@ -10,17 +10,12 @@ export async function GET(
 ) {
   const { id } = await params;
   const token = await readSessionToken();
-  if (!token) return Response.json({ kind: "unauthenticated" }, { status: 401 });
   const before = request.nextUrl.searchParams.get("before") ?? undefined;
-  const result = await listMessages(token, id, { before });
-  switch (result.kind) {
-    case "ok":
-      return Response.json(result.page);
-    case "unauthenticated":
-      return Response.json({ kind: "unauthenticated" }, { status: 401 });
-    case "not_found":
-      return Response.json({ kind: "not_found" }, { status: 404 });
-    default:
-      return Response.json({ kind: "failure" }, { status: 502 });
-  }
+  const result = token
+    ? await listMessages(token, id, { before })
+    : ({ kind: "unauthenticated" } as const);
+  if (result.kind === "ok") return Response.json(result.page);
+  return Response.json({ kind: result.kind }, { status: ERROR_STATUS[result.kind] });
 }
+
+const ERROR_STATUS = { unauthenticated: 401, not_found: 404, failure: 502 } as const;

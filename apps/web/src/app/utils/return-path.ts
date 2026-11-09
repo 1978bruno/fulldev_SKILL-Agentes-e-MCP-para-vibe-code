@@ -67,3 +67,11 @@ export function isVerificationFailed(
 export function expiredSessionPath(returnPath: unknown): string {
   return withReturnPath("/api/session/expired", returnPath);
 }
+
+// No cliente, a Sessão recusada leva a "Entrar" pela rota do BFF que apaga o cookie, com o caminho
+// atual no "para". Devolve uma promessa que não termina: a página já está indo embora, e quem
+// esperava a resposta não deve mostrar falha nesse meio-tempo.
+export function redirectToExpiredSession(): Promise<never> {
+  window.location.assign(expiredSessionPath(window.location.pathname));
+  return new Promise<never>(() => {});
+}

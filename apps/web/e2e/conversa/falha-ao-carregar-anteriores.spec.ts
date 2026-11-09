@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { readyHistory, scrollHistoryToTop } from "../support/conversation-page";
+import { conversationIntro, messageList, readyHistory, scrollHistoryToTop } from "../support/conversation-page";
 import { insertHistory } from "../support/database";
 
 test.describe("Histórico até a primeira Mensagem", () => {
@@ -14,7 +14,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     void loggedInPage;
     await insertHistory(channel, person, 60);
     await page.goto(`/conversas/${channel.id}`);
-    const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
+    const mensagens = messageList(page, channel.name);
     await expect(mensagens.getByRole("listitem")).toHaveCount(50);
 
     // 1. Com a rota das anteriores fora do ar, rolar até o topo
@@ -33,7 +33,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
 
     await expect(mensagens.getByRole("listitem")).toHaveCount(60);
     await expect(
-      page.getByRole("heading", { name: `Este é o começo do canal #${channel.name}` }),
+      conversationIntro(page, channel.name),
     ).toBeVisible();
   });
 });

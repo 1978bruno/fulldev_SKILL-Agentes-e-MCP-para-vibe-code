@@ -4,7 +4,7 @@ import { useCallback, useMemo } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { Message, MessagePage } from "@/app/services/chat-api";
 import { appendToLatestPage, flattenPages } from "@/app/utils/message-pages";
-import { expiredSessionPath } from "@/app/utils/return-path";
+import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 type PageKey = readonly ["messages", string, string | null];
 
@@ -14,9 +14,7 @@ async function fetchOlderPage([, conversationId, before]: PageKey): Promise<Mess
   const response = await fetch(
     `/api/conversations/${encodeURIComponent(conversationId)}/messages?before=${encodeURIComponent(before ?? "")}`,
   );
-  if (response.status === 401) {
-    window.location.assign(expiredSessionPath(window.location.pathname));
-  }
+  if (response.status === 401) return redirectToExpiredSession();
   if (!response.ok) throw new Error("Não foi possível carregar as mensagens anteriores.");
   return (await response.json()) as MessagePage;
 }
@@ -69,7 +67,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     messages,
     hasOlder,
     isLoadingOlder,
-    olderFailed: Boolean(error) && !isLoadingOlder,
+    olderFailed: Boolean(error),
     loadOlder,
     appendSent,
   };

@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { readyHistory, scrollHistoryToTop } from "../support/conversation-page";
+import { conversationIntro, messageList, readyHistory, scrollHistoryToTop } from "../support/conversation-page";
 import { insertHistory } from "../support/database";
 
 test.describe("Histórico até a primeira Mensagem", () => {
@@ -10,7 +10,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     // 1. Abrir um Canal com 75 Mensagens: a página mais recente tem 50
     await insertHistory(channel, person, 75);
     await page.goto(`/conversas/${channel.id}`);
-    const mensagens = page.getByRole("list", { name: `Mensagens em #${channel.name}` });
+    const mensagens = messageList(page, channel.name);
     await expect(mensagens.getByRole("listitem")).toHaveCount(50);
     await expect(mensagens.getByRole("listitem").last()).toContainText("Mensagem 75");
 
@@ -34,7 +34,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     // 3. Rolar até o topo de novo: o começo do Canal
     await scrollHistoryToTop(historico);
     await expect(
-      page.getByRole("heading", { name: `Este é o começo do canal #${channel.name}` }),
+      conversationIntro(page, channel.name),
     ).toBeVisible();
   });
 });

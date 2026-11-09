@@ -1,7 +1,7 @@
 // spec: e2e/plano-de-testes-f02.md
 // seed: e2e/seed.spec.ts
 import { expect, test } from "../fixtures";
-import { readyHistory, scrollHistoryToTop } from "../support/conversation-page";
+import { messageList, readyHistory, scrollHistoryToTop } from "../support/conversation-page";
 import { deleteSessionsOf, insertHistory } from "../support/database";
 
 test.describe("Histórico até a primeira Mensagem", () => {
@@ -15,7 +15,7 @@ test.describe("Histórico até a primeira Mensagem", () => {
     await insertHistory(channel, person, 60);
     await page.goto(`/conversas/${channel.id}`);
     await expect(
-      page.getByRole("list", { name: `Mensagens em #${channel.name}` }).getByRole("listitem"),
+      messageList(page, channel.name).getByRole("listitem"),
     ).toHaveCount(50);
 
     // 1. Revogar a Sessão e rolar até o topo

@@ -256,13 +256,6 @@ export async function listMessages(
   };
 }
 
-export function listLatestMessages(
-  token: string,
-  conversationId: string,
-): Promise<MessagePageResult> {
-  return listMessages(token, conversationId);
-}
-
 export async function sendMessage(
   token: string,
   conversationId: string,
