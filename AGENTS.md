@@ -55,7 +55,7 @@ O `--wait` segura o primeiro comando só até o `postgres` e o `s3` ficarem pron
 docker compose -f compose.yaml --profile e2e up -d e2e
 ```
 
-Os comandos que rodam nele estão no `apps/web/AGENTS.md`. Ele cai junto no `down`.
+Os comandos que rodam nele estão no `apps/web/AGENTS.md`. Para derrubá-lo junto com o resto, use `docker compose -f compose.yaml --profile e2e down`; sem o `--profile`, o `down` deixa o `e2e` de pé.
 
 **Derrubar**
 

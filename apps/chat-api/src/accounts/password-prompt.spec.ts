@@ -56,4 +56,16 @@ describe('TtyPasswordPrompt', () => {
 
     await expect(second).resolves.toBe('senha-nova');
   });
+
+  it('no terminal, setas e teclas de controle não entram na senha', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const answer = passwords.ask('Senha: ');
+
+    input.write('senha');
+    input.write('\u001b[D');
+    input.write('\u0004-certa\r');
+
+    await expect(answer).resolves.toBe('senha-certa');
+  });
 });

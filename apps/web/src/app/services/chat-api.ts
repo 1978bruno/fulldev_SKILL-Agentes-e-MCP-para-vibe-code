@@ -21,9 +21,10 @@ export type CurrentPersonResult =
 
 async function request(path: string, init: RequestInit): Promise<Response | null> {
   // Chamada de tempo de requisição: o pré-render para aqui (o fetch e o tempo limite leem o
-  // relógio, o que o Next recusa durante o pré-render).
+  // relógio, o que o Next recusa durante o pré-render). Fora do try: o sinal do Next que
+  // interrompe o pré-render não pode virar uma "falha da API".
+  await connection();
   try {
-    await connection();
     return await fetch(new URL(path, env.CHAT_API_URL), {
       ...init,
       cache: "no-store",
@@ -36,12 +37,8 @@ async function request(path: string, init: RequestInit): Promise<Response | null
 }
 
 async function errorCode(response: Response): Promise<string | undefined> {
-  try {
-    const body = (await response.json()) as { code?: unknown };
-    return typeof body.code === "string" ? body.code : undefined;
-  } catch {
-    return undefined;
-  }
+  const body = await jsonBody<{ code?: unknown }>(response);
+  return typeof body?.code === "string" ? body.code : undefined;
 }
 
 // O corpo também corre contra o tempo limite e pode chegar quebrado: vira failure, sem lançar.
@@ -96,11 +93,17 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   return { kind: "failure" };
 }
 
-// Sair: apaga na API a Sessão apresentada. O resultado não muda nada para quem chama: o BFF
-// apaga o cookie de qualquer jeito (spec da F01, "Menu do avatar").
+// Sair: apaga na API a Sessão apresentada. O BFF apaga o cookie de qualquer jeito (spec da F01,
+// "Menu do avatar"); quando a API não confirma, a Sessão pode seguir válida no banco, e isso fica
+// no log.
 export async function logout(token: string): Promise<void> {
-  await request("/v1/sessions/current", {
+  const response = await request("/v1/sessions/current", {
     method: "DELETE",
     headers: { cookie: sessionCookieHeader(token) },
   });
+  if (response?.status !== 204 && response?.status !== 401) {
+    console.warn(
+      `Saída sem confirmação da API do chat (status ${response?.status ?? "sem resposta"})`,
+    );
+  }
 }

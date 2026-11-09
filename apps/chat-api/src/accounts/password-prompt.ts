@@ -59,6 +59,8 @@ export class TtyPasswordPrompt implements PasswordPrompt {
             return true;
           }
           if (char === CTRL_U) password = '';
+          // Outras teclas de controle (Ctrl+D, Tab) não fazem parte da senha.
+          else if (char < ' ' && !BACKSPACE.has(char)) continue;
           // Apaga o último ponto de código inteiro, e não meio par de surrogates (um emoji).
           else if (BACKSPACE.has(char))
             password = Array.from(password).slice(0, -1).join('');
@@ -67,6 +69,9 @@ export class TtyPasswordPrompt implements PasswordPrompt {
         return false;
       };
       const onData = (chunk: string) => {
+        // Setas e outras teclas especiais chegam como sequência de escape inteira num pedaço só:
+        // não fazem parte da senha.
+        if (chunk.startsWith('\u001b')) return;
         consume(chunk);
       };
       this.input.setRawMode(true);

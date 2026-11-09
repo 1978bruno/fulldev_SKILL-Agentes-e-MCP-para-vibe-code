@@ -5,7 +5,7 @@ import { hash, verify } from '@node-rs/argon2';
 // Argon2id com os parâmetros padrão da biblioteca (m=19456, t=2, p=1: o mínimo da OWASP).
 @Injectable()
 export class PasswordHasher implements OnModuleInit {
-  private dummyHash?: Promise<string>;
+  private dummyHash!: Promise<string>;
 
   // Gerado na subida: gerar no primeiro e-mail sem conta faria essa resposta levar o dobro.
   async onModuleInit(): Promise<void> {
@@ -24,7 +24,6 @@ export class PasswordHasher implements OnModuleInit {
   // Verifica contra um hash fictício, para o e-mail sem conta levar o mesmo tempo
   // que a senha errada (LLD, "Segurança").
   async verifyDummy(password: string): Promise<false> {
-    this.dummyHash ??= hash(randomBytes(32).toString('base64url'));
     await verify(await this.dummyHash, password);
     return false;
   }
