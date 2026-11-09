@@ -1,10 +1,10 @@
-import { getCurrentPerson } from "@/app/services/chat-api";
 import { type NextRequest } from "next/server";
-import { loginPath, safeReturnPath } from "@/app/utils/return-path";
+import { getCurrentPerson } from "@/app/services/chat-api";
 import {
   deleteSessionCookie,
   readSessionToken,
 } from "@/app/services/session-cookie";
+import { loginPath, safeReturnPath } from "@/app/utils/return-path";
 
 // O layout logado manda para cá quando a API recusa a Sessão, porque um Server Component não
 // apaga cookie. A Sessão é conferida de novo antes de apagar, para um link de outro site não
