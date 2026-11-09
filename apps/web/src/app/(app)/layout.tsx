@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Spinner } from "@/app/components/ui/spinner";
@@ -5,6 +6,10 @@ import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
 import { getCurrentPerson } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
+import {
+  expiredSessionPath,
+  REQUESTED_PATH_HEADER,
+} from "@/app/utils/return-path";
 
 // Layout das telas logadas: verifica a Sessão na API do chat a cada renderização
 // (LLD, "Cliente", "Sessão no cliente").
@@ -21,7 +26,8 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const result = token ? await getCurrentPerson(token) : null;
   if (result?.kind !== "ok") {
     // Um Server Component não apaga cookie: a rota do BFF apaga e leva a "Entrar".
-    redirect("/api/session/expired");
+    const requestedPath = (await headers()).get(REQUESTED_PATH_HEADER);
+    redirect(expiredSessionPath(requestedPath));
   }
 
   return (

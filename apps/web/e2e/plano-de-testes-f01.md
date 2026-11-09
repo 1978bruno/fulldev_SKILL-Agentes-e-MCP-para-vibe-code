@@ -73,8 +73,8 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
 **File:** `e2e/login/sessao-desconhecida-volta-para-entrar.spec.ts`
 
 **Steps:**
-  1. Com um cookie de sessão cujo token a API não conhece, abrir `/`
-    - expect: a URL é `/entrar`
+  1. Com um cookie de sessão cujo token a API não conhece, abrir `/?aba=fixados`
+    - expect: a URL é `/entrar?para=%2F%3Faba%3Dfixados`
     - expect: o cookie de sessão deixa de existir
 
 ### 3. Erros ao entrar
@@ -113,3 +113,42 @@ F01-T04 (`falha-no-envio.md`).
     - expect: o axe não encontra violações na tela com os erros
   3. Entrar com a Pessoa
     - expect: o axe não encontra violações na Home
+
+### 5. Voltar para onde ia
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 5.1. entrar-por-link-profundo
+
+**File:** `e2e/login/entrar-por-link-profundo.spec.ts`
+
+**Steps:**
+  1. Sem Sessão, abrir `/canais/geral?aba=fixados`
+    - expect: a URL é `/entrar?para=%2Fcanais%2Fgeral%3Faba%3Dfixados`
+  2. Entrar com a Pessoa
+    - expect: a URL é `/canais/geral?aba=fixados` (a rota ainda não existe na F01; o destino basta)
+
+#### 5.2. para-externo-cai-na-home
+
+**File:** `e2e/login/para-externo-cai-na-home.spec.ts`
+
+**Steps:** um caso para cada `para`: `//outro-site`, `https://outro-site` e `/\outro-site`.
+  1. Abrir `/entrar?para=<valor>` e entrar com a Pessoa
+    - expect: a URL é `/` e a Home aparece
+
+#### 5.3. logada-em-entrar-vai-para-a-home
+
+**File:** `e2e/login/logada-em-entrar-vai-para-a-home.spec.ts`
+
+**Steps:**
+  1. Logada, abrir `/entrar`
+    - expect: a URL é `/` e a Home aparece
+
+#### 5.4. sessao-desconhecida-em-entrar-mostra-o-formulario
+
+**File:** `e2e/login/sessao-desconhecida-em-entrar-mostra-o-formulario.spec.ts`
+
+**Steps:**
+  1. Com um cookie de sessão que a API não conhece, abrir `/entrar`
+    - expect: a URL continua `/entrar`, com o formulário
+    - expect: o cookie de sessão deixa de existir

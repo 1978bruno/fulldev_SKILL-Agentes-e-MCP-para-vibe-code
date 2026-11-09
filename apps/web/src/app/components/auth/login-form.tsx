@@ -28,7 +28,12 @@ const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
 
 const INITIAL_STATE: LoginState = { status: "idle" };
 
-export function LoginForm() {
+type LoginFormProps = {
+  // Caminho pedido antes de "Entrar", já conferido; o Server Action confere de novo.
+  returnPath: string;
+};
+
+export function LoginForm({ returnPath }: LoginFormProps) {
   const [state, formAction, isPending] = useActionState(login, INITIAL_STATE);
   // Erros da validação no cliente; os do Server Action chegam pelo state.
   const [clientErrors, setClientErrors] = useState<LoginFieldErrors>({});
@@ -111,6 +116,7 @@ export function LoginForm() {
         onSubmit={handleSubmit}
         noValidate
       >
+        <input type="hidden" name="para" value={returnPath} />
         <Field label="E-mail" htmlFor="email" error={emailError} errorId="email-error">
           <Input
             ref={emailRef}
