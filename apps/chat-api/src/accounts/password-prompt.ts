@@ -14,6 +14,9 @@ export class TtyPasswordPrompt implements PasswordPrompt {
   // no terminal ou redirecionada) fica para a próxima pergunta.
   private pending = '';
   private ended = false;
+  // No terminal, um Enter pode chegar como "\r\n", às vezes partido entre dois pedaços: o "\n"
+  // logo depois de um "\r" não é uma segunda resposta vazia.
+  private skipLineFeed = false;
 
   constructor(
     private readonly input: NodeJS.ReadStream = process.stdin,
@@ -42,10 +45,12 @@ export class TtyPasswordPrompt implements PasswordPrompt {
         const chars = Array.from(chunk);
         for (let i = 0; i < chars.length; i += 1) {
           const char = chars[i];
+          const skip = this.skipLineFeed && char === '\n';
+          this.skipLineFeed = false;
+          if (skip) continue;
           if (ENTER.has(char)) {
-            const rest = chars.slice(i + 1).join('');
-            this.pending =
-              chars[i] === '\r' && rest.startsWith('\n') ? rest.slice(1) : rest;
+            this.skipLineFeed = char === '\r';
+            this.pending = chars.slice(i + 1).join('');
             finish();
             return true;
           }

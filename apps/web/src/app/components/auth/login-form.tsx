@@ -17,7 +17,10 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
-import { LOGIN_FEEDBACK_PARAM } from "@/app/utils/login-feedback";
+import { VERIFICATION_FAILED_PARAM } from "@/app/utils/return-path";
+
+// Mesmo nome de services/login-feedback.ts, que só roda no servidor.
+const LOGIN_FEEDBACK_COOKIE = "fc_login_feedback";
 
 const INVALID_CREDENTIALS =
   "E-mail ou senha incorretos. Confira os dados e tente de novo.";
@@ -82,15 +85,13 @@ export function LoginForm({ returnPath, initialState }: LoginFormProps) {
   // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
   useEffect(() => {
     formRef.current?.setAttribute("data-ready", "");
-    // As marcas de verificação que falhou e de falha do envio nativo servem só para esta
-    // abertura: saem da URL, para recarregar a página não repetir a mensagem nem pular a
-    // verificação da Sessão.
+    // A marca de verificação que falhou e o resultado do envio nativo servem só para esta
+    // abertura: saem da URL e do cookie, para recarregar a página não repetir a mensagem nem
+    // pular a verificação da Sessão.
+    document.cookie = `${LOGIN_FEEDBACK_COOKIE}=; Path=/entrar; Max-Age=0`;
     const url = new URL(window.location.href);
-    const marks = ["verificacao", LOGIN_FEEDBACK_PARAM].filter((mark) =>
-      url.searchParams.has(mark),
-    );
-    if (marks.length > 0) {
-      for (const mark of marks) url.searchParams.delete(mark);
+    if (url.searchParams.has(VERIFICATION_FAILED_PARAM)) {
+      url.searchParams.delete(VERIFICATION_FAILED_PARAM);
       window.history.replaceState(window.history.state, "", url);
     }
   }, []);

@@ -43,4 +43,17 @@ describe('TtyPasswordPrompt', () => {
 
     expect(second).toBe('senha-nova');
   });
+
+  it('no terminal, um \\r\\n partido entre dois pedaços vale um Enter só', async () => {
+    const input = new PassThrough();
+    const passwords = prompt(input, true);
+    const first = passwords.ask('Senha: ');
+    input.write('senha-nova\r');
+    await first;
+    const second = passwords.ask('Confirme a senha: ');
+
+    input.write('\nsenha-nova\r');
+
+    await expect(second).resolves.toBe('senha-nova');
+  });
 });

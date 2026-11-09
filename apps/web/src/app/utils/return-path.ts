@@ -27,7 +27,7 @@ export function safeReturnPath(value: unknown): string {
 
 // Marca em "Entrar" que a verificação da Sessão acabou de falhar: a página mostra o formulário
 // sem verificar o cookie de novo, e a nova tentativa fica para a Pessoa.
-const VERIFICATION_FAILED_PARAM = "verificacao";
+export const VERIFICATION_FAILED_PARAM = "verificacao";
 const VERIFICATION_FAILED_VALUE = "falhou";
 
 function withReturnPath(
@@ -48,14 +48,6 @@ function withReturnPath(
 // Endereço de "Entrar" levando o caminho pedido, quando ele é seguro e não é a Home.
 export function loginPath(returnPath: unknown): string {
   return withReturnPath("/entrar", returnPath);
-}
-
-// "Entrar" depois de um envio nativo do login que não entrou, com o tipo da falha.
-export function loginPathWithFeedback(
-  returnPath: unknown,
-  feedback: { param: string; value: string },
-): string {
-  return withReturnPath("/entrar", returnPath, { [feedback.param]: feedback.value });
 }
 
 // "Entrar" depois de uma verificação que falhou por rede ou servidor (o cookie fica).

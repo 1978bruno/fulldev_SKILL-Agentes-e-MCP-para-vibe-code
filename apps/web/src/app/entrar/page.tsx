@@ -3,10 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/components/auth/login-form";
 import { getCurrentPerson } from "@/app/services/chat-api";
-import {
-  LOGIN_FEEDBACK_PARAM,
-  loginStateFromFeedback,
-} from "@/app/utils/login-feedback";
+import { readLoginFeedback } from "@/app/services/login-feedback";
 import { readSessionToken } from "@/app/services/session-cookie";
 import {
   expiredSessionPath,
@@ -45,7 +42,7 @@ async function LoginGate({
   return (
     <LoginForm
       returnPath={returnPath}
-      initialState={loginStateFromFeedback(params[LOGIN_FEEDBACK_PARAM])}
+      initialState={await readLoginFeedback()}
     />
   );
 }

@@ -63,7 +63,7 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
 **Steps:**
   1. Abrir `/entrar` com os bundles do Next bloqueados (o React não hidrata)
   2. Enviar com a senha errada
-    - expect: a URL é `/entrar?falha=credenciais` e a mensagem de dados incorretos aparece
+    - expect: a página volta a `/entrar` e a mensagem de dados incorretos aparece (o resultado vem num cookie de vida curta, e não na URL)
   3. Enviar com a senha certa
     - expect: a URL é `/` (o envio nativo é um POST para a Server Action, sem a senha na URL)
 

@@ -14,7 +14,7 @@ test.describe("Entrar", () => {
     await page.getByLabel("Senha").fill("senha-errada");
     await page.getByRole("button", { name: "Entrar" }).click();
 
-    await expect(page).toHaveURL("/entrar?falha=credenciais");
+    await expect(page).toHaveURL("/entrar");
     await expect(page.getByText("E-mail ou senha incorretos.", { exact: false })).toBeVisible();
 
     // 3. Enviar com a senha certa: o POST nativo para a Server Action entra e cai na Home

@@ -26,7 +26,14 @@ export function SessionError() {
     const frame = requestAnimationFrame(() => {
       region.textContent = `${TITLE}. ${DESCRIPTION}`;
     });
-    return () => cancelAnimationFrame(frame);
+    // Depois do anúncio, a região esvazia, para o texto não ser lido de novo na navegação.
+    const clear = setTimeout(() => {
+      region.textContent = "";
+    }, 3000);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(clear);
+    };
   }, [isPending]);
 
   return (

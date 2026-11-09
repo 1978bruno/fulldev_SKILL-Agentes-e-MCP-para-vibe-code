@@ -8,12 +8,8 @@ import {
   validateLogin,
   type LoginFieldErrors,
 } from "@/app/utils/login-validation";
-import { LOGIN_FEEDBACK_PARAM, loginFeedbackValue } from "@/app/utils/login-feedback";
-import {
-  loginPath,
-  loginPathWithFeedback,
-  safeReturnPath,
-} from "@/app/utils/return-path";
+import { writeLoginFeedback } from "@/app/services/login-feedback";
+import { loginPath, safeReturnPath } from "@/app/utils/return-path";
 
 export type LoginState =
   | { status: "idle" }
@@ -49,15 +45,10 @@ export async function login(
 }
 
 // O mesmo login, como ação nativa do <form>: funciona antes da hidratação. O login certo
-// redireciona; nos outros casos a página volta a "Entrar" com o tipo da falha na URL (sem o
-// e-mail), e o formulário mostra a mensagem.
+// redireciona; nos outros casos a página volta a "Entrar", e o resultado vai num cookie de vida
+// curta para o formulário mostrar a mensagem.
 export async function submitLogin(formData: FormData): Promise<void> {
   const state = await login({ status: "idle" }, formData);
-  const value = loginFeedbackValue(state);
-  const para = formData.get("para");
-  redirect(
-    value
-      ? loginPathWithFeedback(para, { param: LOGIN_FEEDBACK_PARAM, value })
-      : loginPath(para),
-  );
+  await writeLoginFeedback(state);
+  redirect(loginPath(formData.get("para")));
 }
