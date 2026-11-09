@@ -22,6 +22,7 @@ docker compose -f compose.yaml exec web <comando>
 | `pnpm dev --hostname 0.0.0.0` | Sobe o servidor de desenvolvimento (`http://localhost:3000`) |
 | `pnpm lint` | ESLint com as regras do `eslint-config-next` |
 | `pnpm exec tsc --noEmit` | Checagem de tipos |
+| `pnpm test` | Testes de unidade das funções puras, com o Vitest (`src/**/*.test.ts`, em Node) |
 | `pnpm build` | Compila a aplicação para produção |
 
 Os testes de ponta a ponta rodam no contêiner `e2e` (`AGENTS.md` da raiz, "Subir e derrubar"), com a web e a API do chat de pé:
@@ -43,8 +44,9 @@ A imagem do `e2e` tem npm, e não pnpm: os dois comandos só chamam o que o `pnp
 
 1. `pnpm lint`
 2. `pnpm exec tsc --noEmit`
-3. `pnpm build`
-4. `npm run test:e2e`, no contêiner `e2e`, com a web e a API do chat de pé
+3. `pnpm test`
+4. `pnpm build`
+5. `npm run test:e2e`, no contêiner `e2e`, com a web e a API do chat de pé
 
 ## Server Components
 

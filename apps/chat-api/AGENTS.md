@@ -95,6 +95,14 @@ Antes de adicionar um import num arquivo de service, confira em qual dos dois gr
 
 A mesma regra vale para o repository: ele não importa nada de HTTP.
 
+### Transações
+
+Uma operação que grava por services de módulos diferentes roda numa transação só, que passa de um service a outro pelo contexto do CLS (`@nestjs-cls/transactional`, registrado no `DatabaseModule`):
+
+- **Quem orquestra** marca o método com `@Transactional()`.
+- **Quem participa** acessa o banco pelo `TransactionHost<TransactionalAdapterTypeOrm>` (`txHost.tx.getRepository(Entidade)`), e não por um repositório injetado com `@InjectRepository`. Fora de uma transação, o `txHost.tx` usa o gerenciador comum. O exemplo é o `PeopleService`.
+- **Fora do HTTP** (comandos, rotinas), quem chama os services envolve a execução com `ClsService.run`, como o `cli.ts` do comando de contas. No HTTP, o middleware do `ClsModule` abre o contexto.
+
 ### Erros
 
 O service lança erro de domínio, e só o exception filter global conhece o HTTP.
