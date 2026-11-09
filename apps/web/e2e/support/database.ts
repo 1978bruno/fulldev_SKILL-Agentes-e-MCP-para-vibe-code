@@ -120,3 +120,11 @@ export function insertHistory(
     })),
   );
 }
+
+export async function countMessagesWithBody(channel: TestChannel, body: string): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    "SELECT count(*) FROM messages WHERE conversation_id = $1 AND body = $2",
+    [channel.id, body],
+  );
+  return Number(result.rows[0].count);
+}

@@ -21,3 +21,19 @@ export function messageList(page: Page, channelName: string): Locator {
 export function conversationIntro(page: Page, channelName: string): Locator {
   return page.getByRole("heading", { name: `Este é o começo do canal #${channelName}` });
 }
+
+// O envio de Mensagem é um Server Action: um POST para a própria página, com o cabeçalho
+// next-action. `handler` decide o que fazer com cada envio.
+export async function routeSendMessage(
+  page: Page,
+  handler: Parameters<Page["route"]>[1],
+): Promise<() => Promise<void>> {
+  const matcher = (url: URL) => url.pathname.startsWith("/conversas/");
+  await page.route(matcher, async (route, request) => {
+    if (request.method() === "POST" && (await request.headerValue("next-action"))) {
+      return handler(route, request);
+    }
+    return route.fallback();
+  });
+  return () => page.unroute(matcher);
+}

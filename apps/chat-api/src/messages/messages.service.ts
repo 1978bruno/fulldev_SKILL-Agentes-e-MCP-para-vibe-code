@@ -1,9 +1,11 @@
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { TransactionalAdapterTypeOrm } from '@nestjs-cls/transactional-adapter-typeorm';
 import { Injectable } from '@nestjs/common';
+import { randomUUIDv7 } from 'node:crypto';
 import { LessThan, Repository } from 'typeorm';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
+import { ClientIdConflictError } from './client-id-conflict.error';
 import { Message } from './message.entity';
 
 export interface MessageAuthor {
@@ -68,20 +70,44 @@ export class MessagesService {
     return { messages: await this.withAuthors(page), hasMore };
   }
 
+  // Envio sem duplicar (LLD, "Concorrência e idempotência"): o mesmo `client_id` do mesmo autor
+  // devolve a Mensagem já gravada, sem gravar outra; o texto do reenvio é ignorado. O conflito é
+  // resolvido pela unicidade do banco, o que vale também para dois envios ao mesmo tempo.
   async send(
     author: MessageAuthor,
     conversationId: string,
     { clientId, body }: NewMessage,
   ): Promise<MessageView> {
     await this.conversations.getForMember(author.id, conversationId);
-    const message = await this.messages.save(
-      this.messages.create({
+    const inserted = await this.messages
+      .createQueryBuilder()
+      .insert()
+      .values({
+        id: randomUUIDv7(),
         conversationId,
         authorId: author.id,
         clientId,
         body,
-      }),
-    );
+      })
+      .orIgnore()
+      .returning(['id', 'created_at'])
+      .execute();
+    const [row] = inserted.raw as { id: string; created_at: Date }[];
+    // Sem conflito, a linha nova volta no RETURNING; com conflito, lê a que já estava lá.
+    const message = row
+      ? this.messages.create({
+          id: row.id,
+          conversationId,
+          authorId: author.id,
+          clientId,
+          body,
+          createdAt: row.created_at,
+        })
+      : await this.messages.findOneByOrFail({ authorId: author.id, clientId });
+    // O mesmo client_id usado em outra Conversa não é reenvio desta.
+    if (message.conversationId !== conversationId) {
+      throw new ClientIdConflictError();
+    }
     return toView(message, author);
   }
 

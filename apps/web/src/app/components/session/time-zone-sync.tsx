@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { COOKIE_MAX_AGE_SECONDS } from "@/app/utils/client-cookies";
+import { DEFAULT_TIME_ZONE } from "@/app/utils/format-time";
 import { TIME_ZONE_COOKIE } from "@/app/utils/time-zone";
 
 // Grava o fuso do navegador no cookie que o servidor usa para as horas e os dias, e renderiza a
@@ -12,9 +13,14 @@ export function TimeZoneSync() {
   const router = useRouter();
   useEffect(() => {
     const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (!browserTimeZone || readCookie(TIME_ZONE_COOKIE) === browserTimeZone) return;
+    const saved = readCookie(TIME_ZONE_COOKIE);
+    if (!browserTimeZone || saved === browserTimeZone) return;
     document.cookie = `${TIME_ZONE_COOKIE}=${encodeURIComponent(browserTimeZone)}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
-    if (readCookie(TIME_ZONE_COOKIE) === browserTimeZone) router.refresh();
+    // Sem cookie, o servidor já usou o fuso padrão: se é o do navegador, não há o que renderizar.
+    const renderedIn = saved ?? DEFAULT_TIME_ZONE;
+    if (renderedIn !== browserTimeZone && readCookie(TIME_ZONE_COOKIE) === browserTimeZone) {
+      router.refresh();
+    }
   }, [router]);
   return null;
 }

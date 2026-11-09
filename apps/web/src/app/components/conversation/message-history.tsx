@@ -6,7 +6,17 @@ import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
-import type { Conversation, MessagePage } from "@/app/services/chat-api";
+import {
+  type PendingMessage,
+  type PendingStatus,
+  usePendingMessages,
+} from "@/app/hooks/use-pending-messages";
+import type {
+  Conversation,
+  Message,
+  MessageAuthor,
+  MessagePage,
+} from "@/app/services/chat-api";
 import { dayKey, labelForDay } from "@/app/utils/day-label";
 import { isCompact } from "@/app/utils/message-grouping";
 import { ConversationIntro } from "./conversation-intro";
@@ -19,6 +29,8 @@ type MessageHistoryProps = {
   // "Hoje" e "Ontem" dos dois lados, para a hidratação não divergir.
   timeZone: string;
   renderedAt: string;
+  // A Pessoa da Sessão, autora das Mensagens que ainda estão sendo enviadas.
+  currentPerson: MessageAuthor;
 };
 
 // Distância do topo em que o sentinela pede a página anterior (spec da F02, "Lista de Mensagens").
@@ -34,9 +46,25 @@ export function MessageHistory(props: MessageHistoryProps) {
   );
 }
 
-function History({ conversation, initialPage, timeZone, renderedAt }: MessageHistoryProps) {
-  const { messages, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
+function History({
+  conversation,
+  initialPage,
+  timeZone,
+  renderedAt,
+  currentPerson,
+}: MessageHistoryProps) {
+  const { messages: saved, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
     useMessageHistory(conversation.id, initialPage);
+  const { pending, send, retry, discard } = usePendingMessages(
+    conversation.id,
+    currentPerson,
+    appendSent,
+  );
+  // As pendentes vêm sempre depois das gravadas, e passam pelo mesmo agrupamento.
+  const messages = useMemo<(Message & { status?: PendingStatus })[]>(
+    () => [...saved, ...pending],
+    [saved, pending],
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   // Marca a lista hidratada (data-ready), como o formulário de "Entrar": antes disso, a rolagem e
   // o sentinela ainda não respondem.
@@ -164,11 +192,15 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
         <ol aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
           {rows.map(({ message, compact, dayLabel }) => (
             <MessageItem
-              key={message.id}
+              // Pela autora e pelo client_id, a Mensagem "enviando" vira a gravada no mesmo item.
+              key={`${message.author.id}:${message.clientId}`}
               message={message}
               timeZone={timeZone}
               compact={compact}
               dayLabel={dayLabel}
+              status={message.status ?? "sent"}
+              onRetry={message.status ? () => retry(message as PendingMessage) : undefined}
+              onDiscard={message.status ? () => discard(message.clientId) : undefined}
             />
           ))}
         </ol>
@@ -176,9 +208,8 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
       {/* Lugar do "digitando", que entra na F03. */}
       <div className="h-5 shrink-0" />
       <MessageComposer
-        conversationId={conversation.id}
         conversationName={conversation.name}
-        onSent={appendSent}
+        onSend={send}
       />
     </div>
   );

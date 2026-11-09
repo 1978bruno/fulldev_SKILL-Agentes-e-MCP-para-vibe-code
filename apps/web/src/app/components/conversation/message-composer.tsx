@@ -1,47 +1,32 @@
 "use client";
 
 import { SendHorizontal } from "lucide-react";
-import { useState, useTransition } from "react";
-import { sendMessage } from "@/app/actions/send-message";
+import { useId, useState } from "react";
 import { IconButton } from "@/app/components/ui/icon-button";
 import { Kbd } from "@/app/components/ui/kbd";
-import type { Message } from "@/app/services/chat-api";
-import { newClientId } from "@/app/utils/client-id";
-import { redirectToExpiredSession } from "@/app/utils/return-path";
+import { codePointLength, MESSAGE_MAX_LENGTH } from "@/app/utils/message-text";
 
 type MessageComposerProps = {
-  conversationId: string;
   conversationName: string;
-  onSent: (message: Message) => void;
+  // Recebe o texto já sem as pontas; a lista mostra a Mensagem como "enviando" e a fila a grava.
+  onSend: (body: string) => void;
 };
 
-// Caixa de mensagem (MessageComposer): Enter envia e Shift+Enter quebra a linha. Os estados
-// "enviando" e "falhou", a fila e o limite de caracteres entram na F02-T05; o botão de menções,
-// na F06.
-export function MessageComposer({
-  conversationId,
-  conversationName,
-  onSent,
-}: MessageComposerProps) {
+// Caixa de mensagem (MessageComposer): Enter envia e Shift+Enter quebra a linha. Acima do limite,
+// o contador toma o lugar da dica e o envio fica bloqueado. O botão de menções entra na F06.
+export function MessageComposer({ conversationName, onSend }: MessageComposerProps) {
   const [text, setText] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const canSend = text.trim() !== "" && !isPending;
+  const body = text.trim();
+  const overLimit = codePointLength(body) - MESSAGE_MAX_LENGTH;
+  const canSend = body !== "" && overLimit <= 0;
   const label = `Mensagem para #${conversationName}`;
+  // O contador fica ligado à caixa: o leitor de tela o lê com ela, sem anunciar cada tecla.
+  const counterId = useId();
 
   function submit() {
     if (!canSend) return;
-    const body = text;
-    const clientId = newClientId();
-    startTransition(async () => {
-      const result = await sendMessage(conversationId, clientId, body);
-      if (result.kind === "ok") {
-        onSent(result.message);
-        // Só esvazia se a Pessoa não escreveu mais nada enquanto o envio corria.
-        setText((current) => (current === body ? "" : current));
-      } else if (result.kind === "unauthenticated") {
-        await redirectToExpiredSession();
-      }
-    });
+    onSend(body);
+    setText("");
   }
 
   return (
@@ -56,6 +41,8 @@ export function MessageComposer({
         <div className="flex px-3 pt-3 pb-1">
           <textarea
             aria-label={label}
+            aria-invalid={overLimit > 0 || undefined}
+            aria-describedby={overLimit > 0 ? counterId : undefined}
             placeholder={label}
             rows={1}
             autoFocus
@@ -71,10 +58,18 @@ export function MessageComposer({
           />
         </div>
         <div className="flex items-center justify-end gap-3 p-1.5">
-          <p className="hidden items-center gap-1 text-caption text-fg-muted sm:flex">
-            <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd>
-            <span>para nova linha</span>
-          </p>
+          {overLimit > 0 ? (
+            <p id={counterId} className="text-caption text-danger-fg">
+              {overLimit === 1
+                ? "1 caractere acima do limite"
+                : `${overLimit} caracteres acima do limite`}
+            </p>
+          ) : (
+            <p className="hidden items-center gap-1 text-caption text-fg-muted sm:flex">
+              <Kbd>Shift</Kbd>+<Kbd>Enter</Kbd>
+              <span>para nova linha</span>
+            </p>
+          )}
           <IconButton
             type="submit"
             icon={SendHorizontal}

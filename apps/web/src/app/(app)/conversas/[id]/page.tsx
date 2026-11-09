@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { MessageHistory } from "@/app/components/conversation/message-history";
-import { getConversation, listMessages } from "@/app/services/chat-api";
+import { getConversation, getCurrentPerson, listMessages } from "@/app/services/chat-api";
 import { readSessionToken } from "@/app/services/session-cookie";
 import { readTimeZone } from "@/app/services/time-zone-cookie";
 import { expiredSessionPath } from "@/app/utils/return-path";
@@ -14,19 +14,27 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   const token = await readSessionToken();
   if (!token) redirect(expiredSessionPath(path));
 
-  const [conversationResult, pageResult] = await Promise.all([
+  // A Pessoa da Sessão vem da leitura memorizada que o layout já fez nesta requisição.
+  const [personResult, conversationResult, pageResult] = await Promise.all([
+    getCurrentPerson(token),
     getConversation(token, id),
     listMessages(token, id),
   ]);
-  if (conversationResult.kind === "unauthenticated" || pageResult.kind === "unauthenticated") {
+  if (
+    personResult.kind === "unauthenticated" ||
+    conversationResult.kind === "unauthenticated" ||
+    pageResult.kind === "unauthenticated"
+  ) {
     redirect(expiredSessionPath(path));
   }
   if (conversationResult.kind === "not_found" || pageResult.kind === "not_found") notFound();
-  if (conversationResult.kind !== "ok" || pageResult.kind !== "ok") {
+  if (personResult.kind !== "ok" || conversationResult.kind !== "ok" || pageResult.kind !== "ok") {
     throw new Error("Não foi possível carregar a Conversa.");
   }
 
   const { conversation } = conversationResult;
+  const { id: authorId, name, initials } = personResult.person;
+  const author = { id: authorId, name, initials };
   const timeZone = await readTimeZone();
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -37,6 +45,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         initialPage={pageResult.page}
         timeZone={timeZone}
         renderedAt={new Date().toISOString()}
+        currentPerson={author}
       />
     </div>
   );
