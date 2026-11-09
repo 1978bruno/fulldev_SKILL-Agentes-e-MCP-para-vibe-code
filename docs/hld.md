@@ -1,6 +1,6 @@
 # HLD — Full Cycle Chat
 
-2026-11-06 · Luiz Carlos · Status: rascunho · LLD: A definir
+2026-11-09 · Luiz Carlos · Status: rascunho · LLD: A definir
 
 ## 1. Contexto e objetivos
 
@@ -79,7 +79,7 @@ Funcionalidades que mais pesam no desenho:
 | 3 | Integridade dos dados de negócio | Um texto na conversa com instruções ao agente não muda a consulta ao banco; nenhuma escrita gerada pelo agente altera dados de negócio |
 | 4 | Desempenho do agente | Pedido comum com p95 ≤ 5 s |
 | 5 | Custo do agente | ≤ US$ 0,01 por pedido; no máximo 10 pedidos por minuto por pessoa |
-| 6 | Tempo real | Mensagem aparece para os outros em tempo a definir; quem cai e reconecta recebe o que perdeu sem recarregar a página |
+| 6 | Tempo real | Mensagem aparece para quem está com a conversa aberta em até 1 s no p95, contado da gravação; quem cai e reconecta recebe o que perdeu sem recarregar a página |
 | 7 | Auditabilidade | Toda consulta ao banco de negócio registrada (quem pediu, conversa, pergunta, consulta, desfecho), sem o resultado nem conteúdo de mensagens |
 | 8 | Acessibilidade | Tudo funciona por teclado |
 
@@ -199,14 +199,17 @@ limite de tentativas, cria a sessão no Banco do chat e devolve o identificador,
 cookie httpOnly válido para os subdomínios do mesmo domínio (por exemplo `app.` e `api.`). O BFF
 leva essa sessão em cada chamada à API do chat, e o WebSocket abre direto na API do chat com o
 mesmo cookie; a API confere a sessão e a origem. Revogar é apagar a sessão no Banco do chat: a
-próxima requisição ou conexão é recusada. Decisão: [ADR 0016](adr/0016-sessao-na-api-do-chat.md).
+próxima requisição ou conexão é recusada. A conexão já aberta cai na hora quando a pessoa sai, e
+na revogação ou no vencimento, na reconferência periódica da sessão (intervalo no LLD, "Valores e
+configuração"). Decisão: [ADR 0016](adr/0016-sessao-na-api-do-chat.md).
 
 ### 6.2 Mensagem em tempo real e recuperação após queda
 
 O navegador envia a mensagem ao BFF, com um identificador gerado no cliente, e o BFF a grava na API
 do chat por REST. A API grava a mensagem com o que ela causa (seção 7), publica o evento pelo
-WebSocket para quem está na conversa e guarda o evento no Redis, por pessoa. Edição, exclusão,
-"digitando" e notificações saem pelo mesmo caminho. Ao reconectar, o cliente informa o último
+WebSocket para quem está na conversa e guarda o evento no Redis, por pessoa. Edição, exclusão e
+notificações saem pelo mesmo caminho. O "digitando" é passageiro: vai só para quem está com a
+conversa aberta, sem passar pelo Redis nem ser reenviado na reconexão. Ao reconectar, o cliente informa o último
 evento que confirmou e a API reenvia o que veio depois; uma queda mais longa que a retenção dos
 eventos faz o cliente recarregar pelo histórico paginado. A API do chat roda com uma instância só,
 então publica direto, sem nada entre instâncias.
@@ -414,7 +417,6 @@ implantação, está a definir.
 
 - [ ] Tamanho e perfil da equipe (seção 2).
 - [ ] Teto mensal de orçamento de infraestrutura (seção 2).
-- [ ] Critério do tempo real: tempo entre enviar e a mensagem aparecer para os outros (seção 3).
 - [ ] Hipóteses de dimensionamento (contas, pessoas conectadas no pico, mensagens por dia, pedidos
       aos agentes e PDFs por dia, tamanho do banco de negócio), o número de instâncias de cada
       contêiner e o que faria o desenho ser revisto (seções 3 e 9).
