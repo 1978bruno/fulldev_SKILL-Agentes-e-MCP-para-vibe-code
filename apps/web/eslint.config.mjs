@@ -12,7 +12,24 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Saídas do Playwright:
+    "test-results/**",
+    "playwright-report/**",
   ]),
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/app/config/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "process",
+          property: "env",
+          message: "Leia o ambiente só em src/app/config/.",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

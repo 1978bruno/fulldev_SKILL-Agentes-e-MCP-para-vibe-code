@@ -10,10 +10,32 @@ services:
     volumes:
       # Repositório inteiro: o file:../../packages/chat-events precisa resolver igual dentro e fora.
       - .:/home/node/app
+    environment:
+      CHAT_API_URL: http://chat-api:3000
+      SESSION_COOKIE_NAME: fc_session
+      SESSION_COOKIE_SECURE: "false"
     ports:
       - "3000:3000"
     depends_on:
       - chat-api
+
+  # Testes de ponta a ponta do web e playwright-cli. Sobe só com --profile e2e e fica parado.
+  e2e:
+    # Mesma versão exata do @playwright/test do apps/web/package.json.
+    image: mcr.microsoft.com/playwright:v1.65.0-noble
+    profiles: [e2e]
+    init: true
+    user: "1000:1000"
+    working_dir: /home/node/app/apps/web
+    volumes:
+      - .:/home/node/app
+    environment:
+      BASE_URL: http://web:3000
+      PLAYWRIGHT_HTML_OPEN: never
+      HOME: /tmp
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      - web
 
   chat-api:
     build:
