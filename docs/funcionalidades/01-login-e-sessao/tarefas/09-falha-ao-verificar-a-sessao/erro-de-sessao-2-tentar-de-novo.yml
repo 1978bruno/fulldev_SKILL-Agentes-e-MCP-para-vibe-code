@@ -1,0 +1,22 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e26] [cursor=pointer]:
+    - button "Open issues overlay" [ref=f1e27]:
+      - generic [ref=f1e31]:
+        - generic [aria-hidden] [ref=f1e32]: "0"
+        - generic [ref=f1e33]: "1"
+      - generic [ref=f1e34]: Insight
+    - button "Collapse issues badge" [ref=f1e35]
+  - alert [ref=f1e6]
+  - generic [ref=f1e38]:
+    - navigation "Seções" [ref=f1e39]:
+      - generic [aria-hidden] [ref=f1e41]: FC
+      - link "Início" [ref=f1e42] [cursor=pointer]:
+        - /url: /
+      - button "Menu de Pessoa Dev" [ref=f1e48]:
+        - generic [aria-hidden] [ref=f1e49]: PD
+    - complementary "Barra lateral" [ref=f1e51]:
+      - paragraph [ref=f1e53]: Full Cycle
+    - main [ref=f1e54]:
+      - generic [ref=f1e57]:
+        - heading "Nenhuma conversa ainda" [level=1] [ref=f1e58]
+        - paragraph [ref=f1e59]: Crie um canal ou comece uma conversa pela barra lateral.

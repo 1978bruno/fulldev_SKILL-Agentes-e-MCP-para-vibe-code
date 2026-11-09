@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BfcacheReload } from "@/app/components/bfcache-reload";
-import { Spinner } from "@/app/components/ui/spinner";
+import { AppLoading } from "@/app/components/session/app-loading";
+import { SessionError } from "@/app/components/session/session-error";
 import { Rail } from "@/app/components/workspace-nav/rail";
 import { Sidebar } from "@/app/components/workspace-nav/sidebar";
 import { getCurrentPerson } from "@/app/services/chat-api";
@@ -25,6 +26,15 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const token = await readSessionToken();
   const result = token ? await getCurrentPerson(token) : null;
+  if (result?.kind === "failure") {
+    // Rede, 5xx ou tempo esgotado: não manda para "Entrar" nem apaga o cookie.
+    return (
+      <>
+        <BfcacheReload />
+        <SessionError />
+      </>
+    );
+  }
   if (result?.kind !== "ok") {
     // Um Server Component não apaga cookie: a rota do BFF apaga e leva a "Entrar".
     const requestedPath = (await headers()).get(REQUESTED_PATH_HEADER);
@@ -37,14 +47,6 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
       <Rail person={result.person} />
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col bg-surface">{children}</main>
-    </div>
-  );
-}
-
-function AppLoading() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-surface text-fg-muted">
-      <Spinner size="md" />
     </div>
   );
 }

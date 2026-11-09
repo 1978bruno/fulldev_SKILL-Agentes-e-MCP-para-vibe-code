@@ -81,6 +81,13 @@ export function LoginForm({ returnPath }: LoginFormProps) {
   // no cliente. Os testes de ponta a ponta esperam a marca antes de interagir.
   useEffect(() => {
     formRef.current?.setAttribute("data-ready", "");
+    // A marca de verificação que falhou serve só para esta abertura: sai da URL, para recarregar a
+    // página verificar a Sessão de novo.
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("verificacao")) {
+      url.searchParams.delete("verificacao");
+      window.history.replaceState(window.history.state, "", url);
+    }
   }, []);
 
   // Credenciais incorretas: a senha é limpa e recebe o foco; o e-mail continua.

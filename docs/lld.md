@@ -392,6 +392,11 @@ atualiza esse cache direto, sem nova requisição.
 - "Entrar", aberta com cookie, faz a mesma verificação:
   - Com 200, vai para a Home.
   - Com 401, apaga o cookie e mostra o formulário.
+  - Com falha de rede, 5xx ou tempo esgotado, mostra o formulário sem apagar o cookie.
+  - Aberta com `?verificacao=falhou`, mostra o formulário sem verificar. É a marca que a rota
+    `GET /api/session/expired` põe quando a reconferência falha depois de um 401: sem ela, a API
+    instável faria o navegador alternar sem fim entre "Entrar" e a rota. O formulário tira a
+    marca da URL ao abrir, para recarregar a página verificar de novo.
 - Qualquer 401 vindo do BFF manda para "Entrar".
 - Um 401 no WebSocket fecha a conexão e manda para "Entrar".
 - **Voltar para onde ia:** quem é mandado para "Entrar" leva o caminho pedido em `?para=`.

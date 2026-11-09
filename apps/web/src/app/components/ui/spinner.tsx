@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/app/utils/cn";
 
-const SIZES = { sm: 16, md: 24 } as const;
+const SIZES = { sm: 16, md: 20, lg: 24 } as const;
 
 type SpinnerProps = { size?: keyof typeof SIZES; className?: string };
 

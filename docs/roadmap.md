@@ -17,7 +17,7 @@ O ID vira link para a pasta da funcionalidade, em `docs/funcionalidades/`, quand
 
 | ID | Funcionalidade | Ao final a pessoa consegue | Depende de | Status |
 | --- | --- | --- | --- | --- |
-| [F01](funcionalidades/01-login-e-sessao/) | Login e sessão | Entrar com e-mail e senha numa conta criada pela empresa, continuar logada em todas as abas do navegador e sair. | — | em andamento |
+| [F01](funcionalidades/01-login-e-sessao/) | Login e sessão | Entrar com e-mail e senha numa conta criada pela empresa, continuar logada em todas as abas do navegador e sair. | — | concluída |
 | F02 | Mensagens em canal público | Abrir um canal público, enviar mensagens e rolar o histórico até as mais antigas. | F01 | planejada |
 | F03 | Tempo real | Ver as mensagens dos outros chegarem sem recarregar a página, ver quem está digitando e não perder nada depois de uma queda de conexão. | F02 | planejada |
 | F04 | Criação de canais e convite para canal privado | Criar um canal público ou privado e convidar pessoas para o privado, que só os convidados veem. | F02 | planejada |
@@ -90,7 +90,7 @@ flowchart LR
   classDef emAndamento fill:#fef3c7,stroke:#d97706,color:#111827
   classDef concluida fill:#d1fae5,stroke:#059669,color:#111827
 
-  class F01 emAndamento
+  class F01 concluida
   class F02,F03,F04,F05,F06,F07,F08,F09,F10,F11,F12,F13,F14 planejada
 ```
 
