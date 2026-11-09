@@ -67,6 +67,7 @@ docs/             HLD, LLD, ADRs, brief
 | Geração do PDF | A definir | — |
 | Acesso ao Banco dos agentes e migrações | A definir | — |
 | Validação das variáveis de ambiente | zod, com `@nestjs/config` na API do chat; no projeto `agents`, a definir | Valida e tipa numa peça só, igual nos dois projetos TypeScript |
+| Validação de entrada na API do chat | `class-validator` e `class-transformer`, no `ValidationPipe` do Nest | Caminho padrão do Nest, e o `@nestjs/swagger` lê os mesmos decorators para gerar o snapshot OpenAPI; descartado: zod com `nestjs-zod` |
 | Parser da conferência de somente leitura | A definir | — |
 | Log estruturado | A definir | — |
 
@@ -171,8 +172,9 @@ depois do commit (publicação direta ou tabela de saída) estão a definir.
 ### Erros
 
 - Corpo de erro nas três APIs (BFF, API do chat, Serviço de agentes): `application/problem+json`
-  (RFC 9457), com a extensão `code`, estável e em `snake_case`. O `detail` é para pessoas e não
-  traz detalhes internos.
+  (RFC 9457), com a extensão `code`, estável e em `snake_case`. O corpo tem `type`
+  (`about:blank`), `title` (a frase do status HTTP), `status`, `detail` e `code`, sem `instance`.
+  O `detail` é para pessoas e não traz detalhes internos.
 - O catálogo de códigos fica nos snapshots OpenAPI, como enum na resposta de erro de cada rota.
 - Na API do chat, o service e o guard lançam erro de domínio, e só o filter global o traduz em
   resposta HTTP: `.claude/rules/nest-api-errors.md`. No BFF e no Serviço de agentes, quem traduz
@@ -436,6 +438,7 @@ todas `planejadas`:
 | API do chat | `DATABASE_URL` | Conexão com o Banco do chat |
 | API do chat | `WEB_ORIGIN` | Origem aceita no handshake do WebSocket |
 | API do chat | `SESSION_TTL_DAYS` | `Duração da Sessão` |
+| API do chat | `PORT` | Porta HTTP em que a API escuta |
 | Web | `CHAT_API_URL` | Endereço interno da API do chat |
 | Web | `SESSION_COOKIE_NAME` | Nome do cookie de sessão |
 | Web | `SESSION_COOKIE_DOMAIN` | `Domain` do cookie; vazio no local |
@@ -492,8 +495,9 @@ usuário conecta num banco que não é o seu. Senhas iguais ao nome do usuário,
   (path-style).
 - **Banco dos testes da API do chat:** `chat_test`, do mesmo dono que o `chat`, para os testes
   não misturarem dados com o desenvolvimento. Ele é criado pelo script de inicialização do
-  Postgres e, num volume que já existe, pelo `globalSetup` dos testes, que também roda as
-  migrações.
+  Postgres e, num volume que já existe, pelo `globalSetup` dos testes, que conecta como o
+  superusuário local para criar o banco, porque o papel `chat` não tem `CREATEDB`, e também roda
+  as migrações.
 - **Contêiner `e2e`:** fica de pé porque o fluxo da skill `playwright-cli` pausa o teste em
   segundo plano (`--debug=cli`) e conecta o `playwright-cli` a ele, e os dois precisam estar no
   mesmo contêiner. O `playwright-cli` é o do `@playwright/test` instalado no `web`, sem instalação

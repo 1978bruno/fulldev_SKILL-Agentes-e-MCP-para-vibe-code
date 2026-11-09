@@ -1,6 +1,6 @@
 # 01: Base da API do chat
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** a API do chat deixa de ser o esqueleto do Nest e passa a ter a base de que
 toda funcionalidade precisa:
