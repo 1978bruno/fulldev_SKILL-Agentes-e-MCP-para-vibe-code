@@ -22,8 +22,8 @@ export type CurrentPersonResult =
 async function request(path: string, init: RequestInit): Promise<Response | null> {
   // Chamada de tempo de requisição: o pré-render para aqui (o fetch e o tempo limite leem o
   // relógio, o que o Next recusa durante o pré-render).
-  await connection();
   try {
+    await connection();
     return await fetch(new URL(path, env.CHAT_API_URL), {
       ...init,
       cache: "no-store",
