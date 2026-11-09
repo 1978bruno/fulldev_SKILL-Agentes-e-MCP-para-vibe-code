@@ -2,7 +2,9 @@ import { EntityManager } from 'typeorm';
 
 // Trava transacional da participação em Canal público (ADR 0024): criar um Canal público e criar
 // uma conta tomam a mesma trava, para uma conta e um Canal criados ao mesmo tempo não deixarem a
-// Pessoa fora do Canal. A chave é fixa e só serve a esta trava.
+// Pessoa fora do Canal. Toda criação de Canal, inclusive a do privado, também a toma: ela serializa
+// a conferência do client_id e a do nome, únicos entre todos os Canais (spec da F04, "Conversas").
+// A chave é fixa e só serve a esta trava.
 export const PUBLIC_MEMBERSHIP_LOCK_KEY = 2_024_000_001;
 
 export async function lockPublicMembership(

@@ -48,7 +48,11 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RememberConversation conversationId={conversation.id} />
-      <ConversationHeader name={conversation.name} topic={conversation.topic} />
+      <ConversationHeader
+        name={conversation.name}
+        topic={conversation.topic}
+        kind={conversation.kind}
+      />
       <Suspense key={conversation.id} fallback={<HistoryLoading conversationName={conversation.name} />}>
         <ConversationHistory conversation={conversation} history={history} path={path} />
       </Suspense>

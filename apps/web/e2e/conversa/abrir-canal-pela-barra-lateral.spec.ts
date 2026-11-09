@@ -15,7 +15,8 @@ test.describe("Abrir um Canal", () => {
     const canais = page.getByRole("region", { name: "Canais" });
     await expect(canais.getByRole("link")).toHaveText([first.name, second.name]);
     const barra = page.getByRole("complementary", { name: "Barra lateral" });
-    await expect(barra.getByText("Adicionar canal")).toHaveCount(0);
+    // "Adicionar canal" entrou com a F04; Mensagens diretas e Agentes seguem fora.
+    await expect(barra.getByRole("button", { name: "Adicionar canal" })).toBeVisible();
     await expect(barra.getByText("Mensagens diretas")).toHaveCount(0);
     await expect(barra.getByText("Agentes")).toHaveCount(0);
 

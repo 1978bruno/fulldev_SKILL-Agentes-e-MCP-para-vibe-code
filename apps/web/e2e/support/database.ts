@@ -38,19 +38,19 @@ export async function countSessionsOf(personId: string): Promise<number> {
 
 export type TestChannel = { id: string; name: string; topic: string | null };
 
-// Canal público criado direto no banco, com nome de prefixo e2e- e só as participações das
+// Canal criado direto no banco, público a menos que o teste peça o privado, com nome de prefixo e2e- e só as participações das
 // Pessoas que o teste passa: isola o teste dos Canais de outros testes e do desenvolvimento (spec
 // da F02, "Decisões de teste").
 export async function insertChannel(
   members: TestPerson[],
-  options: { name?: string; topic?: string | null } = {},
+  options: { name?: string; topic?: string | null; kind?: "public_channel" | "private_channel" } = {},
 ): Promise<TestChannel> {
   const id = randomUUIDv7();
   const name = options.name ?? `e2e-${randomUUIDv7()}`;
   const topic = options.topic === undefined ? "Canal de teste" : options.topic;
   await pool.query(
-    "INSERT INTO conversations (id, kind, name, topic) VALUES ($1, 'public_channel', $2, $3)",
-    [id, name, topic],
+    "INSERT INTO conversations (id, kind, name, topic) VALUES ($1, $2, $3, $4)",
+    [id, options.kind ?? "public_channel", name, topic],
   );
   await pool.query(
     `INSERT INTO conversation_members (id, conversation_id, person_id)
@@ -141,4 +141,13 @@ export async function countChannelsNamed(name: string): Promise<number> {
     [name],
   );
   return Number(result.rows[0].count);
+}
+
+export async function membersOfChannelNamed(name: string): Promise<string[]> {
+  const result = await pool.query<{ person_id: string }>(
+    `SELECT m.person_id FROM conversation_members m
+     JOIN conversations c ON c.id = m.conversation_id WHERE c.name = $1`,
+    [name],
+  );
+  return result.rows.map((row) => row.person_id);
 }

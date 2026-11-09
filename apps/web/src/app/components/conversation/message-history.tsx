@@ -276,7 +276,11 @@ function History({
               </button>
             </div>
           ) : (
-            <ConversationIntro name={conversation.name} topic={conversation.topic} />
+            <ConversationIntro
+              name={conversation.name}
+              topic={conversation.topic}
+              kind={conversation.kind}
+            />
           )}
           <ol ref={listRef} aria-label={`Mensagens em #${conversation.name}`} className="flex flex-col">
             {rows.map(({ message, compact, dayLabel }) => (
