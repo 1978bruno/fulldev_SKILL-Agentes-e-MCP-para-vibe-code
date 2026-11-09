@@ -297,7 +297,7 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` e `sync`; os demais eventos planejados | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
+| API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created`, `sync`, abertura da Conversa e "digitando"; `session.ended` planejado | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
@@ -387,7 +387,7 @@ Legenda: "livre" é o e-mail sem linha de tentativas; o estado vale por e-mail n
 
 ### 6.3 Digitando
 
-Situação: `planejada` (F03).
+Situação: `existe`.
 
 - Só a aba que abriu a Conversa, depois da conferência de participação ("Segurança"), recebe e
   repassa o "digitando" daquela Conversa. Ele nunca vai para as abas da própria Pessoa, não é
@@ -396,6 +396,8 @@ Situação: `planejada` (F03).
   vazio, e avisa que parou ao enviar, ao apagar todo o texto e ao trocar de Conversa.
 - Quem vê tira a Pessoa da lista no aviso de que parou ou depois da `expiração do digitando` sem
   novo aviso; a queda da própria conexão esvazia a lista.
+- A aba que sai da sala (fecha a Conversa ou abre outra) conta como aviso de que parou: a API o
+  repassa aos outros da sala.
 
 ## 7. Processos de segundo plano
 
