@@ -241,9 +241,9 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 | Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
 | Chat | Sessões | existe (`sessions`) |
 | Chat | Tentativas de login por e-mail | existe (`login_attempts`) |
-| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | planejada: Canal público, com a forma na spec da F02, seção "Conversas e participação" |
+| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | existe: Canal público (`conversations`, `conversation_members`) |
 | Chat | Conversas diretas | tipo de Conversa (ADR 0024); a detalhar |
-| Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | planejada: autor pessoa e texto, com a forma na spec da F02, seção "Mensagens"; autor bot, citação e marca a detalhar |
+| Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | existe: autor pessoa e texto (`messages`); autor bot, citação e marca a detalhar |
 | Chat | Menções | a detalhar |
 | Chat | Última leitura e contadores por pessoa e conversa | a detalhar |
 | Chat | Notificações | a detalhar |
@@ -286,12 +286,12 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `DELETE /v1/sessions/current` | existe | Sair: mesma seção |
 | BFF: Server Actions entrar e sair | existe | Gravam e apagam o cookie: "Conceitos transversais de implementação", seção "Segurança" |
 | BFF: `GET /api/session/expired` | existe | Apaga o cookie de uma Sessão que a API recusa e leva a "Entrar": "Cliente", seção "Sessão no cliente" |
-| API do chat: `GET /v1/conversations` | planejada | As Conversas de que a Pessoa é Membro: spec da F02, seção "Rotas" |
-| API do chat: `GET /v1/conversations/:id` | planejada | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
-| API do chat: `GET /v1/conversations/:id/messages` | planejada | Página do histórico: spec da F02, seção "Rotas" |
-| API do chat: `POST /v1/conversations/:id/messages` | planejada | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations` | existe | As Conversas de que a Pessoa é Membro: spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
+| API do chat: `GET /v1/conversations/:id/messages` | existe: a página mais recente; `before` e `limit` planejados | Página do histórico: spec da F02, seção "Rotas" |
+| API do chat: `POST /v1/conversations/:id/messages` | existe; o reenvio sem duplicar é planejado | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
 | BFF: `GET /api/conversations/:id/messages` | planejada | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
-| Envio de mensagem no BFF (Server Action) | planejada | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
+| Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
 
@@ -386,9 +386,9 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | Rota | Acesso | Lê | Ações | Situação |
 | --- | --- | --- | --- | --- |
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
-| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe. Alteração `planejada`: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista |
-| `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | planejada: ler e enviar; o resto a detalhar |
-| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | planejada: a lista; não lidas e menções a detalhar |
+| `/` (Home) | Sessão | Pessoa da Sessão | Sair | existe: redireciona para a primeira Conversa da lista. Alteração `planejada`: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa |
+| `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; o resto a detalhar |
+| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa | existe: a lista; não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
