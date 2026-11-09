@@ -43,10 +43,12 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
   const firstId = messages[0]?.id;
   const lastId = messages.at(-1)?.id;
 
-  // Ao abrir e a cada Mensagem nova no fim, a lista rola até a última.
+  // Ao abrir e a cada Mensagem nova no fim, a lista rola até a última. A posição guardada antes de
+  // uma carga de anteriores deixa de valer: a Pessoa agora está no fim.
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (element) element.scrollTop = element.scrollHeight;
+    distanceFromBottom.current = null;
   }, [lastId]);
 
   // Quando a página anterior entra no começo, a Mensagem que a Pessoa lia fica no mesmo lugar: a
@@ -58,9 +60,24 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
     distanceFromBottom.current = null;
   }, [firstId]);
 
+  // Uma carga que falhou não devolve a rolagem depois.
+  useEffect(() => {
+    if (olderFailed) distanceFromBottom.current = null;
+  }, [olderFailed]);
+
+  // Quem pediu as anteriores pelo teclado não perde o foco quando a última página chega e o botão
+  // dá lugar ao começo do Canal: o foco vai para a área do histórico.
+  const loadOlderButtonRef = useRef<HTMLButtonElement>(null);
+  const hadButtonFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (!hasOlder && hadButtonFocus.current) scrollRef.current?.focus();
+    hadButtonFocus.current = false;
+  }, [hasOlder]);
+
   function requestOlder() {
     const element = scrollRef.current;
     if (element) distanceFromBottom.current = element.scrollHeight - element.scrollTop;
+    hadButtonFocus.current = document.activeElement === loadOlderButtonRef.current;
     loadOlder();
   }
   const onSentinelVisible = useEffectEvent(requestOlder);
@@ -98,6 +115,7 @@ function History({ conversation, initialPage }: MessageHistoryProps) {
             {/* O botão fica montado durante a carga, para quem chegou pelo teclado não perder o
                 foco; só o conteúdo vira o indicador ("Conversa / Lista / Carregando anteriores"). */}
             <button
+              ref={loadOlderButtonRef}
               type="button"
               onClick={requestOlder}
               aria-busy={isLoadingOlder}

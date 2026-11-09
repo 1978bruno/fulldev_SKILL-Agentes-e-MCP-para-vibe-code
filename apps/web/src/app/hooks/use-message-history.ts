@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import useSWRInfinite from "swr/infinite";
 import type { Message, MessagePage } from "@/app/services/chat-api";
 import { appendToLatestPage, flattenPages } from "@/app/utils/message-pages";
@@ -8,22 +8,31 @@ import { redirectToExpiredSession } from "@/app/utils/return-path";
 
 type PageKey = readonly ["messages", string, string | null];
 
-// Uma página anterior pela rota do BFF. A Sessão recusada leva a "Entrar"; outra falha vira erro
-// do SWR, e o link "Carregar mensagens anteriores" tenta de novo.
+// Uma página anterior pela rota do BFF. A Sessão recusada leva a "Entrar"; a Conversa que deixou
+// de existir para a Pessoa recarrega a página, que mostra "Conversa não encontrada"; outra falha
+// vira erro do SWR, e o link "Carregar mensagens anteriores" tenta de novo.
 async function fetchOlderPage([, conversationId, before]: PageKey): Promise<MessagePage> {
   const response = await fetch(
     `/api/conversations/${encodeURIComponent(conversationId)}/messages?before=${encodeURIComponent(before ?? "")}`,
   );
   if (response.status === 401) return redirectToExpiredSession();
+  if (response.status === 404) {
+    window.location.reload();
+    return new Promise<never>(() => {});
+  }
   if (!response.ok) throw new Error("Não foi possível carregar as mensagens anteriores.");
   return (await response.json()) as MessagePage;
 }
 
 // Histórico de uma Conversa no cache do SWR (spec da F02, "Leituras"). pages[0] é a página mais
-// recente, que vem do Server Component como fallbackData e nunca é buscada pelo cliente; a página
+// recente, que vem do Server Component como fallbackData e nunca é buscada na API; a página
 // n tem a chave da Mensagem mais antiga da página n-1 e só existe enquanto ela tem `hasMore`. Os
 // eventos do tempo real (F03) entram neste mesmo cache.
 export function useMessageHistory(conversationId: string, initialPage: MessagePage) {
+  // A página mais recente como está agora no cache. Ao carregar uma anterior, o SWR pode pedir a
+  // página 0 de novo; ela volta como está, com as Mensagens enviadas nesta abertura, e não como a
+  // página inicial do servidor.
+  const latestPage = useRef(initialPage);
   const { data, mutate, size, setSize, error, isValidating } = useSWRInfinite<
     MessagePage,
     Error,
@@ -34,7 +43,7 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
       const oldest = previous?.messages[0];
       return previous?.hasMore && oldest ? ["messages", conversationId, oldest.id] : null;
     },
-    (key) => (key[2] === null ? Promise.resolve(initialPage) : fetchOlderPage(key)),
+    (key) => (key[2] === null ? Promise.resolve(latestPage.current) : fetchOlderPage(key)),
     {
       fallbackData: [initialPage],
       revalidateOnMount: false,
@@ -45,6 +54,9 @@ export function useMessageHistory(conversationId: string, initialPage: MessagePa
     },
   );
   const pages = useMemo(() => data ?? [initialPage], [data, initialPage]);
+  useLayoutEffect(() => {
+    latestPage.current = pages[0] ?? initialPage;
+  }, [pages, initialPage]);
   const messages = useMemo(() => flattenPages(pages), [pages]);
   const hasOlder = pages.at(-1)?.hasMore ?? false;
   const isLoadingOlder = isValidating && size > pages.length;

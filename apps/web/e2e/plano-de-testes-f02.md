@@ -143,6 +143,7 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
     - expect: o foco está na área do histórico, e ela rola para cima
   4. Tab e Enter
     - expect: 60 itens e o começo do Canal
+    - expect: o foco está na área do histórico, porque o botão saiu com a última página
 
 #### 5.3. falha-ao-carregar-anteriores
 
@@ -169,6 +170,16 @@ antes de rolar, e montam o histórico com `insertHistory` ("Mensagem 1" a "Mensa
 **Steps:**
   1. Com 60 Mensagens, revogar a Sessão e rolar até o topo
     - expect: a URL é `/entrar?para=%2Fconversas%2F<id>`
+
+#### 5.6. enviar-e-carregar-anteriores
+
+**File:** `e2e/conversa/enviar-e-carregar-anteriores.spec.ts`
+
+**Steps:**
+  1. Com 60 Mensagens, enviar "Recém-enviada"
+    - expect: a última Mensagem é a enviada
+  2. Rolar até o topo
+    - expect: 61 itens, e a enviada continua a última
 
 ### 6. Acessibilidade
 

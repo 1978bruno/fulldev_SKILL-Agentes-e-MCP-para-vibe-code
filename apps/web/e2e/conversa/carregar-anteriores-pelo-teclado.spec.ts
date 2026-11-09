@@ -55,6 +55,8 @@ test.describe("Histórico até a primeira Mensagem", () => {
     await page.keyboard.press("Enter");
 
     await expect(mensagens.getByRole("listitem")).toHaveCount(60);
+    // O botão sai com a última página, e o foco vai para a área do histórico.
+    await expect(historico).toBeFocused();
     await expect(
       conversationIntro(page, channel.name),
     ).toBeVisible();
