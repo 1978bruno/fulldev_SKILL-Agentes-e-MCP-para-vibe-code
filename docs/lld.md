@@ -254,7 +254,7 @@ exigem estão em "Conceitos transversais de implementação", seção "Concorrê
 | Chat | Pessoas (perfil, papel de administrador, permissão de dados) | existe a base da F01 (`people`); perfil, papel e permissão a detalhar |
 | Chat | Sessões | existe (`sessions`) |
 | Chat | Tentativas de login por e-mail | existe (`login_attempts`) |
-| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | existe: Canal público (`conversations`, `conversation_members`); Canal privado, criador e identificador da criação `planejados` ([spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Conversas") |
+| Chat | Conversas e participações, numa tabela só para Canais e Conversas diretas ([ADR 0024](adr/0024-conversas-numa-tabela-so.md)) | existe: Canal público, criador e identificador da criação (`conversations`, `conversation_members`); Canal privado `planejado` ([spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Conversas") |
 | Chat | Conversas diretas | tipo de Conversa (ADR 0024); a detalhar |
 | Chat | Mensagens (autor pessoa ou bot, citação, marca "dados de negócio") | existe: autor pessoa e texto (`messages`); autor bot, citação e marca a detalhar |
 | Chat | Menções | a detalhar |
@@ -303,14 +303,14 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `GET /v1/conversations/:id` | existe | Uma Conversa, pela conferência de participação ("Segurança"): spec da F02, seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/messages` | existe | Página do histórico: spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
-| API do chat: `POST /v1/conversations` | planejada | Criar Canal sem duplicar ("Concorrência e idempotência"): [spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Rotas" |
+| API do chat: `POST /v1/conversations` | existe: Canal público; Canal privado `planejado` | Criar Canal sem duplicar ("Concorrência e idempotência"): [spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/members` | planejada | Membros da Conversa: spec da F04, seção "Rotas" |
 | API do chat: `POST /v1/conversations/:id/members` | planejada | Adicionar ao Canal privado: spec da F04, seção "Rotas" |
 | API do chat: `GET /v1/people` | planejada | Busca de Pessoas pelo nome, fora dos Membros de uma Conversa: spec da F04, seções "Busca de Pessoas" e "Rotas" |
 | API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended`; `conversation.member_added` `planejado` (F04) | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos"; o evento da F04: spec da F04, seção "Tempo real" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
 | BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | planejada | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
-| BFF: Server Actions `createChannel` e `addMembers` | planejada | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
+| BFF: Server Actions `createChannel` e `addMembers` | existe: `createChannel`; `addMembers` `planejado` | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
@@ -432,7 +432,7 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | `/entrar` | Público | Sessão, quando há cookie | Entrar com e-mail e senha | existe |
 | `/` (Home) | Sessão | Pessoa da Sessão, lista de Conversas e cookie da última Conversa | Sair | existe: redireciona para a última Conversa ("Cookies do cliente"), se ela está na lista da Pessoa, ou para a primeira da lista; sem Conversas, a Home vazia; com a lista em falha, o erro com "Tentar de novo" |
 | `/conversas/[id]` | Sessão; só Membro | Conversa e histórico | Enviar (F02); editar, apagar, citar; "digitando"; botões de resposta pronta | existe: ler e enviar; tempo real e "digitando" planejados (F03); o resto a detalhar |
-| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa; criar Canal | existe: a lista; a lista no cliente, atualizada pelo tempo real, e o diálogo "Criar canal" `planejados` (F04); não lidas e menções a detalhar |
+| Layout das telas logadas (barra lateral) | Sessão | Conversas; não lidas e menções na F07 | Abrir conversa; criar Canal | existe: a lista e o diálogo "Criar canal"; a lista no cliente, atualizada pelo tempo real, `planejada` (F04); não lidas e menções a detalhar |
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
