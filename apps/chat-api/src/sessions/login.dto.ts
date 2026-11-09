@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { PASSWORD_MAX_LENGTH } from '../people/password-policy';
 
 export class LoginDto {
   // Os espaços das pontas saem antes de validar; a normalização completa é do service.
@@ -13,6 +14,6 @@ export class LoginDto {
   // Teto para um texto enorme não pesar no Argon2id.
   @IsString()
   @IsNotEmpty()
-  @MaxLength(256)
+  @MaxLength(PASSWORD_MAX_LENGTH)
   password!: string;
 }
