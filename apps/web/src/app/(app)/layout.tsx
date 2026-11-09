@@ -28,7 +28,12 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const result = token ? await getCurrentPerson(token) : null;
   if (result?.kind === "failure") {
     // Rede, 5xx ou tempo esgotado: não manda para "Entrar" nem apaga o cookie.
-    return <SessionError />;
+    return (
+      <>
+        <BfcacheReload />
+        <SessionError />
+      </>
+    );
   }
   if (result?.kind !== "ok") {
     // Um Server Component não apaga cookie: a rota do BFF apaga e leva a "Entrar".

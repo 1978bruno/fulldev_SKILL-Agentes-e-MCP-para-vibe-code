@@ -43,3 +43,8 @@ caminho normal do 401.
 - Os badges "Insight" e "Issue" no canto das capturas são do servidor de desenvolvimento do Next:
   um aviso de navegação instantânea, e o stream de desenvolvimento interrompido quando a API foi
   parada no meio de uma renderização. Não aparecem no build de produção.
+- Depois da revisão, a rota `/api/session/expired` deixou de voltar ao caminho pedido quando a
+  reconferência falha (o layout tinha recebido 401): ela leva a "Entrar" sem apagar o cookie, e
+  "Entrar" mostra o formulário. Assim a API instável não faz o navegador alternar sem fim entre
+  o layout e a rota. A falha na verificação do layout, que é o caso desta tarefa, continua
+  mostrando o erro na própria tela, como acima.

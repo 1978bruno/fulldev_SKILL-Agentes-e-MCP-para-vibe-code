@@ -13,10 +13,14 @@ export async function GET(request: NextRequest) {
   const returnPath = request.nextUrl.searchParams.get("para");
   const token = await readSessionToken();
   const result = token ? await getCurrentPerson(token) : null;
-  // Com a Sessão válida, ou com a verificação falhando por rede ou servidor, o cookie fica: a
-  // volta ao caminho pedido mostra a tela, ou o erro de verificação com "Tentar de novo".
-  if (result?.kind === "ok" || result?.kind === "failure") {
+  if (result?.kind === "ok") {
     return redirectTo(safeReturnPath(returnPath));
+  }
+  // A reconferência falhou por rede ou servidor depois de um 401: o cookie fica e a Pessoa vai
+  // para "Entrar", que verifica de novo e mostra o formulário. Voltar ao caminho pedido poderia
+  // alternar sem fim entre o layout e esta rota com a API instável.
+  if (result?.kind === "failure") {
+    return redirectTo(loginPath(returnPath));
   }
   await deleteSessionCookie();
   return redirectTo(loginPath(returnPath));
