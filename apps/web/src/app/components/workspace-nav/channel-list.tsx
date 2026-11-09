@@ -61,6 +61,7 @@ export function ChannelList({ initialConversations, personId }: ChannelListProps
         onSync: (event) => {
           if (event.reset) void mutate();
         },
+        replayLastReset: true,
       }),
     [subscribe, mutate, initialConversations, personId],
   );

@@ -29,6 +29,10 @@ export type RealtimeListener = {
   onMessage?: (message: Message) => void;
   onMemberAdded?: (event: MemberAdded) => void;
   onSync?: (event: SyncEvent) => void;
+  // Quem assina depois do sync recebe, por padrão, uma cópia sem reset. Com esta marca, recebe o
+  // reset do último sync: é o caso de quem não guarda os eventos que perdeu, como a lista de
+  // Conversas da barra lateral.
+  replayLastReset?: boolean;
 };
 
 type RealtimeContextValue = {
@@ -227,7 +231,10 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       pendingReset.current = null;
       listener.onSync(pending);
     } else if (lastSync.current && listener.onSync) {
-      listener.onSync({ ...lastSync.current, reset: false });
+      listener.onSync({
+        ...lastSync.current,
+        reset: listener.replayLastReset ? lastSync.current.reset : false,
+      });
     }
     return () => {
       listeners.current.delete(listener);
