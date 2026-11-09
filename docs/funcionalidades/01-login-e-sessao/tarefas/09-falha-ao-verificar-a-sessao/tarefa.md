@@ -1,6 +1,6 @@
 # 09: Falha ao verificar a Sessão
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** enquanto o chat confere a Sessão, a Pessoa vê a tela de carregamento. Se a
 conferência falha por rede ou servidor, ela vê "Não foi possível verificar sua sessão", com
