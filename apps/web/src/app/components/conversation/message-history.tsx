@@ -134,7 +134,7 @@ function History({ conversation, initialPage, timeZone, renderedAt }: MessageHis
         role="region"
         aria-label={`Histórico de #${conversation.name}`}
         tabIndex={0}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
+        className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
       >
         <div className="mt-auto" />
         {hasOlder ? (

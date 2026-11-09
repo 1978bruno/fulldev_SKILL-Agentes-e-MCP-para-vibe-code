@@ -21,5 +21,11 @@ export function TimeZoneSync() {
 
 function readCookie(name: string): string | undefined {
   const entry = document.cookie.split("; ").find((cookie) => cookie.startsWith(`${name}=`));
-  return entry ? decodeURIComponent(entry.slice(name.length + 1)) : undefined;
+  if (!entry) return undefined;
+  try {
+    return decodeURIComponent(entry.slice(name.length + 1));
+  } catch {
+    // Valor corrompido: tratado como ausente, para o fuso do navegador ser gravado por cima.
+    return undefined;
+  }
 }

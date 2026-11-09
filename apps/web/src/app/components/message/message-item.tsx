@@ -8,7 +8,8 @@ import { MessageBody } from "./message-body";
 type MessageItemProps = {
   message: Message;
   timeZone: string;
-  // Forma compacta (22:7404): sem avatar nem nome, com a hora na calha ao passar o mouse.
+  // Forma compacta (22:7404): sem avatar nem nome, com a hora na calha ao passar o mouse ou com o
+  // foco do teclado na área do histórico.
   compact?: boolean;
   // Rótulo do divisor de dia, na primeira Mensagem de cada dia.
   dayLabel?: string;
@@ -40,7 +41,7 @@ function CompactRow({ message, timeZone }: RowProps) {
         <MessageTime
           message={message}
           timeZone={timeZone}
-          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+          className="opacity-0 group-hover:opacity-100 group-focus-visible/history:opacity-100"
         />
       </div>
       <div className="min-w-0 flex-1">
