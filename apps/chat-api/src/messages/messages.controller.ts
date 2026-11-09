@@ -39,7 +39,7 @@ export class MessagesController {
     @Param('conversationId') conversationId: string,
     @Body() body: SendMessageDto,
   ): Promise<{ message: MessageResponse }> {
-    const message = await this.messages.send(
+    const message = await this.messages.sendMessage(
       { id: person.id, name: person.name },
       conversationId,
       { clientId: body.client_id, body: body.body },

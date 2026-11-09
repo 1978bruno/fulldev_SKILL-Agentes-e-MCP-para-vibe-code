@@ -19,10 +19,11 @@ test.describe("Histórico até a primeira Mensagem", () => {
       messageList(page, channel.name).getByRole("listitem"),
     ).toHaveCount(50);
     await waitForRealtime(page);
+    const history = await readyHistory(page, channel.name);
 
     // 1. Revogar a Sessão e rolar até o topo
     await deleteSessionsOf(person.id);
-    await scrollHistoryToTop(await readyHistory(page, channel.name));
+    await scrollHistoryToTop(history);
 
     await expect(page).toHaveURL(`/entrar?para=%2Fconversas%2F${channel.id}`);
   });

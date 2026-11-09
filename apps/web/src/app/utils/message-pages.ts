@@ -21,7 +21,12 @@ export function appendToLatestPage(pages: MessagePage[], message: Message): Mess
   const hasOlder = pages.length > 1 || latest.hasMore;
   const start = latest.messages[0];
   if (hasOlder && start && message.id < start.id) return pages;
-  const position = latest.messages.findLastIndex((existing) => existing.id < message.id) + 1;
-  const messages = latest.messages.toSpliced(position, 0, message);
-  return [{ ...latest, messages }, ...older];
+  return [{ ...latest, messages: insertById(latest.messages, message) }, ...older];
+}
+
+// Encaixa a Mensagem na ordem do id (UUID v7, a ordem da Conversa). Quem chama já descartou o id
+// repetido.
+export function insertById(messages: readonly Message[], message: Message): Message[] {
+  const position = messages.findLastIndex((existing) => existing.id < message.id) + 1;
+  return messages.toSpliced(position, 0, message);
 }

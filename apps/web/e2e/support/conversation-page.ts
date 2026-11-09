@@ -1,10 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 
-// O histórico da Conversa depois de hidratado: antes disso, rolar não pede as anteriores, e a
-// abertura leva a lista de volta ao fim.
+// O histórico da Conversa depois de hidratado e em dia com o tempo real: antes disso, rolar não
+// pede as anteriores, a abertura leva a lista de volta ao fim, e o reset da conexão ainda recarrega
+// a página mais recente.
 export async function readyHistory(page: Page, channelName: string): Promise<Locator> {
   const history = page.getByRole("region", { name: `Histórico de #${channelName}` });
-  await history.and(page.locator("[data-ready]")).waitFor();
+  await history.and(page.locator("[data-ready][data-synced]")).waitFor();
   return history;
 }
 
@@ -16,6 +17,16 @@ export async function scrollHistoryToTop(history: Locator): Promise<void> {
 
 export function messageList(page: Page, channelName: string): Locator {
   return page.getByRole("list", { name: `Mensagens em #${channelName}` });
+}
+
+// Os itens da lista de Mensagens com o texto dado.
+export function messageItem(page: Page, channelName: string, text: string): Locator {
+  return messageList(page, channelName).getByRole("listitem").filter({ hasText: text });
+}
+
+// A caixa de mensagem do Canal.
+export function composer(page: Page, channelName: string): Locator {
+  return page.getByRole("textbox", { name: `Mensagem para #${channelName}` });
 }
 
 export function conversationIntro(page: Page, channelName: string): Locator {

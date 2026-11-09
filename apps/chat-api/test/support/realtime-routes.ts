@@ -71,3 +71,47 @@ export const realtimeRoutes = {
     return socket;
   },
 };
+
+type ServerEvent = keyof ServerToClientEvents;
+type EventPayload<E extends ServerEvent> = Parameters<
+  ServerToClientEvents[E]
+>[0];
+
+// Junta tudo o que o socket recebe de um evento, desde agora.
+export function collectEvents<E extends ServerEvent>(
+  socket: TestSocket,
+  event: E,
+): EventPayload<E>[] {
+  const received: EventPayload<E>[] = [];
+  const listener = (payload: EventPayload<E>) => received.push(payload);
+  (
+    socket.on as (
+      event: string,
+      listener: (payload: EventPayload<E>) => void,
+    ) => void
+  )(event, listener);
+  return received;
+}
+
+// Espera até a lista ter `count` itens, ou falha depois de `timeoutMs`.
+export async function waitForCount<T>(
+  received: T[],
+  count: number,
+  timeoutMs = 2000,
+): Promise<T[]> {
+  const deadline = Date.now() + timeoutMs;
+  while (received.length < count) {
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Esperava ${count} evento(s), chegaram ${received.length}`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return received;
+}
+
+// Dá tempo para um evento que não deveria chegar aparecer.
+export function settle(ms = 300): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

@@ -6,6 +6,7 @@ import { MessageItem } from "@/app/components/message/message-item";
 import { buttonVariants } from "@/app/components/ui/button";
 import { Spinner } from "@/app/components/ui/spinner";
 import { useMessageHistory } from "@/app/hooks/use-message-history";
+import { useRealtimeMessages } from "@/app/hooks/use-realtime-messages";
 import {
   type PendingMessage,
   type PendingStatus,
@@ -53,13 +54,19 @@ function History({
   renderedAt,
   currentPerson,
 }: MessageHistoryProps) {
-  const { messages: saved, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSent } =
+  const { messages: saved, hasOlder, isLoadingOlder, olderFailed, loadOlder, appendSaved, reloadLatest } =
     useMessageHistory(conversation.id, initialPage);
-  const { pending, send, retry, discard } = usePendingMessages(
+  const { pending, send, retry, discard, dropDelivered } = usePendingMessages(
     conversation.id,
     currentPerson,
-    appendSent,
+    appendSaved,
   );
+  const { isSynced } = useRealtimeMessages(conversation.id, initialPage, {
+    currentPersonId: currentPerson.id,
+    appendSaved,
+    dropDelivered,
+    reloadLatest,
+  });
   // As pendentes vêm sempre depois das gravadas, e passam pelo mesmo agrupamento.
   const messages = useMemo<(Message & { status?: PendingStatus })[]>(
     () => [...saved, ...pending],
@@ -161,6 +168,8 @@ function History({
         ref={scrollRef}
         role="region"
         aria-label={`Histórico de #${conversation.name}`}
+        // Marca o histórico em dia com o tempo real, que os testes esperam antes de agir.
+        data-synced={isSynced ? "" : undefined}
         tabIndex={0}
         className="group/history flex min-h-0 flex-1 flex-col overflow-y-auto pb-2"
       >

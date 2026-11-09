@@ -1,7 +1,9 @@
+import type { MessagePayload } from "chat-events";
 import { connection } from "next/server";
 import { cache } from "react";
 import { env } from "@/app/config/env";
 import { initials } from "@/app/utils/initials";
+import { messageFromEvent } from "@/app/utils/message-event";
 
 // Service HTTP da API do chat, usado só no servidor (Server Actions, Server Components e
 // Route Handlers). Devolve uniões de resultado em vez de lançar.
@@ -137,14 +139,8 @@ export type Conversation = {
   topic: string | null;
 };
 
-type ApiMessage = {
-  id: string;
-  conversation_id: string;
-  client_id: string;
-  author: { id: string; name: string };
-  body: string;
-  created_at: string;
-};
+// A Mensagem da API é a mesma do evento do tempo real (pacote chat-events).
+type ApiMessage = MessagePayload;
 
 export type MessageAuthor = { id: string; name: string; initials: string };
 
@@ -159,16 +155,6 @@ export type Message = {
 
 export type MessagePage = { messages: Message[]; hasMore: boolean };
 
-function toMessage(message: ApiMessage): Message {
-  return {
-    id: message.id,
-    conversationId: message.conversation_id,
-    clientId: message.client_id,
-    author: { ...message.author, initials: initials(message.author.name) },
-    body: message.body,
-    createdAt: message.created_at,
-  };
-}
 
 export type ConversationsResult =
   | { kind: "ok"; conversations: Conversation[] }
@@ -252,7 +238,7 @@ export async function listMessages(
   if (result.kind !== "ok") return result;
   return {
     kind: "ok",
-    page: { messages: result.body.messages.map(toMessage), hasMore: result.body.has_more },
+    page: { messages: result.body.messages.map(messageFromEvent), hasMore: result.body.has_more },
   };
 }
 
@@ -268,7 +254,7 @@ export async function sendMessage(
   });
   if (response?.status === 201) {
     const body = await jsonBody<{ message: ApiMessage }>(response);
-    if (body) return { kind: "ok", message: toMessage(body.message) };
+    if (body) return { kind: "ok", message: messageFromEvent(body.message) };
     return { kind: "failure" };
   }
   if (response?.status === 400) return { kind: "invalid" };
