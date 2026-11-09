@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RENEWAL_INTERVAL_DAYS } from '../sessions/session-renewal';
+import { RENEWAL_INTERVAL_DAYS } from './session-values';
 
 export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
