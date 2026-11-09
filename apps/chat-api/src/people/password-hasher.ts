@@ -1,11 +1,17 @@
 import { randomBytes } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { hash, verify } from '@node-rs/argon2';
 
 // Argon2id com os parâmetros padrão da biblioteca (m=19456, t=2, p=1: o mínimo da OWASP).
 @Injectable()
-export class PasswordHasher {
+export class PasswordHasher implements OnModuleInit {
   private dummyHash?: Promise<string>;
+
+  // Gerado na subida: gerar no primeiro e-mail sem conta faria essa resposta levar o dobro.
+  async onModuleInit(): Promise<void> {
+    this.dummyHash = hash(randomBytes(32).toString('base64url'));
+    await this.dummyHash;
+  }
 
   hash(password: string): Promise<string> {
     return hash(password);

@@ -1,3 +1,4 @@
+import { isEmail } from 'class-validator';
 import { DomainError } from '../common/errors/domain.error';
 import { PeopleService } from '../people/people.service';
 import { PasswordPrompt } from './password-prompt';
@@ -41,8 +42,13 @@ export class AccountsCommand {
   }
 
   private async create([email, name]: string[]): Promise<number> {
-    if (!email || !name) {
+    if (!email?.trim() || !name?.trim()) {
       this.output.error('Uso: pnpm accounts create <e-mail> <nome>');
+      return 1;
+    }
+    // O mesmo formato que o login aceita; fora dele, a conta nunca conseguiria entrar.
+    if (!isEmail(email.trim())) {
+      this.output.error(`E-mail inválido: ${email.trim()}`);
       return 1;
     }
     const password = await this.prompt.ask('Senha: ');

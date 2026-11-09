@@ -22,7 +22,3 @@ export async function insertPerson(name = "Ana Souza"): Promise<TestPerson> {
   );
   return { id, name, email, password: TEST_PASSWORD };
 }
-
-export async function closeDatabase(): Promise<void> {
-  await pool.end();
-}

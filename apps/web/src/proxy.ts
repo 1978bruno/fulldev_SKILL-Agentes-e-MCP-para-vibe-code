@@ -11,5 +11,6 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!entrar|api|_next/static|_next/image|favicon.ico).*)"],
+  // O (?:/|$) evita que /entrar-x ou /apiario escapem do proxy por começarem igual.
+  matcher: ["/((?!(?:entrar|api)(?:/|$)|_next/static|_next/image|favicon.ico).*)"],
 };

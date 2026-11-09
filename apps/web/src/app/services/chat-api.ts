@@ -39,6 +39,15 @@ async function errorCode(response: Response): Promise<string | undefined> {
   }
 }
 
+// O corpo também corre contra o tempo limite e pode chegar quebrado: vira failure, sem lançar.
+async function jsonBody<T>(response: Response): Promise<T | null> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
 function sessionCookieHeader(token: string): string {
   return `${env.SESSION_COOKIE_NAME}=${token}`;
 }
@@ -51,7 +60,8 @@ export async function login(email: string, password: string): Promise<LoginResul
   });
   if (!response) return { kind: "failure" };
   if (response.status === 201) {
-    const body = (await response.json()) as { token: string; person: Person };
+    const body = await jsonBody<{ token: string; person: Person }>(response);
+    if (!body) return { kind: "failure" };
     return { kind: "ok", token: body.token, person: body.person };
   }
   if (response.status === 401 && (await errorCode(response)) === "invalid_credentials") {
@@ -67,7 +77,8 @@ export async function getCurrentPerson(token: string): Promise<CurrentPersonResu
   });
   if (!response) return { kind: "failure" };
   if (response.status === 200) {
-    const body = (await response.json()) as { person: Person };
+    const body = await jsonBody<{ person: Person }>(response);
+    if (!body) return { kind: "failure" };
     return { kind: "ok", person: body.person };
   }
   if (response.status === 401) return { kind: "unauthenticated" };

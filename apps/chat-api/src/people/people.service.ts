@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { EmailAlreadyExistsError } from './email-already-exists.error';
 import { normalizeEmail } from './normalize-email';
 import { PasswordHasher } from './password-hasher';
@@ -10,6 +10,13 @@ export interface NewPerson {
   email: string;
   name: string;
   password: string;
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof QueryFailedError &&
+    (error.driverError as { code?: string } | undefined)?.code === '23505'
+  );
 }
 
 @Injectable()
@@ -29,7 +36,15 @@ export class PeopleService {
       name: name.trim(),
       passwordHash: await this.passwords.hash(password),
     });
-    return this.people.save(person);
+    try {
+      return await this.people.save(person);
+    } catch (error) {
+      // Duas criações simultâneas passam pelo existsBy; o índice único decide.
+      if (isUniqueViolation(error)) {
+        throw new EmailAlreadyExistsError(normalized);
+      }
+      throw error;
+    }
   }
 
   // Devolve a Pessoa só quando a senha confere. O e-mail sem conta passa pelo hash

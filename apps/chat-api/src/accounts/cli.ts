@@ -19,4 +19,8 @@ async function main(): Promise<void> {
     await app.close();
   }
 }
-void main();
+main().catch((error: unknown) => {
+  // Ctrl+C na senha, banco fora do ar: mensagem curta e saída com falha, sem rejeição solta.
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});
