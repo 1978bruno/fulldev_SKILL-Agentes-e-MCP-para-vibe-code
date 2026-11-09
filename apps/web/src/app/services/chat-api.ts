@@ -64,7 +64,10 @@ export async function login(email: string, password: string): Promise<LoginResul
     if (!body) return { kind: "failure" };
     return { kind: "ok", token: body.token, person: body.person };
   }
-  if (response.status === 401 && (await errorCode(response)) === "invalid_credentials") {
+  const code = response.status < 500 ? await errorCode(response) : undefined;
+  // Um 400 aqui é uma entrada que passou na validação da web e a API recusou (formato ou
+  // tamanho mais estritos): essas credenciais não podem estar certas.
+  if (code === "invalid_credentials" || code === "validation_failed") {
     return { kind: "invalid_credentials" };
   }
   return { kind: "failure" };

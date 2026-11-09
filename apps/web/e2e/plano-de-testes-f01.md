@@ -44,6 +44,18 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
     - expect: a Senha fica vazia, inválida e com o foco
     - expect: o E-mail continua preenchido
 
+#### 1.3. entrar-pelo-teclado
+
+**File:** `e2e/login/entrar-pelo-teclado.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar`
+    - expect: o foco está no E-mail
+  2. Digitar o e-mail, Tab, digitar a senha, Tab
+    - expect: o foco passa pela Senha e chega ao botão "Entrar"
+  3. Shift+Tab até a Senha e Enter
+    - expect: a URL é `/` e a Home aparece
+
 ### 2. Sem Sessão
 
 **Seed:** `e2e/seed.spec.ts`
@@ -64,3 +76,42 @@ Pessoa pela fixture `person`; os que partem de alguém logado usam `loggedInPage
   1. Com um cookie de sessão cujo token a API não conhece, abrir `/`
     - expect: a URL é `/entrar`
     - expect: o cookie de sessão deixa de existir
+
+### 3. Erros ao entrar
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 3.1. erros-de-preenchimento
+
+**File:** `e2e/login/erros-de-preenchimento.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar` e clicar em "Entrar" com os dois campos vazios
+    - expect: "Informe um e-mail válido, como nome@empresa.com." abaixo do E-mail e "Informe sua senha." abaixo da Senha
+    - expect: o foco vai para o E-mail, que fica inválido e descrito pela mensagem dele
+  2. Preencher um e-mail fora do formato e uma senha, e enviar com Enter
+    - expect: só a mensagem do E-mail, com o foco no E-mail
+  3. Preencher `ana@empresa..com` e, depois, `ana@empresa/com.br`, e enviar cada um
+    - expect: a mensagem do E-mail, com o foco no E-mail
+  4. Preencher um e-mail válido, apagar a senha e enviar
+    - expect: só a mensagem da Senha, com o foco na Senha
+    - expect: nenhum envio saiu para o servidor em todo o cenário
+
+A falha no envio (API do chat parada) é verificada pelo `playwright-cli` e registrada na pasta da
+F01-T04 (`falha-no-envio.md`).
+
+### 4. Acessibilidade
+
+**Seed:** `e2e/seed.spec.ts`
+
+#### 4.1. entrar-e-home-sem-violacoes
+
+**File:** `e2e/acessibilidade/entrar-e-home-sem-violacoes.spec.ts`
+
+**Steps:**
+  1. Abrir `/entrar`
+    - expect: o axe não encontra violações
+  2. Enviar com os campos vazios
+    - expect: o axe não encontra violações na tela com os erros
+  3. Entrar com a Pessoa
+    - expect: o axe não encontra violações na Home

@@ -1,20 +1,73 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { login, type LoginState } from "@/app/actions/login";
 import { Button } from "@/app/components/ui/button";
 import { Field } from "@/app/components/ui/field";
 import { Input } from "@/app/components/ui/input";
+import {
+  hasErrors,
+  validateLogin,
+  type LoginFieldErrors,
+} from "@/app/utils/login-validation";
 
 const INVALID_CREDENTIALS =
   "E-mail ou senha incorretos. Confira os dados e tente de novo.";
 
+// Mensagens do formulário: ficam entre a Senha e o botão, com role="alert".
+const FORM_MESSAGES: Partial<Record<LoginState["status"], string>> = {
+  failure: "Não foi possível entrar agora. Confira sua conexão e tente de novo.",
+};
+
 const INITIAL_STATE: LoginState = { status: "idle" };
 
+// A rede pode cair na própria chamada do Server Action, antes de ele devolver um estado: o fetch
+// rejeita com um TypeError de rede ("Failed to fetch" no Chromium, "NetworkError…" no Firefox,
+// "Load failed" no Safari). Isso vira a mesma falha recuperável; qualquer outro erro (um bug, ou
+// o redirecionamento do login certo) segue para o Next.
+const NETWORK_ERROR = /failed to fetch|networkerror|load failed/i;
+
+function isNetworkError(error: unknown): boolean {
+  return error instanceof TypeError && NETWORK_ERROR.test(error.message);
+}
+
+async function loginOrFailure(
+  previous: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
+  try {
+    return await login(previous, formData);
+  } catch (error) {
+    if (isNetworkError(error)) return { status: "failure" };
+    throw error;
+  }
+}
+
+function focusIsLost(): boolean {
+  return !document.activeElement || document.activeElement === document.body;
+}
+
 export function LoginForm() {
-  const [state, formAction, isPending] = useActionState(login, INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(
+    loginOrFailure,
+    INITIAL_STATE,
+  );
+  // Erros da validação no cliente; os do Server Action chegam pelo state.
+  const [clientErrors, setClientErrors] = useState<LoginFieldErrors>({});
+  const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  // Onde estava o foco ao enviar: o botão desabilitado durante o envio o perde.
+  const focusedOnSubmitRef = useRef<HTMLElement | null>(null);
+  // O foco vai para o primeiro campo inválido depois que os erros aparecem, para o leitor de
+  // tela já encontrar a descrição ao chegar no campo.
+  const shouldFocusInvalidRef = useRef(false);
 
   // Credenciais incorretas: a senha é limpa e recebe o foco; o e-mail continua.
   useEffect(() => {
@@ -25,17 +78,52 @@ export function LoginForm() {
         input.focus();
       }
     }
+    // Falha no envio: o foco volta para onde estava, só se ele se perdeu (a Pessoa pode ter ido
+    // para outro campo enquanto esperava).
+    if (state.status === "failure" && focusIsLost()) {
+      focusedOnSubmitRef.current?.focus();
+    }
   }, [state]);
+
+  useEffect(() => {
+    if (!shouldFocusInvalidRef.current) return;
+    shouldFocusInvalidRef.current = false;
+    if (clientErrors.email) emailRef.current?.focus();
+    else if (clientErrors.password) passwordRef.current?.focus();
+  }, [clientErrors]);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isPending) return;
     const formData = new FormData(event.currentTarget);
+    const errors = validateLogin({
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
+    });
+    setClientErrors(errors);
+    if (hasErrors(errors)) {
+      shouldFocusInvalidRef.current = true;
+      return;
+    }
+    focusedOnSubmitRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     startTransition(() => formAction(formData));
   }
 
+  // O resultado do último envio (erros do Server Action, dados incorretos, mensagem do
+  // formulário) vale só até a próxima validação no cliente ou o próximo envio.
+  const hasClientErrors = hasErrors(clientErrors);
+  const showsLastResult = !hasClientErrors && !isPending;
+  const serverErrors =
+    showsLastResult && state.status === "invalid_input" ? state.fieldErrors : {};
+  const emailError = clientErrors.email ?? serverErrors.email;
   const passwordError =
-    state.status === "invalid_credentials" ? INVALID_CREDENTIALS : undefined;
+    clientErrors.password ??
+    serverErrors.password ??
+    (showsLastResult && state.status === "invalid_credentials"
+      ? INVALID_CREDENTIALS
+      : undefined);
+  const formMessage = showsLastResult ? FORM_MESSAGES[state.status] : undefined;
 
   return (
     <div className="flex w-full max-w-md flex-col gap-6 rounded-panel bg-surface-raised p-8 shadow-2">
@@ -52,21 +140,25 @@ export function LoginForm() {
       </div>
 
       {/* O action vale antes da hidratação (o React o renderiza como POST para o Server Action):
-          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit chama o
-          mesmo Server Action. */}
+          sem ele, o navegador mandaria um GET com a senha na URL. Com o JS, o onSubmit valida e
+          chama o mesmo Server Action. */}
       <form
         className="flex w-full flex-col gap-4"
         action={formAction}
         onSubmit={handleSubmit}
         noValidate
       >
-        <Field label="E-mail" htmlFor="email">
+        <Field label="E-mail" htmlFor="email" error={emailError} errorId="email-error">
           <Input
+            ref={emailRef}
             id="email"
             name="email"
             type="email"
             autoComplete="username"
+            placeholder="nome@empresa.com"
             autoFocus
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "email-error" : undefined}
           />
         </Field>
         <Field
@@ -85,6 +177,11 @@ export function LoginForm() {
             aria-describedby={passwordError ? "password-error" : undefined}
           />
         </Field>
+        {formMessage && (
+          <p role="alert" className="text-small text-danger-fg">
+            {formMessage}
+          </p>
+        )}
         <Button type="submit" size="lg" className="w-full" loading={isPending}>
           Entrar
         </Button>
