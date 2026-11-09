@@ -1,5 +1,6 @@
 import { isEmail } from 'class-validator';
 import { DomainError } from '../common/errors/domain.error';
+import { PASSWORD_MAX_LENGTH } from '../people/password-policy';
 import { PeopleService } from '../people/people.service';
 import { PasswordPrompt } from './password-prompt';
 
@@ -7,9 +8,6 @@ export interface CommandOutput {
   info(message: string): void;
   error(message: string): void;
 }
-
-// O mesmo teto da senha no login (LoginDto): acima dele, a conta nunca conseguiria entrar.
-const PASSWORD_MAX_LENGTH = 256;
 
 const USAGE = `Uso: pnpm accounts <operação> [argumentos]
 
