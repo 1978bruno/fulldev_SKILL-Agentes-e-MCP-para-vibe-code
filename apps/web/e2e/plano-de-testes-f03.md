@@ -156,3 +156,36 @@ As duas Pessoas abrem o Canal em comum (`openSharedChannel`); a outra digita tec
 #### 5.4. digitando-sem-violacoes
   1. Com o aviso na tela, rodar o axe
     - expect: nenhuma violação
+
+### 6. Faixa de conexão
+
+**File:** `e2e/tempo-real/faixa-de-conexao.spec.ts` e
+`e2e/acessibilidade/faixa-de-conexao-sem-violacoes.spec.ts`
+
+A queda é o `context.setOffline(true)` depois de a página abrir: o navegador dispara `offline`, e o
+provedor derruba o socket na hora.
+
+#### 6.1. a faixa aparece depois de 3 s offline e some ao voltar
+  1. Com o Canal aberto, a rede cai
+    - expect: `data-realtime` fica `disconnected`; depois de 2,5 s a faixa ainda não aparece, e
+      aparece até 2 s depois, sem receber o foco
+  2. A rede volta
+    - expect: `connected` e a faixa some
+
+#### 6.2. uma queda curta não mostra a faixa
+  1. A rede cai e fica fora 2,5 s
+    - expect: nenhuma faixa enquanto está fora
+  2. A rede volta
+    - expect: conectada, sem faixa
+
+#### 6.3. a faixa aparece quando a primeira conexão não acontece
+  1. Entrar com o WebSocket preso no `routeWebSocket`, sem chegar ao servidor
+    - expect: a faixa aparece em até 6 s
+
+#### 6.4. durante a queda, o envio segue a F02
+  1. Sem rede, enviar uma Mensagem
+    - expect: "Não foi possível enviar."
+
+#### 6.5. faixa-de-conexao-sem-violacoes
+  1. Com a faixa na tela, rodar o axe
+    - expect: nenhuma violação

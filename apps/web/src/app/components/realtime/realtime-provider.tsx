@@ -24,6 +24,9 @@ export type RealtimeListener = {
 
 type RealtimeContextValue = {
   status: RealtimeStatus;
+  // Número da queda atual: cresce cada vez que a aba deixa de estar conectada (a primeira conexão
+  // ainda por fazer é a queda 1). A faixa de conexão conta o atraso por queda.
+  outage: number;
   // Nulo só antes do primeiro efeito, na renderização do servidor e na hidratação.
   socket: RealtimeSocket | null;
   // Assina os eventos da aba; devolve a função que cancela.
@@ -34,6 +37,7 @@ type RealtimeContextValue = {
 
 const RealtimeContext = createContext<RealtimeContextValue>({
   status: "connecting",
+  outage: 0,
   socket: null,
   subscribe: () => () => {},
   recentMessages: () => [],
@@ -59,8 +63,9 @@ type RealtimeProviderProps = {
 export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
   const [connection, setConnection] = useState<{
     status: RealtimeStatus;
+    outage: number;
     socket: RealtimeSocket | null;
-  }>({ status: "connecting", socket: null });
+  }>({ status: "connecting", outage: 1, socket: null });
   const listeners = useRef(new Set<RealtimeListener>());
   // Um reset que chegou sem ninguém assinando: o histórico ainda montava (Suspense) ou estava
   // entre duas Conversas. A próxima assinatura o recebe.
@@ -77,7 +82,13 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     });
     let retryDelay = RETRY_MIN_MS;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    const setStatus = (status: RealtimeStatus) => setConnection({ status, socket });
+    const setStatus = (status: RealtimeStatus) =>
+      setConnection((current) => {
+        if (current.status === status && current.socket === socket) return current;
+        // Sair do "conectada" abre uma queda nova; entre "conectando" e "desconectada" é a mesma.
+        const outage = current.status === "connected" ? current.outage + 1 : current.outage;
+        return { status, outage, socket };
+      });
     const received = recent.current;
 
     socket.on("connect", () => {
@@ -116,7 +127,24 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       syncListeners.forEach((listener) => listener.onSync?.(event));
     });
 
+    // O navegador sabe que caiu antes do ping: o socket cai na hora e volta com a rede. O próprio
+    // cliente do Socket.IO ignora o offline quando o host é localhost. A desconexão pedida aqui
+    // desliga a reconexão automática, e por isso o online conecta de novo.
+    const goOffline = () => {
+      clearTimeout(retryTimer);
+      socket.disconnect();
+    };
+    const goOnline = () => {
+      clearTimeout(retryTimer);
+      retryDelay = RETRY_MIN_MS;
+      if (!socket.connected) socket.connect();
+    };
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+
     return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
       clearTimeout(retryTimer);
       socket.removeAllListeners();
       socket.disconnect();
