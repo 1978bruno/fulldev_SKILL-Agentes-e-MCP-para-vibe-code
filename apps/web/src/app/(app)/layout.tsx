@@ -57,7 +57,7 @@ async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
             navigation={
               <>
                 <Rail person={result.person} />
-                <Sidebar />
+                <Sidebar personId={result.person.id} />
               </>
             }
           >

@@ -1,7 +1,8 @@
-import type { MessagePayload } from "chat-events";
+import type { ConversationPayload, MessagePayload } from "chat-events";
 import { connection } from "next/server";
 import { cache } from "react";
 import { env } from "@/app/config/env";
+import { conversationFromPayload } from "@/app/utils/conversation-event";
 import { initials } from "@/app/utils/initials";
 import { messageFromEvent } from "@/app/utils/message-event";
 
@@ -140,23 +141,8 @@ export type Conversation = {
   memberCount: number;
 };
 
-type ApiConversation = {
-  id: string;
-  kind: ConversationKind;
-  name: string;
-  topic: string | null;
-  member_count: number;
-};
-
-function toConversation(conversation: ApiConversation): Conversation {
-  return {
-    id: conversation.id,
-    kind: conversation.kind,
-    name: conversation.name,
-    topic: conversation.topic,
-    memberCount: conversation.member_count,
-  };
-}
+// A Conversa da API é a mesma do evento do tempo real (pacote chat-events).
+type ApiConversation = ConversationPayload;
 
 // A Mensagem da API é a mesma do evento do tempo real (pacote chat-events).
 type ApiMessage = MessagePayload;
@@ -238,7 +224,7 @@ export const listConversations = cache(fetchConversations);
 async function fetchConversations(token: string): Promise<ConversationsResult> {
   const result = await getJson<{ conversations: ApiConversation[] }>(token, "/v1/conversations");
   if (result.kind === "ok") {
-    return { kind: "ok", conversations: result.body.conversations.map(toConversation) };
+    return { kind: "ok", conversations: result.body.conversations.map(conversationFromPayload) };
   }
   // A lista não tem 404: só a Sessão recusada ou a falha.
   return result.kind === "unauthenticated" ? result : { kind: "failure" };
@@ -250,7 +236,7 @@ export async function getConversation(
 ): Promise<ConversationResult> {
   const result = await getJson<{ conversation: ApiConversation }>(token, conversationPath(id));
   return result.kind === "ok"
-    ? { kind: "ok", conversation: toConversation(result.body.conversation) }
+    ? { kind: "ok", conversation: conversationFromPayload(result.body.conversation) }
     : result;
 }
 
@@ -271,7 +257,7 @@ export async function createChannel(
   });
   if (response?.status === 201) {
     const body = await jsonBody<{ conversation: ApiConversation }>(response);
-    return body ? { kind: "ok", conversation: toConversation(body.conversation) } : { kind: "failure" };
+    return body ? { kind: "ok", conversation: conversationFromPayload(body.conversation) } : { kind: "failure" };
   }
   if (response?.status === 401) return { kind: "unauthenticated" };
   if (response?.status === 400) return { kind: "invalid" };

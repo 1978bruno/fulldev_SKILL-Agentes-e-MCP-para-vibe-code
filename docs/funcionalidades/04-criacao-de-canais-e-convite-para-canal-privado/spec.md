@@ -126,14 +126,18 @@ do comando continua criando só Canal público. A operação entra no `AGENTS.md
 
 | Evento | Direção | Carga |
 | --- | --- | --- |
-| `conversation.member_added` | API → aba | `event_id` (cursor, ausente se o Redis falhou), `conversation` (no formato da Conversa do REST, com `member_count`) e `person_ids`, as Pessoas adicionadas agora |
+| `conversation.member_added` | API → aba | `event_id` (cursor, ausente se o Redis falhou), `conversation` (no formato da Conversa do REST, com `member_count`) e `person_ids`: só a própria Pessoa, para quem entrou agora, ou as Pessoas adicionadas, para quem já era Membro |
 
 - **Para quem:** todos os Membros da Conversa depois da gravação, guardado no stream de cada um e
   emitido para a sala `person:`, como o `message.created` (spec da F03, "Eventos por Pessoa e
   reconexão").
-  - Canal público criado: todas as Pessoas, com `person_ids` de todas.
+  - Canal público criado: todas as Pessoas, cada uma com `person_ids` só com ela.
   - Canal privado criado: só quem o criou (as outras abas dela), com `person_ids` dela.
-  - Adição ao Canal: os Membros antigos e os novos, com `person_ids` dos novos.
+  - Adição ao Canal: os Membros novos, cada um com `person_ids` só com ele, e os antigos, com
+    `person_ids` dos novos.
+- **Carga por Pessoa:** a aba só precisa saber se ela mesma entrou agora. Com `person_ids` de todas
+  as Pessoas, o Canal público novo gravaria o workspace inteiro em cada stream: com 4,5 mil Pessoas,
+  o p95 da chegada passava de 3 s (medição da F04-T03).
 - **Sem evento:** o reenvio idempotente da criação e a adição em que todas as Pessoas já eram
   Membros.
 - Quem foi adicionada recebe as Mensagens seguintes sem nada a mais: a publicação lê os Membros a

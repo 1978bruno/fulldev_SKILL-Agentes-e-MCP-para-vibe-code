@@ -1,13 +1,8 @@
-import { ConversationKind } from './conversation.entity';
+import type { ConversationPayload } from 'chat-events';
 import type { ConversationSummary } from './conversations.service';
 
-export interface ConversationResponse {
-  id: string;
-  kind: ConversationKind;
-  name: string | null;
-  topic: string | null;
-  member_count: number;
-}
+// A Conversa do REST é a mesma do evento do tempo real (pacote chat-events).
+export type ConversationResponse = ConversationPayload;
 
 export function toConversationResponse({
   conversation,

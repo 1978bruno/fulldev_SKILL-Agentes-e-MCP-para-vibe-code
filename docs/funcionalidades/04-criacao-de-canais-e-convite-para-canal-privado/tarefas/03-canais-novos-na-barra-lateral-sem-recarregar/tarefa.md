@@ -1,6 +1,6 @@
 # 03: Canais novos na barra lateral sem recarregar
 
-**Status:** a fazer
+**Status:** concluída
 
 **O que construir:** quando alguém cria um Canal público, ele aparece na barra lateral de todas as
 Pessoas em até 1 s, sem recarregar a página, em todas as abas, na ordem alfabética e sem abrir
@@ -17,24 +17,24 @@ dos eventos recarrega a lista. Referências:
 
 **Bloqueada por:** 01 (Criar um Canal público pela barra lateral)
 
-- [ ] **CA1** · O evento `conversation.member_added` entra no pacote `chat-events`, com `event_id`,
+- [x] **CA1** · O evento `conversation.member_added` entra no pacote `chat-events`, com `event_id`,
   `conversation` (no formato do REST, com `member_count`) e `person_ids`.
-- [ ] **CA2** · O service que orquestra a criação publica o evento depois do commit para todos os
+- [x] **CA2** · O service que orquestra a criação publica o evento depois do commit para todos os
   Membros que a Conversa tem depois da gravação, com `person_ids` das Pessoas que entraram agora,
   pelo caminho do `message.created`: guardado no stream de cada Pessoa e emitido para a sala
   `person:`. O reenvio idempotente não publica. Redis fora ou travado segue a F03. A regra vale para
   qualquer tipo de Canal: o privado, ao existir, publica só para quem o criou.
-- [ ] **CA3** · A lista de Conversas da barra lateral passa a um `useSWR` de chave fixa, com a lista
+- [x] **CA3** · A lista de Conversas da barra lateral passa a um `useSWR` de chave fixa, com a lista
   do Server Component como `fallbackData`; o esqueleto e o erro continuam no servidor.
-- [ ] **CA4** · Uma função pura aplica o evento à lista: com a Pessoa da aba em `person_ids`, insere
+- [x] **CA4** · Uma função pura aplica o evento à lista: com a Pessoa da aba em `person_ids`, insere
   a Conversa na ordem da 01 e ignora um id que já está lá; sem ela, atualiza o `member_count`. O
   evento passa pelo provedor da F03, com a aplicação em ordem até o `sync`.
-- [ ] **CA5** · `GET /api/conversations` lê a lista, e o `sync` de `reset` a busca de novo, junto com
+- [x] **CA5** · `GET /api/conversations` lê a lista, e o `sync` de `reset` a busca de novo, junto com
   o histórico da Conversa aberta.
-- [ ] **CA6** · Os testes de ponta a ponta da API com `socket.io-client` provam que o evento do Canal
+- [x] **CA6** · Os testes de ponta a ponta da API com `socket.io-client` provam que o evento do Canal
   público chega a todas as Pessoas conectadas, que o reenvio idempotente não gera outro, e que o
   evento volta na reconexão com cursor. O Vitest prova a função de aplicação.
-- [ ] **CA7** · O Playwright prova, com duas Pessoas, o Canal criado por uma aparecendo na barra
+- [x] **CA7** · O Playwright prova, com duas Pessoas, o Canal criado por uma aparecendo na barra
   lateral da outra sem recarregar, sem tirar o foco da caixa de mensagem.
-- [ ] **CA8** · A medição do p95 entre a resposta da criação e a chegada do evento, com 50 sockets e
+- [x] **CA8** · A medição do p95 entre a resposta da criação e a chegada do evento, com 50 sockets e
   50 Canais públicos, está em `medicao-p95.md` nesta pasta, com o critério do PRD (até 1 s).

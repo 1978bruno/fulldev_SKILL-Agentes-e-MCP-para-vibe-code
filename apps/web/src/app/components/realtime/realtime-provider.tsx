@@ -2,6 +2,7 @@
 
 import type {
   ClientToServerEvents,
+  ConversationMemberAddedEvent,
   HandshakeErrorCode,
   MessageCreatedEvent,
   ServerToClientEvents,
@@ -9,7 +10,8 @@ import type {
 } from "chat-events";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import type { Message } from "@/app/services/chat-api";
+import type { Conversation, Message } from "@/app/services/chat-api";
+import { conversationFromPayload } from "@/app/utils/conversation-event";
 import { laterCursor, orderForSync } from "@/app/utils/event-cursor";
 import { messageFromEvent } from "@/app/utils/message-event";
 import { rememberMessage } from "@/app/utils/recent-messages";
@@ -20,9 +22,17 @@ export type RealtimeSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 export type RealtimeStatus = "connecting" | "connected" | "disconnected";
 
+// Pessoas que entraram numa Conversa (spec da F04, "Tempo real").
+export type MemberAdded = { conversation: Conversation; personIds: readonly string[] };
+
 export type RealtimeListener = {
   onMessage?: (message: Message) => void;
+  onMemberAdded?: (event: MemberAdded) => void;
   onSync?: (event: SyncEvent) => void;
+  // Quem assina depois do sync recebe, por padrão, uma cópia sem reset. Com esta marca, recebe o
+  // reset do último sync: é o caso de quem não guarda os eventos que perdeu, como a lista de
+  // Conversas da barra lateral.
+  replayLastReset?: boolean;
 };
 
 type RealtimeContextValue = {
@@ -47,6 +57,12 @@ const RealtimeContext = createContext<RealtimeContextValue>({
 });
 
 const UNAUTHENTICATED: HandshakeErrorCode = "unauthenticated";
+
+// Um evento guardado por Pessoa, com o cursor dele à vista para a ordem até o sync.
+type StoredEvent = { event_id?: string } & (
+  | { name: "message.created"; event: MessageCreatedEvent }
+  | { name: "conversation.member_added"; event: ConversationMemberAddedEvent }
+);
 
 // Intervalo de uma nova tentativa depois de um handshake recusado por outro motivo, igual ao da
 // reconexão padrão do cliente do Socket.IO: começa em 1 s e dobra até 5 s.
@@ -92,7 +108,7 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
     // Até o sync de cada conexão, os eventos ficam guardados: a sala da Pessoa já recebe os novos
     // enquanto a API reenvia os perdidos, e a ordem é a do cursor.
     let isSyncing = true;
-    let pendingEvents: MessageCreatedEvent[] = [];
+    let pendingEvents: StoredEvent[] = [];
     let retryDelay = RETRY_MIN_MS;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const setStatus = (status: RealtimeStatus) =>
@@ -142,7 +158,6 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       }
     });
     const applyMessage = (event: MessageCreatedEvent) => {
-      cursor = laterCursor(cursor, event.event_id);
       const message = messageFromEvent(event.message);
       received.set(
         message.conversationId,
@@ -150,12 +165,31 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       );
       listeners.current.forEach((listener) => listener.onMessage?.(message));
     };
-    socket.on("message.created", (event) => {
-      if (isSyncing) pendingEvents.push(event);
-      else applyMessage(event);
-    });
+    const applyMemberAdded = (event: ConversationMemberAddedEvent) => {
+      const added = {
+        conversation: conversationFromPayload(event.conversation),
+        personIds: event.person_ids,
+      };
+      listeners.current.forEach((listener) => listener.onMemberAdded?.(added));
+    };
+    // Os eventos guardados por Pessoa, na ordem do cursor: aplica e avança o cursor.
+    const apply = (stored: StoredEvent) => {
+      cursor = laterCursor(cursor, stored.event_id);
+      if (stored.name === "message.created") applyMessage(stored.event);
+      else applyMemberAdded(stored.event);
+    };
+    const receive = (stored: StoredEvent) => {
+      if (isSyncing) pendingEvents.push(stored);
+      else apply(stored);
+    };
+    socket.on("message.created", (event) =>
+      receive({ name: "message.created", event, event_id: event.event_id }),
+    );
+    socket.on("conversation.member_added", (event) =>
+      receive({ name: "conversation.member_added", event, event_id: event.event_id }),
+    );
     socket.on("sync", (event) => {
-      orderForSync(pendingEvents).forEach(applyMessage);
+      orderForSync(pendingEvents).forEach(apply);
       pendingEvents = [];
       isSyncing = false;
       cursor = laterCursor(cursor, event.cursor);
@@ -197,7 +231,10 @@ export function RealtimeProvider({ url, children }: RealtimeProviderProps) {
       pendingReset.current = null;
       listener.onSync(pending);
     } else if (lastSync.current && listener.onSync) {
-      listener.onSync({ ...lastSync.current, reset: false });
+      listener.onSync({
+        ...lastSync.current,
+        reset: listener.replayLastReset ? lastSync.current.reset : false,
+      });
     }
     return () => {
       listeners.current.delete(listener);

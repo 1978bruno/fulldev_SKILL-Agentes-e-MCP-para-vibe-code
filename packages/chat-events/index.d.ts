@@ -1,4 +1,4 @@
-// Tipos dos eventos do WebSocket da API do chat (spec da F03, "Eventos"). Só tipos, sem código de
+// Tipos dos eventos do WebSocket da API do chat (spec da F03, "Eventos"; spec da F04, "Tempo real"). Só tipos, sem código de
 // execução: o pacote é o contrato do tempo real, consumido pela chat-api e pela web. Campos em
 // snake_case, como no REST.
 
@@ -30,6 +30,36 @@ export interface MessageCreatedEvent {
   message: MessagePayload;
 }
 
+/** Uma Conversa, no mesmo formato da resposta REST (spec da F04, "Rotas"). */
+export interface ConversationPayload {
+  id: string;
+  kind: "public_channel" | "private_channel";
+  name: string | null;
+  topic: string | null;
+  member_count: number;
+}
+
+/** Pessoas que entraram numa Conversa (spec da F04, "Tempo real"). */
+export interface ConversationMemberAddedEvent {
+  /** Cursor do evento para a reconexão; ausente quando o Redis falhou na publicação. */
+  event_id?: string;
+  conversation: ConversationPayload;
+  /**
+   * As Pessoas que entraram agora, como quem recebe precisa delas: só a própria Pessoa, se ela
+   * entrou agora, ou todas as adicionadas, se ela já era Membro.
+   */
+  person_ids: string[];
+}
+
+/**
+ * Os eventos guardados por Pessoa e reenviados na reconexão, com a carga de cada um sem o cursor,
+ * que é de cada Pessoa (spec da F03, "Eventos por Pessoa e reconexão").
+ */
+export interface StoredEventPayloads {
+  "message.created": Omit<MessageCreatedEvent, "event_id">;
+  "conversation.member_added": Omit<ConversationMemberAddedEvent, "event_id">;
+}
+
 export interface SyncEvent {
   /** Cursor atual da Pessoa, que a aba manda no próximo handshake. */
   cursor: string | null;
@@ -58,6 +88,7 @@ export interface HandshakeAuth {
 /** Eventos que a API emite para a aba. */
 export interface ServerToClientEvents {
   "message.created": (event: MessageCreatedEvent) => void;
+  "conversation.member_added": (event: ConversationMemberAddedEvent) => void;
   sync: (event: SyncEvent) => void;
   "session.ended": () => void;
   "typing.start": (event: TypingEvent) => void;

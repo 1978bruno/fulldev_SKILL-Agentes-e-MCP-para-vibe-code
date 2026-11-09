@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
@@ -7,7 +7,6 @@ import {
   toConversationResponse,
 } from './conversation.response';
 import { ConversationsService } from './conversations.service';
-import { CreateConversationDto } from './create-conversation.dto';
 
 @Controller('conversations')
 @UseGuards(AuthGuard)
@@ -21,20 +20,6 @@ export class ConversationsController {
     const conversations = await this.conversations.listForMember(person.id);
     const summaries = await this.conversations.withMemberCounts(conversations);
     return { conversations: summaries.map(toConversationResponse) };
-  }
-
-  @Post()
-  async create(
-    @CurrentPerson() person: Person,
-    @Body() body: CreateConversationDto,
-  ): Promise<{ conversation: ConversationResponse }> {
-    const created = await this.conversations.createChannel(person.id, {
-      kind: body.kind,
-      name: body.name,
-      topic: body.topic,
-      clientId: body.client_id,
-    });
-    return { conversation: toConversationResponse(created) };
   }
 
   @Get(':id')

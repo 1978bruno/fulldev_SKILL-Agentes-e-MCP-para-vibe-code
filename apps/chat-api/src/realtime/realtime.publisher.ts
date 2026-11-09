@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { MessageCreatedEvent, MessagePayload } from 'chat-events';
+import type {
+  ConversationPayload,
+  MessageCreatedEvent,
+  MessagePayload,
+  StoredEventPayloads,
+} from 'chat-events';
 import { EventsStore } from './events.store';
 import { RealtimeGateway } from './realtime.gateway';
 import { personRoom } from './realtime-socket';
+
+type StoredEventName = keyof StoredEventPayloads;
 
 // Emite os eventos guardados por Pessoa para as abas dela (spec da F03, "Eventos por Pessoa e
 // reconexão"). Quem chama publica depois da gravação. Cada evento entra antes no stream de cada
@@ -17,30 +24,74 @@ export class RealtimePublisher {
     private readonly events: EventsStore,
   ) {}
 
-  async messageCreated(
+  messageCreated(memberIds: string[], message: MessagePayload): Promise<void> {
+    return this.publish('message.created', memberIds, { message });
+  }
+
+  // Pessoas que entraram numa Conversa: vai para todos os Membros dela depois da gravação (spec da
+  // F04, "Tempo real"). Quem entrou agora recebe person_ids só com ela mesma; quem já era Membro
+  // recebe as Pessoas adicionadas. Assim o Canal público novo não leva o workspace inteiro em cada
+  // um dos eventos guardados.
+  memberAdded(
     memberIds: string[],
-    message: MessagePayload,
+    conversation: ConversationPayload,
+    addedIds: string[],
+  ): Promise<void> {
+    const added = new Set(addedIds);
+    return this.publish('conversation.member_added', memberIds, (personId) => ({
+      conversation,
+      person_ids: added.has(personId) ? [personId] : addedIds,
+    }));
+  }
+
+  private async publish<N extends StoredEventName>(
+    name: N,
+    memberIds: string[],
+    // A carga, a mesma para todos os Membros, ou montada para cada um.
+    payload:
+      StoredEventPayloads[N] | ((personId: string) => StoredEventPayloads[N]),
   ): Promise<void> {
     if (memberIds.length === 0) return;
+    // A carga de cada Pessoa é montada uma vez só, para o stream e para a emissão.
+    const built =
+      typeof payload === 'function'
+        ? new Map(memberIds.map((personId) => [personId, payload(personId)]))
+        : null;
+    const payloadFor = (personId: string): StoredEventPayloads[N] =>
+      built ? built.get(personId)! : (payload as StoredEventPayloads[N]);
     let cursors: Map<string, string>;
     try {
-      cursors = await this.events.append(memberIds, {
-        name: 'message.created',
-        payload: { message } satisfies MessageCreatedEvent,
-      });
+      cursors = await this.events.append(
+        memberIds,
+        typeof payload === 'function'
+          ? (personId) => ({ name, payload: payloadFor(personId) })
+          : { name, payload },
+      );
     } catch (error) {
       this.logger.error('Falha ao guardar o evento no Redis', error);
       this.events.markMissed(memberIds);
-      this.gateway.server
-        .to(memberIds.map(personRoom))
-        .emit('message.created', { message });
+      if (typeof payload === 'function') {
+        for (const personId of memberIds) {
+          this.emit(personRoom(personId), name, payloadFor(personId));
+        }
+      } else {
+        this.emit(memberIds.map(personRoom), name, payload);
+      }
       return;
     }
     for (const personId of memberIds) {
-      this.gateway.server.to(personRoom(personId)).emit('message.created', {
+      this.emit(personRoom(personId), name, {
         event_id: cursors.get(personId),
-        message,
+        ...payloadFor(personId),
       });
     }
+  }
+
+  // O emit do Socket.IO não aceita um nome genérico; o par nome e carga já vem de
+  // StoredEventPayloads.
+  private emit(rooms: string | string[], name: StoredEventName, event: object) {
+    this.gateway.server
+      .to(rooms)
+      .emit(name as 'message.created', event as MessageCreatedEvent);
   }
 }
