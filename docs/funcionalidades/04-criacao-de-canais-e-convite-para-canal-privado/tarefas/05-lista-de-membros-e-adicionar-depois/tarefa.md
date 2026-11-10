@@ -1,6 +1,6 @@
 # 05: Lista de Membros e adicionar depois
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** o cabeçalho do Canal mostra quantos Membros ele tem; clicar abre "Membros de
 #nome", com cada Membro em ordem alfabética e "(você)" ao lado da própria Pessoa. No Canal privado,
