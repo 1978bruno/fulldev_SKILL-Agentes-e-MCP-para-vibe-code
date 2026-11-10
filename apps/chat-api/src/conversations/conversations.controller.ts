@@ -1,4 +1,5 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import type { PersonSummary } from '../people/person-summary';
 import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
@@ -26,7 +27,7 @@ export class ConversationsController {
   async members(
     @CurrentPerson() person: Person,
     @Param('id') id: string,
-  ): Promise<{ members: { id: string; name: string }[] }> {
+  ): Promise<{ members: PersonSummary[] }> {
     return { members: await this.conversations.listMembers(person.id, id) };
   }
 

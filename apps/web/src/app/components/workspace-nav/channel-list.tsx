@@ -9,14 +9,20 @@ import { AddChannelAction } from "./add-channel-action";
 import { SidebarRow } from "./sidebar-row";
 import { SidebarSection } from "./sidebar-section";
 
-// Chave do cache da lista de Conversas, a rota do BFF que a lê de novo.
-export const CONVERSATIONS_KEY = "/api/conversations";
+// A rota do BFF que lê a lista de novo.
+const CONVERSATIONS_URL = "/api/conversations";
+
+// A chave do cache da lista de Conversas, por Pessoa: quem entra depois de outra na mesma aba, sem
+// recarregar a página, não herda a lista dela. O cabeçalho da Conversa lê o mesmo cache.
+export function conversationsKey(personId: string): [string, string] {
+  return [CONVERSATIONS_URL, personId];
+}
 
 // Um 401 aqui é só uma falha: a lista que está na tela fica, e quem leva a "Entrar" é o fim da
 // Sessão no tempo real (session.ended) ou a próxima ação da Pessoa. Sem isso, a busca do reset da
 // primeira conexão disputaria a navegação com quem acabou de sair.
 async function fetchConversations(): Promise<readonly Conversation[]> {
-  const response = await fetch(CONVERSATIONS_KEY);
+  const response = await fetch(CONVERSATIONS_URL);
   if (!response.ok) throw new Error("Não foi possível carregar as conversas.");
   return (await response.json()) as Conversation[];
 }
@@ -32,9 +38,7 @@ type ChannelListProps = {
 // conversation.member_added muda o cache sem nova requisição, e o reset do tempo real busca a
 // lista de novo. Uma falha nessa busca mantém a lista que já está na tela.
 export function ChannelList({ initialConversations, personId }: ChannelListProps) {
-  // A chave leva a Pessoa: quem entra depois de outra na mesma aba, sem recarregar a página, não
-  // herda a lista dela.
-  const { data: conversations, mutate } = useSWR([CONVERSATIONS_KEY, personId], fetchConversations, {
+  const { data: conversations, mutate } = useSWR(conversationsKey(personId), fetchConversations, {
     fallbackData: initialConversations,
     revalidateOnMount: false,
     revalidateOnFocus: false,

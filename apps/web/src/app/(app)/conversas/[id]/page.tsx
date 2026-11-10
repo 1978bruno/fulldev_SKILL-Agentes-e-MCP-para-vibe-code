@@ -28,7 +28,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   if (!token) redirect(expiredSessionPath(path));
 
   // As três leituras começam juntas; só a da Conversa segura o cabeçalho.
-  const history = Promise.all([getCurrentPerson(token), listMessages(token, id)]);
+  const person = getCurrentPerson(token);
+  const history = Promise.all([person, listMessages(token, id)]);
   // Se a página sair antes de esperar o histórico, a falha dele não fica sem tratamento; quem o
   // espera recebe a mesma rejeição.
   history.catch(() => {});
@@ -45,8 +46,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
-  // Já lida pelo layout, na mesma requisição (cache do React): sem nova chamada à API.
-  const personResult = await getCurrentPerson(token);
+  const personResult = await person;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RememberConversation conversationId={conversation.id} />
@@ -56,11 +56,7 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         kind={conversation.kind}
         members={
           personResult.kind === "ok"
-            ? {
-                conversationId: conversation.id,
-                memberCount: conversation.memberCount,
-                personId: personResult.person.id,
-              }
+            ? { conversation, personId: personResult.person.id }
             : undefined
         }
       />

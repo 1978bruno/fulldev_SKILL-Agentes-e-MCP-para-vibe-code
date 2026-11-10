@@ -6,6 +6,7 @@ import { isUniqueViolation } from '../database/unique-violation';
 import { EmailAlreadyExistsError } from './email-already-exists.error';
 import { normalizeEmail } from './normalize-email';
 import { PasswordHasher } from './password-hasher';
+import type { PersonSummary } from './person-summary';
 import { Person } from './person.entity';
 
 export interface NewPerson {
@@ -123,6 +124,15 @@ export class PeopleService {
       .orderBy('unaccent(lower(person.name))', 'ASC')
       .limit(limit)
       .getMany();
+  }
+
+  // Só o id e o nome das Pessoas pedidas, para as listas por nome.
+  findSummariesByIds(ids: string[]): Promise<PersonSummary[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.people.find({
+      select: { id: true, name: true },
+      where: { id: In(ids) },
+    });
   }
 
   // Todas as Pessoas do workspace, para a participação em Canal público (ADR 0024).

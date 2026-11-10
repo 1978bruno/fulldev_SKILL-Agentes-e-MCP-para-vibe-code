@@ -22,6 +22,7 @@ import { compareNames } from './name-order';
 import { MembersNotEditableError } from './members-not-editable.error';
 import { lockPublicMembership } from './public-membership-lock';
 import { InvalidPeopleError } from '../people/invalid-people.error';
+import { PersonSummary, sortedSummaries } from '../people/person-summary';
 
 // Tipos de Canal que a Pessoa cria pelo produto.
 export type ChannelKind = Extract<
@@ -111,14 +112,13 @@ export class ConversationsService {
   async listMembers(
     personId: string,
     conversationId: string,
-  ): Promise<{ id: string; name: string }[]> {
+  ): Promise<PersonSummary[]> {
     await this.getForMember(personId, conversationId);
-    const people = await this.people.findByIds(
-      await this.listMemberIds(conversationId),
+    return sortedSummaries(
+      await this.people.findSummariesByIds(
+        await this.listMemberIds(conversationId),
+      ),
     );
-    return people
-      .map(({ id, name }) => ({ id, name }))
-      .sort((a, b) => compareNames(a.name, b.name));
   }
 
   // Ids das Pessoas que são Membros da Conversa: os destinatários dos eventos dela.

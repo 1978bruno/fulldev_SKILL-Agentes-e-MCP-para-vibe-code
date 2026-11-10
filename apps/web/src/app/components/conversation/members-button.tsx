@@ -4,12 +4,12 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { Dialog, DialogTrigger } from "@/app/components/ui/dialog";
-import { CONVERSATIONS_KEY } from "@/app/components/workspace-nav/channel-list";
-import type { Conversation, ConversationKind } from "@/app/services/chat-api";
+import { conversationsKey } from "@/app/components/workspace-nav/channel-list";
+import type { Conversation } from "@/app/services/chat-api";
 import { MembersDialog } from "./members-dialog";
 
 type MembersButtonProps = {
-  conversation: { id: string; name: string; kind: ConversationKind; memberCount: number };
+  conversation: Pick<Conversation, "id" | "name" | "kind" | "memberCount">;
   personId: string;
 };
 
@@ -20,7 +20,7 @@ export function MembersButton({ conversation, personId }: MembersButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   // Sem fetcher: só lê o cache que a barra lateral mantém.
   const { data: conversations } = useSWR<readonly Conversation[]>(
-    [CONVERSATIONS_KEY, personId],
+    conversationsKey(personId),
     null,
   );
   const memberCount =

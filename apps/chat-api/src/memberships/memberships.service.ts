@@ -6,14 +6,9 @@ import type {
 } from '../conversations/conversations.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
-import { compareNames } from '../conversations/name-order';
+import { PersonSummary, sortedSummaries } from '../people/person-summary';
 import { RealtimePublisher } from '../realtime/realtime.publisher';
 import { PEOPLE_SEARCH_LIMIT } from './membership-values';
-
-export interface PersonSummary {
-  id: string;
-  name: string;
-}
 
 export interface AddedMembers {
   addedIds: string[];
@@ -47,9 +42,7 @@ export class MembershipsService {
       memberIds,
       PEOPLE_SEARCH_LIMIT,
     );
-    return people
-      .map(({ id, name }) => ({ id, name }))
-      .sort((a, b) => compareNames(a.name, b.name));
+    return sortedSummaries(people);
   }
 
   // Adiciona Pessoas ao Canal privado e, se alguma entrou agora, avisa os Membros antigos e novos.

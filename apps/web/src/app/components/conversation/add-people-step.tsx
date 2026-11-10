@@ -4,7 +4,7 @@ import { Check, Search, X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { addMembers } from "@/app/actions/add-members";
 import { Button } from "@/app/components/ui/button";
-import { DialogBody, DialogClose, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
+import { DialogBody, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
 import { IconButton } from "@/app/components/ui/icon-button";
 import { Input } from "@/app/components/ui/input";
 import { PersonRow } from "@/app/components/user/person-row";
@@ -24,7 +24,7 @@ type AddPeopleStepProps = {
   // Depois de adicionar: quem abriu o passo decide o que vem (abrir o Canal, voltar à lista).
   onDone: () => void;
   // O botão secundário: "Pular", que fecha o diálogo, na criação; "Voltar", na lista de Membros.
-  secondary?: { label: string; onClick: () => void };
+  secondary: { label: string; onClick: () => void };
   onCloseAutoFocus?: (event: Event) => void;
 };
 
@@ -188,17 +188,9 @@ export function AddPeopleStep({
         )}
       </DialogBody>
       <DialogFooter>
-        {secondary ? (
-          <Button type="button" variant="secondary" disabled={isSending} onClick={secondary.onClick}>
-            {secondary.label}
-          </Button>
-        ) : (
-          <DialogClose asChild>
-            <Button type="button" variant="secondary" disabled={isSending}>
-              Pular
-            </Button>
-          </DialogClose>
-        )}
+        <Button type="button" variant="secondary" disabled={isSending} onClick={secondary.onClick}>
+          {secondary.label}
+        </Button>
         <Button
           type="button"
           loading={isSending}

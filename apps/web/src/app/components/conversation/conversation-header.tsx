@@ -1,5 +1,5 @@
 import { OpenNavigationButton } from "@/app/components/workspace-nav/navigation-drawer";
-import type { ConversationKind } from "@/app/services/chat-api";
+import type { Conversation, ConversationKind } from "@/app/services/chat-api";
 import { ChannelIcon } from "./channel-icon";
 import { MembersButton } from "./members-button";
 
@@ -8,7 +8,7 @@ type ConversationHeaderProps = {
   topic: string | null;
   kind: ConversationKind;
   // O botão de Membros, quando a página tem a Conversa inteira e a Pessoa da Sessão.
-  members?: { conversationId: string; memberCount: number; personId: string };
+  members?: { conversation: Conversation; personId: string };
 };
 
 // Cabeçalho da Conversa (ConversationHeader): h-header; o Tópico some abaixo de 640 px, e o botão
@@ -29,10 +29,7 @@ export function ConversationHeader({ name, topic, kind, members }: ConversationH
         )}
       </div>
       {members && (
-        <MembersButton
-          conversation={{ id: members.conversationId, name, kind, memberCount: members.memberCount }}
-          personId={members.personId}
-        />
+        <MembersButton conversation={members.conversation} personId={members.personId} />
       )}
     </header>
   );
