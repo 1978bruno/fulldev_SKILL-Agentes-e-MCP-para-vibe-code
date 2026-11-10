@@ -47,7 +47,9 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
         });
         if (response.status === 401) return void redirectToExpiredSession();
         if (!response.ok) throw new Error("Falha na busca");
-        setSearch({ kind: "ok", people: (await response.json()) as PersonSummary[] });
+        const people = (await response.json()) as PersonSummary[];
+        // A busca pode ter sido trocada por outra depois de responder: só a última vale.
+        if (!controller.signal.aborted) setSearch({ kind: "ok", people });
       } catch {
         if (!controller.signal.aborted) setSearch({ kind: "failure" });
       }

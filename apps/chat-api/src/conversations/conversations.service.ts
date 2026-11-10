@@ -174,6 +174,12 @@ export class ConversationsService {
     if (conversation.kind !== 'private_channel') {
       throw new MembersNotEditableError();
     }
+    // Duas adições ao mesmo Canal acontecem uma depois da outra: a segunda lê os Membros já com os
+    // da primeira, e o evento dela chega a todos.
+    await this.txHost.tx.query(
+      'SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE',
+      [conversation.id],
+    );
     const people = await this.people.findByIds(personIds);
     if (people.length !== new Set(personIds).size) {
       throw new InvalidPeopleError();
