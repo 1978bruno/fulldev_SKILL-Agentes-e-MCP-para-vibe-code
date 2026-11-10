@@ -1,10 +1,12 @@
 import { INestApplicationContext } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
+import { randomUUID } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { uniqueChannelName } from '../../test/support/unique-channel-name';
 import { uniqueEmail } from '../../test/support/unique-email';
 import { CommandOutput } from '../common/cli/command';
+import { ConversationNotFoundError } from '../conversations/conversation-not-found.error';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PeopleService } from '../people/people.service';
 import { ChannelsCommand } from './channels.command';
@@ -204,5 +206,106 @@ describe('comando de canais', () => {
       new RegExp(`^#${prefix}-a \\(\\d+ Membros?\\) Avisos do time$`),
     );
     expect(mine[1]).toMatch(new RegExp(`^#${prefix}-b \\(\\d+ Membros?\\)$`));
+  });
+
+  describe('remove-member', () => {
+    // Um Canal privado de duas Pessoas, criado pelo service como o produto faz.
+    async function privateChannelWithTwo() {
+      const owner = await people.create({
+        email: uniqueEmail(),
+        name: 'Ana Souza',
+        password: 'senha',
+      });
+      const memberEmail = uniqueEmail();
+      const member = await people.create({
+        email: memberEmail,
+        name: 'Bruno Lima',
+        password: 'senha',
+      });
+      const name = uniqueChannelName();
+      const { conversation } = await cls.run(() =>
+        conversations.createChannel(owner.id, {
+          kind: 'private_channel',
+          name,
+          clientId: randomUUID(),
+        }),
+      );
+      await cls.run(() =>
+        conversations.addMembers(owner.id, conversation.id, [member.id]),
+      );
+      return { owner, member, memberEmail, name, channelId: conversation.id };
+    }
+
+    async function isMember(channelId: string, personId: string) {
+      const rows = await dataSource.query<unknown[]>(
+        'SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND person_id = $2',
+        [channelId, personId],
+      );
+      return rows.length > 0;
+    }
+
+    it('remove-member apaga a participação da Pessoa no Canal privado', async () => {
+      const { owner, member, memberEmail, name, channelId } =
+        await privateChannelWithTwo();
+      const output = recordingOutput();
+      const infos: string[] = [];
+      output.info = (message) => infos.push(message);
+
+      const exitCode = await run(
+        ['remove-member', name, memberEmail.toUpperCase()],
+        output,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(infos).toEqual([`Bruno Lima saiu de #${name}.`]);
+      expect(await isMember(channelId, member.id)).toBe(false);
+      expect(await isMember(channelId, owner.id)).toBe(true);
+      await expect(
+        cls.run(() => conversations.getForMember(member.id, channelId)),
+      ).rejects.toBeInstanceOf(ConversationNotFoundError);
+    });
+
+    it.each([
+      ['Canal inexistente', 'canal', 'Canal não encontrado:'],
+      ['Canal público', 'publico', 'só é possível remover'],
+      ['e-mail sem conta', 'email', 'Nenhuma Pessoa com o e-mail'],
+      ['Pessoa que não é Membro', 'fora', 'não é Membro de'],
+    ])('remove-member recusa %s, sem mudar nada', async (_caso, kind, text) => {
+      const { member, memberEmail, name, channelId } =
+        await privateChannelWithTwo();
+      const outsiderEmail = uniqueEmail();
+      await people.create({
+        email: outsiderEmail,
+        name: 'Carla Dias',
+        password: 'senha',
+      });
+      const publicChannel =
+        await conversations.createPublicChannel(uniqueChannelName());
+      const args = {
+        canal: ['remove-member', uniqueChannelName(), memberEmail],
+        publico: ['remove-member', publicChannel.name!, memberEmail],
+        email: ['remove-member', name, uniqueEmail()],
+        fora: ['remove-member', name, outsiderEmail],
+      }[kind]!;
+      const output = recordingOutput();
+
+      const exitCode = await run(args, output);
+
+      expect(exitCode).toBe(1);
+      expect(output.errors).toHaveLength(1);
+      expect(output.errors[0].toLowerCase()).toContain(text.toLowerCase());
+      expect(await isMember(channelId, member.id)).toBe(true);
+    });
+
+    it('remove-member mostra o uso sem os dois argumentos', async () => {
+      const output = recordingOutput();
+
+      const exitCode = await run(['remove-member', 'so-o-nome'], output);
+
+      expect(exitCode).toBe(1);
+      expect(output.errors).toEqual([
+        'Uso: pnpm channels remove-member <nome> <e-mail>',
+      ]);
+    });
   });
 });

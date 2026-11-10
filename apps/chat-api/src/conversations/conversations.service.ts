@@ -19,7 +19,10 @@ import { ConversationNotFoundError } from './conversation-not-found.error';
 import { Conversation, ConversationKind } from './conversation.entity';
 import { InvalidChannelError } from './invalid-channel.error';
 import { compareNames } from './name-order';
+import { ChannelNotPrivateError } from './channel-not-private.error';
 import { MembersNotEditableError } from './members-not-editable.error';
+import { NotAMemberError } from './not-a-member.error';
+import { PersonNotFoundError } from '../people/person-not-found.error';
 import { lockPublicMembership } from './public-membership-lock';
 import { InvalidPeopleError } from '../people/invalid-people.error';
 import { PersonSummary, sortedSummaries } from '../people/person-summary';
@@ -273,6 +276,29 @@ export class ConversationsService {
     );
     if (!result.affected) throw new ChannelNotFoundError(name);
     return { name, topic: topic.value };
+  }
+
+  // Tira uma Pessoa de um Canal privado, pelo comando de canais (spec da F04, "Comando de
+  // canais"). Sem evento: a Pessoa para de receber as Mensagens na hora, porque a publicação lê os
+  // Membros a cada envio. Devolve o nome da Pessoa e o do Canal, normalizado.
+  @Transactional()
+  async removeMember(
+    rawChannelName: string,
+    email: string,
+  ): Promise<{ personName: string; channelName: string }> {
+    const name = normalizeChannelName(rawChannelName);
+    const channel = await this.conversations.findOneBy({ name });
+    if (!channel) throw new ChannelNotFoundError(name);
+    if (channel.kind !== 'private_channel') {
+      throw new ChannelNotPrivateError(name);
+    }
+    const person = await this.people.findByEmail(email);
+    if (!person) throw new PersonNotFoundError(email.trim());
+    const result = await this.txHost.tx
+      .getRepository(ConversationMember)
+      .delete({ conversationId: channel.id, personId: person.id });
+    if (!result.affected) throw new NotAMemberError(person.name, name);
+    return { personName: person.name, channelName: name };
   }
 
   // Canais públicos em ordem alfabética ("name-order.ts"), com o número de Membros.
