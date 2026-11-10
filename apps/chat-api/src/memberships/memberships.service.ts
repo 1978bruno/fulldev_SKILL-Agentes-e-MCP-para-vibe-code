@@ -58,13 +58,9 @@ export class MembershipsService {
     conversationId: string,
     personIds: string[],
   ): Promise<AddedMembers> {
-    const { summary, addedIds } = await this.conversations.addMembers(
-      personId,
-      conversationId,
-      personIds,
-    );
+    const { summary, addedIds, memberIds } =
+      await this.conversations.addMembers(personId, conversationId, personIds);
     if (addedIds.length > 0) {
-      const memberIds = await this.conversations.listMemberIds(conversationId);
       this.publishMemberAdded(summary, memberIds, addedIds);
     }
     return { addedIds, memberCount: summary.memberCount };

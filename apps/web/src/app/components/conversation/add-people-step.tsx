@@ -1,7 +1,7 @@
 "use client";
 
-import { Search, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Check, Search, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { addMembers } from "@/app/actions/add-members";
 import { Button } from "@/app/components/ui/button";
 import { DialogBody, DialogClose, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
@@ -34,34 +34,45 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
   const [search, setSearch] = useState<SearchState>({ kind: "loading" });
   const [chosen, setChosen] = useState<PersonSummary[]>([]);
   const [status, setStatus] = useState<"idle" | "sending" | "failure">("idle");
-  // Cada busca ganha um número; a resposta de uma busca mais antiga é descartada.
-  const latestSearch = useRef(0);
   const searchId = useId();
 
+  // Uma busca nova cancela a anterior, esperando ou em andamento: só a resposta da última vale.
   useEffect(() => {
-    const id = ++latestSearch.current;
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       const params = new URLSearchParams({ q: query, not_member_of: conversation.id });
       try {
-        const response = await fetch(`/api/people?${params.toString()}`);
+        const response = await fetch(`/api/people?${params.toString()}`, {
+          signal: controller.signal,
+        });
         if (response.status === 401) return void redirectToExpiredSession();
         if (!response.ok) throw new Error("Falha na busca");
-        const people = (await response.json()) as PersonSummary[];
-        if (id === latestSearch.current) setSearch({ kind: "ok", people });
+        setSearch({ kind: "ok", people: (await response.json()) as PersonSummary[] });
       } catch {
-        if (id === latestSearch.current) setSearch({ kind: "failure" });
+        if (!controller.signal.aborted) setSearch({ kind: "failure" });
       }
     }, SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, conversation.id]);
 
   const chosenIds = new Set(chosen.map((person) => person.id));
-  const results =
-    search.kind === "ok" ? search.people.filter((person) => !chosenIds.has(person.id)) : [];
+  // As escolhidas continuam nos resultados, marcadas: a busca devolve no máximo 20, e tirá-las da
+  // lista a esvaziaria.
+  const results = search.kind === "ok" ? search.people : [];
   const isSending = status === "sending";
+  const canAdd = chosen.length > 0 && !isSending;
+
+  // Mudar as escolhidas tira a falha anterior.
+  function updateChosen(next: (current: PersonSummary[]) => PersonSummary[]) {
+    setChosen(next);
+    if (status === "failure") setStatus("idle");
+  }
 
   async function confirm() {
-    if (chosen.length === 0 || isSending) return;
+    if (!canAdd) return;
     setStatus("sending");
     const result = await addMembers(
       conversation.id,
@@ -97,10 +108,8 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
             placeholder="Buscar por nome"
             autoComplete="off"
             readOnly={isSending}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setSearch({ kind: "loading" });
-            }}
+            // Os resultados anteriores ficam na tela até a busca nova responder.
+            onChange={(event) => setQuery(event.target.value)}
             className="pl-9"
           />
         </div>
@@ -117,10 +126,9 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
                   label={`Tirar ${person.name}`}
                   size="sm"
                   disabled={isSending}
-                  onClick={() => {
-                    setChosen((current) => current.filter((item) => item.id !== person.id));
-                    if (status === "failure") setStatus("idle");
-                  }}
+                  onClick={() =>
+                    updateChosen((current) => current.filter((item) => item.id !== person.id))
+                  }
                 />
               </li>
             ))}
@@ -137,22 +145,30 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
           )}
           {results.length > 0 && (
             <ul aria-label="Pessoas" className="flex flex-col">
-              {results.map((person) => (
-                <li key={person.id}>
-                  <button
-                    type="button"
-                    disabled={isSending}
-                    aria-label={`Escolher ${person.name}`}
-                    onClick={() => {
-                      setChosen((current) => [...current, person]);
-                      if (status === "failure") setStatus("idle");
-                    }}
-                    className="flex w-full items-center rounded-item p-2 text-left hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus/30 disabled:opacity-50"
-                  >
-                    <PersonRow person={person} />
-                  </button>
-                </li>
-              ))}
+              {results.map((person) => {
+                const isChosen = chosenIds.has(person.id);
+                return (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      disabled={isSending}
+                      // O nome visível é o nome acessível; aria-pressed diz se ela está escolhida.
+                      aria-pressed={isChosen}
+                      onClick={() =>
+                        updateChosen((current) =>
+                          isChosen
+                            ? current.filter((item) => item.id !== person.id)
+                            : [...current, person],
+                        )
+                      }
+                      className="flex w-full items-center gap-3 rounded-item p-2 text-left hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus/30 disabled:opacity-50"
+                    >
+                      <PersonRow person={person} />
+                      {isChosen && <Check size={18} aria-hidden className="shrink-0 text-primary" />}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -171,7 +187,7 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
         <Button
           type="button"
           loading={isSending}
-          disabled={chosen.length === 0 || isSending}
+          disabled={!canAdd}
           onClick={() => void confirm()}
         >
           Adicionar

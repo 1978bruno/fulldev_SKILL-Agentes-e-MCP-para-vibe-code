@@ -127,13 +127,8 @@ describe('Canais novos em tempo real', () => {
     expect(eventsOf(otherEvents, conversation.id)).toHaveLength(0);
   });
 
-  async function privateChannelOf(cookie: string): Promise<string> {
-    const response = await createChannel(app, cookie, {
-      kind: 'private_channel',
-    });
-    return (response.body as { conversation: ConversationBody }).conversation
-      .id;
-  }
+  const privateChannelOf = (cookie: string) =>
+    conversationRoutes.privateChannelOf(app, cookie);
 
   it('a adição chega aos Membros antigos e novos', async () => {
     const owner = await authRoutes.loggedIn(app);

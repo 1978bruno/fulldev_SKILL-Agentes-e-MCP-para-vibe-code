@@ -29,7 +29,7 @@ test.describe("Adicionar Pessoas ao Canal privado", () => {
       const searchBox = step.getByRole("searchbox", { name: "Buscar pessoas" });
       await expect(searchBox).toBeFocused();
       await ownerSession.page.keyboard.type(guest.name);
-      const option = step.getByRole("button", { name: `Escolher ${guest.name}` });
+      const option = step.getByRole("button", { name: guest.name, exact: true });
       await expect(option).toBeVisible();
       await option.focus();
       await ownerSession.page.keyboard.press("Enter");

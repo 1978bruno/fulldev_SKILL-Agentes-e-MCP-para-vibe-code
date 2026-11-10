@@ -17,4 +17,4 @@ export async function GET(request: NextRequest) {
   return Response.json({ kind: result.kind }, { status: ERROR_STATUS[result.kind] });
 }
 
-const ERROR_STATUS = { unauthenticated: 401, not_found: 404, failure: 502 } as const;
+const ERROR_STATUS = { invalid: 400, unauthenticated: 401, not_found: 404, failure: 502 } as const;

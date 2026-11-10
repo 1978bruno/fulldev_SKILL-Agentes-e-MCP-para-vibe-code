@@ -14,6 +14,7 @@ export async function addMembers(
 ): Promise<AddMembersResult> {
   if (
     typeof conversationId !== "string" ||
+    !isUUID(conversationId) ||
     !Array.isArray(personIds) ||
     personIds.length === 0 ||
     personIds.length > MEMBERS_PER_ADD ||

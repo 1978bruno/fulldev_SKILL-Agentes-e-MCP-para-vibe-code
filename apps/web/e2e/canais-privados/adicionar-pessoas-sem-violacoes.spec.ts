@@ -15,7 +15,7 @@ test.describe("Acessibilidade", () => {
       // 1. O passo com os resultados da busca e uma escolhida
       const step = await createPrivateChannel(page, name);
       await step.getByRole("searchbox", { name: "Buscar pessoas" }).fill(guest.name);
-      await step.getByRole("button", { name: `Escolher ${guest.name}` }).click();
+      await step.getByRole("button", { name: guest.name, exact: true }).click();
       await expect(step.getByRole("list", { name: "Escolhidas" })).toBeVisible();
 
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

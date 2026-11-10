@@ -24,14 +24,11 @@ describe('busca de Pessoas', () => {
   // Uma Membro com um Canal privado só dela, e um sufixo que separa os nomes deste teste.
   async function privateChannel() {
     const owner = await authRoutes.loggedIn(app);
-    const created = await conversationRoutes.createChannelByRest(
+    const channelId = await conversationRoutes.privateChannelOf(
       app,
       owner.cookie,
-      { kind: 'private_channel' },
     );
-    const { id } = (created.body as { conversation: { id: string } })
-      .conversation;
-    return { owner, channelId: id, tag: randomUUID().slice(0, 8) };
+    return { owner, channelId, tag: randomUUID().slice(0, 8) };
   }
 
   function search(cookie: string, query: Record<string, string>) {

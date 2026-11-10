@@ -21,7 +21,7 @@ test.describe("Adicionar Pessoas ao Canal privado", () => {
       const step = await createPrivateChannel(page, name);
       const restore = await routeServerAction(page, (route) => route.abort());
       await step.getByRole("searchbox", { name: "Buscar pessoas" }).fill(guest.name);
-      await step.getByRole("button", { name: `Escolher ${guest.name}` }).click();
+      await step.getByRole("button", { name: guest.name, exact: true }).click();
       await step.getByRole("button", { name: "Adicionar" }).click();
 
       // 2. O erro aparece, e a escolhida continua lá

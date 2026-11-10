@@ -165,7 +165,11 @@ export class ConversationsService {
     personId: string,
     conversationId: string,
     personIds: string[],
-  ): Promise<{ summary: ConversationSummary; addedIds: string[] }> {
+  ): Promise<{
+    summary: ConversationSummary;
+    addedIds: string[];
+    memberIds: string[];
+  }> {
     const conversation = await this.getForMember(personId, conversationId);
     if (conversation.kind !== 'private_channel') {
       throw new MembersNotEditableError();
@@ -177,8 +181,13 @@ export class ConversationsService {
     const addedIds = await this.insertMembers(
       personIds.map((id) => [conversation.id, id]),
     );
-    const [summary] = await this.withMemberCounts([conversation]);
-    return { summary, addedIds };
+    // Os Membros depois da gravação: a quantidade da resposta e os destinatários do evento.
+    const memberIds = await this.listMemberIds(conversation.id);
+    return {
+      summary: { conversation, memberCount: memberIds.length },
+      addedIds,
+      memberIds,
+    };
   }
 
   // Cria o Canal público pelo comando de canais, sem criador nem client_id.

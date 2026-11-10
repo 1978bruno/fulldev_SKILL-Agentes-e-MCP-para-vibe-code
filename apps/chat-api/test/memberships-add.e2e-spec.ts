@@ -22,21 +22,15 @@ describe('adicionar ao Canal privado', () => {
 
   async function privateChannel() {
     const owner = await authRoutes.loggedIn(app);
-    const created = await conversationRoutes.createChannelByRest(
+    const channelId = await conversationRoutes.privateChannelOf(
       app,
       owner.cookie,
-      { kind: 'private_channel' },
     );
-    const { id } = (created.body as { conversation: { id: string } })
-      .conversation;
-    return { owner, channelId: id };
+    return { owner, channelId };
   }
 
   const add = (cookie: string, channelId: string, personIds: unknown) =>
-    request(app.getHttpServer() as App)
-      .post(`/v1/conversations/${channelId}/members`)
-      .set('Cookie', cookie)
-      .send({ person_ids: personIds });
+    conversationRoutes.addMembers(app, cookie, channelId, personIds);
 
   async function memberIds(channelId: string): Promise<string[]> {
     const rows = await app
