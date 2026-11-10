@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { ConversationHeaderSkeleton } from "@/app/components/conversation/conversation-header-skeleton";
 import { HistoryError } from "@/app/components/conversation/history-error";
+import { MembersButton } from "@/app/components/conversation/members-button";
 import { HistoryLoading } from "@/app/components/conversation/history-loading";
 import { MessageHistory } from "@/app/components/conversation/message-history";
 import { RememberConversation } from "@/app/components/conversation/remember-conversation";
@@ -46,7 +47,6 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
-  const personResult = await person;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RememberConversation conversationId={conversation.id} />
@@ -55,9 +55,10 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         topic={conversation.topic}
         kind={conversation.kind}
         members={
-          personResult.kind === "ok"
-            ? { conversation, personId: personResult.person.id }
-            : undefined
+          // O botão espera a Pessoa da Sessão sem segurar o cabeçalho.
+          <Suspense fallback={null}>
+            <HeaderMembers conversation={conversation} person={person} />
+          </Suspense>
         }
       />
       <Suspense key={conversation.id} fallback={<HistoryLoading conversationName={conversation.name} />}>
@@ -65,6 +66,19 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
       </Suspense>
     </div>
   );
+}
+
+// O botão de Membros do cabeçalho, com a Pessoa da Sessão para ler o cache da barra lateral.
+async function HeaderMembers({
+  conversation,
+  person,
+}: {
+  conversation: Conversation;
+  person: Promise<CurrentPersonResult>;
+}) {
+  const result = await person;
+  if (result.kind !== "ok") return null;
+  return <MembersButton conversation={conversation} personId={result.person.id} />;
 }
 
 type ConversationHistoryProps = {

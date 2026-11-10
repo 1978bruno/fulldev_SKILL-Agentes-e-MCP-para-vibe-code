@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { useRealtime } from "@/app/components/realtime/realtime-provider";
 import { Button } from "@/app/components/ui/button";
 import { DialogBody, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
+import { Spinner } from "@/app/components/ui/spinner";
 import { PersonRow } from "@/app/components/user/person-row";
 import type { ConversationKind, PersonSummary } from "@/app/services/chat-api";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
@@ -40,6 +41,10 @@ export function MembersDialog({ conversation, personId }: MembersDialogProps) {
         onMemberAdded: (event) => {
           if (event.conversation.id === conversation.id) void mutate();
         },
+        // Uma queda pode ter perdido Pessoas adicionadas: o reset busca a lista de novo.
+        onSync: (event) => {
+          if (event.reset) void mutate();
+        },
       }),
     [subscribe, mutate, conversation.id],
   );
@@ -60,10 +65,21 @@ export function MembersDialog({ conversation, personId }: MembersDialogProps) {
   return (
     <DialogContent title={`Membros de #${conversation.name}`}>
       <DialogBody>
-        {error && !members && (
-          <p role="alert" className="text-small text-danger-fg">
-            Não foi possível carregar os membros.
+        {!members && !error && (
+          <p role="status" className="flex items-center gap-2 p-2 text-body text-fg-muted">
+            <Spinner />
+            Carregando os membros…
           </p>
+        )}
+        {error && !members && (
+          <div className="flex flex-col items-start gap-2 p-2">
+            <p role="alert" className="text-small text-danger-fg">
+              Não foi possível carregar os membros.
+            </p>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void mutate()}>
+              Tentar de novo
+            </Button>
+          </div>
         )}
         {members && (
           <ul aria-label="Membros" className="flex max-h-96 flex-col overflow-y-auto">

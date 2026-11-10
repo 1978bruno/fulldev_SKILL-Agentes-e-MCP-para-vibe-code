@@ -18,6 +18,7 @@ test.describe("Lista de Membros", () => {
     try {
       await page.goto(`/conversas/${channel.id}`);
       await readyHistory(page, channel.name);
+      await waitForRealtime(page);
 
       // 2. O cabeçalho mostra a quantidade e abre a lista
       await page.getByRole("button", { name: "Membros: 2" }).click();
