@@ -1,7 +1,6 @@
 "use client";
 
 import { Hash } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { createChannel } from "@/app/actions/create-channel";
 import { Button } from "@/app/components/ui/button";
@@ -9,6 +8,7 @@ import { DialogBody, DialogClose, DialogContent, DialogFooter } from "@/app/comp
 import { Field } from "@/app/components/ui/field";
 import { Input } from "@/app/components/ui/input";
 import { Switch } from "@/app/components/ui/switch";
+import type { Conversation } from "@/app/services/chat-api";
 import { isValidChannelName, normalizeChannelNameInput, normalizeTopicInput } from "@/app/utils/channel-name";
 import { newClientId } from "@/app/utils/client-id";
 import { redirectToExpiredSession } from "@/app/utils/return-path";
@@ -16,14 +16,15 @@ import { redirectToExpiredSession } from "@/app/utils/return-path";
 type Status = "idle" | "sending" | "name_taken" | "failure";
 
 type CreateChannelDialogProps = {
-  onCreated: () => void;
+  // Quem abriu o diálogo decide o passo seguinte: abrir o Canal público ou adicionar Pessoas ao
+  // privado.
+  onCreated: (conversation: Conversation) => void;
 };
 
 // Conteúdo do diálogo "Criar canal" ("Diálogos / Criar canal": Padrão, Erro no nome, Enviando e
 // Falha ao criar). Monta a cada abertura: o clientId nasce aqui e vale para as novas tentativas
 // enquanto o diálogo está aberto (spec da F04, "BFF").
 export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
-  const router = useRouter();
   const [clientId, setClientId] = useState(newClientId);
   const [name, setName] = useState("");
   const [topic, setTopic] = useState("");
@@ -55,9 +56,7 @@ export function CreateChannelDialog({ onCreated }: CreateChannelDialogProps) {
     switch (result.kind) {
       case "ok":
         created.current = true;
-        onCreated();
-        // O Server Action revalida o layout: a barra lateral chega com o Canal novo nesta navegação.
-        router.push(`/conversas/${result.conversation.id}`);
+        onCreated(result.conversation);
         return;
       case "unauthenticated":
         return redirectToExpiredSession();

@@ -107,6 +107,24 @@ export class PeopleService {
     return this.people.findBy({ id: In(ids) });
   }
 
+  // Busca pelo nome, sem diferenciar maiúsculas, minúsculas e acentos, deixando de fora as Pessoas
+  // de `excludeIds` (spec da F04, "Busca de Pessoas"). O banco filtra e corta em `limit`, pela
+  // ordem do nome sem acento; quem chama reordena pela regra da aplicação.
+  search(q: string, excludeIds: string[], limit: number): Promise<Person[]> {
+    // %, _ e \ do texto valem como literais no LIKE.
+    const pattern = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+    return this.people
+      .createQueryBuilder('person')
+      .where(
+        "unaccent(lower(person.name)) LIKE unaccent(lower(:pattern)) ESCAPE '\\'",
+        { pattern },
+      )
+      .andWhere('NOT (person.id = ANY(:excludeIds))', { excludeIds })
+      .orderBy('unaccent(lower(person.name))', 'ASC')
+      .limit(limit)
+      .getMany();
+  }
+
   // Todas as Pessoas do workspace, para a participação em Canal público (ADR 0024).
   async listIds(): Promise<string[]> {
     const people = await this.people.find({ select: { id: true } });

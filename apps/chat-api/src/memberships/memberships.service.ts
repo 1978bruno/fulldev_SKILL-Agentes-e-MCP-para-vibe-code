@@ -5,7 +5,20 @@ import type {
   NewChannel,
 } from '../conversations/conversations.service';
 import { ConversationsService } from '../conversations/conversations.service';
+import { PeopleService } from '../people/people.service';
+import { compareNames } from '../conversations/name-order';
 import { RealtimePublisher } from '../realtime/realtime.publisher';
+import { PEOPLE_SEARCH_LIMIT } from './membership-values';
+
+export interface PersonSummary {
+  id: string;
+  name: string;
+}
+
+export interface AddedMembers {
+  addedIds: string[];
+  memberCount: number;
+}
 
 // Mudanças de participação que viram evento do tempo real (spec da F04, "Tempo real"): grava pelo
 // service de Conversas, que é a transação, e só depois publica conversation.member_added para os
@@ -16,8 +29,46 @@ export class MembershipsService {
 
   constructor(
     private readonly conversations: ConversationsService,
+    private readonly people: PeopleService,
     private readonly publisher: RealtimePublisher,
   ) {}
+
+  // Pessoas para adicionar a uma Conversa de que quem busca é Membro, sem os Membros dela, em ordem
+  // alfabética (spec da F04, "Busca de Pessoas").
+  async searchPeople(
+    personId: string,
+    conversationId: string,
+    q: string,
+  ): Promise<PersonSummary[]> {
+    await this.conversations.getForMember(personId, conversationId);
+    const memberIds = await this.conversations.listMemberIds(conversationId);
+    const people = await this.people.search(
+      q.trim(),
+      memberIds,
+      PEOPLE_SEARCH_LIMIT,
+    );
+    return people
+      .map(({ id, name }) => ({ id, name }))
+      .sort((a, b) => compareNames(a.name, b.name));
+  }
+
+  // Adiciona Pessoas ao Canal privado e, se alguma entrou agora, avisa os Membros antigos e novos.
+  async addMembers(
+    personId: string,
+    conversationId: string,
+    personIds: string[],
+  ): Promise<AddedMembers> {
+    const { summary, addedIds } = await this.conversations.addMembers(
+      personId,
+      conversationId,
+      personIds,
+    );
+    if (addedIds.length > 0) {
+      const memberIds = await this.conversations.listMemberIds(conversationId);
+      this.publishMemberAdded(summary, memberIds, addedIds);
+    }
+    return { addedIds, memberCount: summary.memberCount };
+  }
 
   // Cria o Canal e, só quando ele foi criado agora, avisa os Membros: todos eles entraram agora. O
   // reenvio do mesmo client_id não publica de novo.

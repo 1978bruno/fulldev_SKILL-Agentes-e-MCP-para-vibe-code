@@ -42,6 +42,19 @@ export const conversationRoutes = {
       });
   },
 
+  // Pelo REST, como a web: as Pessoas viram Membros do Canal privado.
+  addMembers(
+    app: INestApplication,
+    cookie: string,
+    conversationId: string,
+    personIds: string[],
+  ): request.Test {
+    return request(app.getHttpServer() as App)
+      .post(`/v1/conversations/${conversationId}/members`)
+      .set('Cookie', cookie)
+      .send({ person_ids: personIds });
+  },
+
   // Pelo REST, como a web: a Mensagem é gravada e publicada.
   sendMessage(
     app: INestApplication,

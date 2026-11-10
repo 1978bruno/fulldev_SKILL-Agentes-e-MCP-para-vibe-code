@@ -130,3 +130,35 @@ Ficam em `e2e/canais-publicos/`, porque criam Canal público pela tela.
   2. A primeira cria um Canal público
   3. A rede volta
     - expect: o `sync` com `reset` busca a lista de novo, e o Canal aparece
+
+### 5. Adicionar Pessoas ao Canal privado
+
+Ficam em `e2e/canais-privados/`. As Pessoas buscadas ganham nome único (`insertUniquePerson`),
+porque o banco de desenvolvimento tem milhares de Pessoas com os nomes padrão das fixtures.
+
+#### 5.1. adiciona pela busca e o Canal aparece para quem entrou, com as Mensagens
+
+**File:** `e2e/canais-privados/adicionar-pessoas-na-criacao.spec.ts`
+
+**Steps:**
+  1. Quem cria um Canal privado passa ao passo, com o foco na busca, e escolhe a outra Pessoa pelo
+     teclado
+    - expect: ela aparece entre as escolhidas, com o botão de tirar
+  2. Adicionar
+    - expect: o Canal abre, com as duas Pessoas como Membros
+  3. Na aba da outra Pessoa
+    - expect: o Canal aparece na barra lateral sem recarregar, com o cadeado
+  4. A primeira envia, a outra abre o Canal, e a primeira envia de novo
+    - expect: a Mensagem de antes aparece ao abrir, e a nova chega em tempo real
+
+#### 5.2. Pular, Esc e o X abrem o Canal só com quem o criou
+
+**File:** `e2e/canais-privados/pular-adicionar-pessoas.spec.ts`
+
+#### 5.3. a falha mantém as escolhidas e a nova tentativa adiciona
+
+**File:** `e2e/canais-privados/falha-ao-adicionar.spec.ts`
+
+#### 5.4. adicionar-pessoas-sem-violacoes
+
+**File:** `e2e/canais-privados/adicionar-pessoas-sem-violacoes.spec.ts`
