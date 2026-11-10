@@ -107,6 +107,20 @@ export class ConversationsService {
     );
   }
 
+  // Os Membros de uma Conversa de que a Pessoa é Membro, em ordem alfabética ("name-order.ts").
+  async listMembers(
+    personId: string,
+    conversationId: string,
+  ): Promise<{ id: string; name: string }[]> {
+    await this.getForMember(personId, conversationId);
+    const people = await this.people.findByIds(
+      await this.listMemberIds(conversationId),
+    );
+    return people
+      .map(({ id, name }) => ({ id, name }))
+      .sort((a, b) => compareNames(a.name, b.name));
+  }
+
   // Ids das Pessoas que são Membros da Conversa: os destinatários dos eventos dela.
   async listMemberIds(conversationId: string): Promise<string[]> {
     const members = await this.txHost.tx

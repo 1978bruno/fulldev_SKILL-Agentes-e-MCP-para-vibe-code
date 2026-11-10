@@ -45,6 +45,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   }
 
   const { conversation } = conversationResult;
+  // Já lida pelo layout, na mesma requisição (cache do React): sem nova chamada à API.
+  const personResult = await getCurrentPerson(token);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <RememberConversation conversationId={conversation.id} />
@@ -52,6 +54,15 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         name={conversation.name}
         topic={conversation.topic}
         kind={conversation.kind}
+        members={
+          personResult.kind === "ok"
+            ? {
+                conversationId: conversation.id,
+                memberCount: conversation.memberCount,
+                personId: personResult.person.id,
+              }
+            : undefined
+        }
       />
       <Suspense key={conversation.id} fallback={<HistoryLoading conversationName={conversation.name} />}>
         <ConversationHistory conversation={conversation} history={history} path={path} />

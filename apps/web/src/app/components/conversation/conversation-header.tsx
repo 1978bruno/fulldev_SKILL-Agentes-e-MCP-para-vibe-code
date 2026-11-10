@@ -1,16 +1,19 @@
 import { OpenNavigationButton } from "@/app/components/workspace-nav/navigation-drawer";
 import type { ConversationKind } from "@/app/services/chat-api";
 import { ChannelIcon } from "./channel-icon";
+import { MembersButton } from "./members-button";
 
 type ConversationHeaderProps = {
   name: string;
   topic: string | null;
   kind: ConversationKind;
+  // O botão de Membros, quando a página tem a Conversa inteira e a Pessoa da Sessão.
+  members?: { conversationId: string; memberCount: number; personId: string };
 };
 
 // Cabeçalho da Conversa (ConversationHeader): h-header; o Tópico some abaixo de 640 px, e o botão
 // da gaveta (Menu) só aparece abaixo de 768 px.
-export function ConversationHeader({ name, topic, kind }: ConversationHeaderProps) {
+export function ConversationHeader({ name, topic, kind, members }: ConversationHeaderProps) {
   return (
     <header className="flex h-header shrink-0 items-center gap-2 border-b border-border bg-surface pr-5 pl-2 md:pl-5">
       <OpenNavigationButton />
@@ -25,6 +28,12 @@ export function ConversationHeader({ name, topic, kind }: ConversationHeaderProp
           </p>
         )}
       </div>
+      {members && (
+        <MembersButton
+          conversation={{ id: members.conversationId, name, kind, memberCount: members.memberCount }}
+          personId={members.personId}
+        />
+      )}
     </header>
   );
 }

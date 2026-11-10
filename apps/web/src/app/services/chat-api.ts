@@ -363,3 +363,20 @@ export async function addMembers(
   if (response?.status === 409) return { kind: "not_editable" };
   return commonFailure(response);
 }
+
+export type MembersResult =
+  | { kind: "ok"; members: PersonSummary[] }
+  | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+// Os Membros de uma Conversa, em ordem alfabética (spec da F04, "Rotas").
+export async function listMembers(token: string, conversationId: string): Promise<MembersResult> {
+  const result = await getJson<{ members: { id: string; name: string }[] }>(
+    token,
+    conversationPath(conversationId, "/members"),
+  );
+  return result.kind === "ok"
+    ? { kind: "ok", members: result.body.members.map(withInitials) }
+    : result;
+}

@@ -22,6 +22,14 @@ export class ConversationsController {
     return { conversations: summaries.map(toConversationResponse) };
   }
 
+  @Get(':id/members')
+  async members(
+    @CurrentPerson() person: Person,
+    @Param('id') id: string,
+  ): Promise<{ members: { id: string; name: string }[] }> {
+    return { members: await this.conversations.listMembers(person.id, id) };
+  }
+
   @Get(':id')
   async get(
     @CurrentPerson() person: Person,
