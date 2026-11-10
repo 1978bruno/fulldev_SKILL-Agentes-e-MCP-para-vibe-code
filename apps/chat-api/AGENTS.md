@@ -44,7 +44,7 @@ docker compose -f compose.yaml exec chat-api <comando>
 | `pnpm channels create <nome> ["<tópico>"]` | Comando de canais: cria um Canal público, com todas as Pessoas como Membros |
 | `pnpm channels set-topic <nome> "<tópico>"` | Troca o Tópico do Canal; `""` apaga |
 | `pnpm channels list` | Lista os Canais públicos, com o número de Membros e o Tópico |
-| `pnpm channels remove-member <nome> <e-mail>` | Tira a Pessoa de um Canal privado, sem avisar as abas abertas: ela para de receber as Mensagens na hora e deixa de ver o Canal ao recarregar a página |
+| `pnpm channels remove-member <nome> <e-mail>` | Tira a Pessoa de um Canal privado (spec da F04, "Comando de canais") |
 
 O comando de contas precisa do terminal para ler a senha: rode com `docker compose -f compose.yaml exec chat-api ...`, que abre um TTY. As operações estão na spec da F01, "Comando de contas". As do comando de canais estão nas specs da F02 e da F04, "Comando de canais".
 

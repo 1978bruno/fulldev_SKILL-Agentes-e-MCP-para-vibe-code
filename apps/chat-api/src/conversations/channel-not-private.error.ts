@@ -7,7 +7,7 @@ export class ChannelNotPrivateError extends DomainError {
 
   constructor(readonly name: string) {
     super(
-      `#${name} é público: só é possível remover Membros de um Canal privado.`,
+      `#${name} não é um Canal privado: só é possível remover Membros de um Canal privado.`,
     );
   }
 }

@@ -20,8 +20,10 @@ import { Conversation, ConversationKind } from './conversation.entity';
 import { InvalidChannelError } from './invalid-channel.error';
 import { compareNames } from './name-order';
 import { ChannelNotPrivateError } from './channel-not-private.error';
+import { LastMemberError } from './last-member.error';
 import { MembersNotEditableError } from './members-not-editable.error';
 import { NotAMemberError } from './not-a-member.error';
+import { normalizeEmail } from '../people/normalize-email';
 import { PersonNotFoundError } from '../people/person-not-found.error';
 import { lockPublicMembership } from './public-membership-lock';
 import { InvalidPeopleError } from '../people/invalid-people.error';
@@ -292,12 +294,21 @@ export class ConversationsService {
     if (channel.kind !== 'private_channel') {
       throw new ChannelNotPrivateError(name);
     }
+    // Em série com as adições ao mesmo Canal (addMembers).
+    await this.txHost.tx.query(
+      'SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE',
+      [channel.id],
+    );
     const person = await this.people.findByEmail(email);
-    if (!person) throw new PersonNotFoundError(email.trim());
-    const result = await this.txHost.tx
+    if (!person) throw new PersonNotFoundError(normalizeEmail(email));
+    const memberIds = await this.listMemberIds(channel.id);
+    if (!memberIds.includes(person.id)) {
+      throw new NotAMemberError(person.name, name);
+    }
+    if (memberIds.length === 1) throw new LastMemberError(person.name, name);
+    await this.txHost.tx
       .getRepository(ConversationMember)
       .delete({ conversationId: channel.id, personId: person.id });
-    if (!result.affected) throw new NotAMemberError(person.name, name);
     return { personName: person.name, channelName: name };
   }
 

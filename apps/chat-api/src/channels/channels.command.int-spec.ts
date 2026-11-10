@@ -12,9 +12,18 @@ import { PeopleService } from '../people/people.service';
 import { ChannelsCommand } from './channels.command';
 import { ChannelsModule } from './channels.module';
 
-function recordingOutput(): CommandOutput & { errors: string[] } {
+function recordingOutput(): CommandOutput & {
+  errors: string[];
+  infos: string[];
+} {
   const errors: string[] = [];
-  return { errors, info: () => undefined, error: (m) => errors.push(m) };
+  const infos: string[] = [];
+  return {
+    errors,
+    infos,
+    info: (m) => infos.push(m),
+    error: (m) => errors.push(m),
+  };
 }
 
 describe('comando de canais', () => {
@@ -38,6 +47,14 @@ describe('comando de canais', () => {
   afterAll(async () => {
     await context.close();
   });
+
+  async function isMember(channelId: string, personId: string) {
+    const rows = await dataSource.query<unknown[]>(
+      'SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND person_id = $2',
+      [channelId, personId],
+    );
+    return rows.length > 0;
+  }
 
   // Como o cli.ts: cada execução do comando roda dentro de um contexto do CLS.
   function run(args: string[], output = recordingOutput()) {
@@ -76,11 +93,7 @@ describe('comando de canais', () => {
       [channel.id],
     );
     expect(Number(outside)).toBe(0);
-    const [membership] = await dataSource.query<unknown[]>(
-      'SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND person_id = $2',
-      [channel.id, person.id],
-    );
-    expect(membership).toBeDefined();
+    expect(await isMember(channel.id, person.id)).toBe(true);
   });
 
   it('create recusa nome repetido', async () => {
@@ -216,9 +229,8 @@ describe('comando de canais', () => {
         name: 'Ana Souza',
         password: 'senha',
       });
-      const memberEmail = uniqueEmail();
       const member = await people.create({
-        email: memberEmail,
+        email: uniqueEmail(),
         name: 'Bruno Lima',
         password: 'senha',
       });
@@ -233,31 +245,20 @@ describe('comando de canais', () => {
       await cls.run(() =>
         conversations.addMembers(owner.id, conversation.id, [member.id]),
       );
-      return { owner, member, memberEmail, name, channelId: conversation.id };
-    }
-
-    async function isMember(channelId: string, personId: string) {
-      const rows = await dataSource.query<unknown[]>(
-        'SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND person_id = $2',
-        [channelId, personId],
-      );
-      return rows.length > 0;
+      return { owner, member, name, channelId: conversation.id };
     }
 
     it('remove-member apaga a participação da Pessoa no Canal privado', async () => {
-      const { owner, member, memberEmail, name, channelId } =
-        await privateChannelWithTwo();
+      const { owner, member, name, channelId } = await privateChannelWithTwo();
       const output = recordingOutput();
-      const infos: string[] = [];
-      output.info = (message) => infos.push(message);
 
       const exitCode = await run(
-        ['remove-member', name, memberEmail.toUpperCase()],
+        ['remove-member', name, member.email.toUpperCase()],
         output,
       );
 
       expect(exitCode).toBe(0);
-      expect(infos).toEqual([`Bruno Lima saiu de #${name}.`]);
+      expect(output.infos).toEqual([`Bruno Lima saiu de #${name}.`]);
       expect(await isMember(channelId, member.id)).toBe(false);
       expect(await isMember(channelId, owner.id)).toBe(true);
       await expect(
@@ -265,42 +266,76 @@ describe('comando de canais', () => {
       ).rejects.toBeInstanceOf(ConversationNotFoundError);
     });
 
+    type Fixture = Awaited<ReturnType<typeof privateChannelWithTwo>>;
+
+    it.each<
+      [string, (fixture: Fixture) => string[] | Promise<string[]>, string]
+    >([
+      [
+        'Canal inexistente',
+        ({ member }) => [uniqueChannelName(), member.email],
+        'Canal não encontrado:',
+      ],
+      [
+        'Canal público',
+        async ({ member }) => {
+          const channel =
+            await conversations.createPublicChannel(uniqueChannelName());
+          return [channel.name!, member.email];
+        },
+        'só é possível remover',
+      ],
+      [
+        'e-mail sem conta',
+        ({ name }) => [name, uniqueEmail()],
+        'Nenhuma Pessoa com o e-mail',
+      ],
+      [
+        'Pessoa que não é Membro',
+        async ({ name }) => {
+          const outsider = await people.create({
+            email: uniqueEmail(),
+            name: 'Carla Dias',
+            password: 'senha',
+          });
+          return [name, outsider.email];
+        },
+        'não é Membro de',
+      ],
+      [
+        'o último Membro',
+        async ({ owner, member, name, channelId }) => {
+          await dataSource.query(
+            'DELETE FROM conversation_members WHERE conversation_id = $1 AND person_id = $2',
+            [channelId, owner.id],
+          );
+          return [name, member.email];
+        },
+        'é o último Membro',
+      ],
+    ])(
+      'remove-member recusa %s, sem mudar nada',
+      async (_caso, build, text) => {
+        const fixture = await privateChannelWithTwo();
+        const args = await build(fixture);
+        const output = recordingOutput();
+
+        const exitCode = await run(['remove-member', ...args], output);
+
+        expect(exitCode).toBe(1);
+        expect(output.errors).toHaveLength(1);
+        expect(output.errors[0].toLowerCase()).toContain(text.toLowerCase());
+        expect(await isMember(fixture.channelId, fixture.member.id)).toBe(true);
+      },
+    );
+
     it.each([
-      ['Canal inexistente', 'canal', 'Canal não encontrado:'],
-      ['Canal público', 'publico', 'só é possível remover'],
-      ['e-mail sem conta', 'email', 'Nenhuma Pessoa com o e-mail'],
-      ['Pessoa que não é Membro', 'fora', 'não é Membro de'],
-    ])('remove-member recusa %s, sem mudar nada', async (_caso, kind, text) => {
-      const { member, memberEmail, name, channelId } =
-        await privateChannelWithTwo();
-      const outsiderEmail = uniqueEmail();
-      await people.create({
-        email: outsiderEmail,
-        name: 'Carla Dias',
-        password: 'senha',
-      });
-      const publicChannel =
-        await conversations.createPublicChannel(uniqueChannelName());
-      const args = {
-        canal: ['remove-member', uniqueChannelName(), memberEmail],
-        publico: ['remove-member', publicChannel.name!, memberEmail],
-        email: ['remove-member', name, uniqueEmail()],
-        fora: ['remove-member', name, outsiderEmail],
-      }[kind]!;
+      ['sem os dois argumentos', ['so-o-nome']],
+      ['com argumento sobrando', ['canal', 'pessoa@teste.local', 'sobra']],
+    ])('remove-member mostra o uso %s', async (_caso, args) => {
       const output = recordingOutput();
 
-      const exitCode = await run(args, output);
-
-      expect(exitCode).toBe(1);
-      expect(output.errors).toHaveLength(1);
-      expect(output.errors[0].toLowerCase()).toContain(text.toLowerCase());
-      expect(await isMember(channelId, member.id)).toBe(true);
-    });
-
-    it('remove-member mostra o uso sem os dois argumentos', async () => {
-      const output = recordingOutput();
-
-      const exitCode = await run(['remove-member', 'so-o-nome'], output);
+      const exitCode = await run(['remove-member', ...args], output);
 
       expect(exitCode).toBe(1);
       expect(output.errors).toEqual([
