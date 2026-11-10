@@ -1,6 +1,6 @@
 # 06: Remover Membro de Canal privado pelo comando
 
-**Status:** a fazer
+**Status:** em andamento
 
 **O que construir:** quem opera a instalação remove de um Canal privado uma Pessoa adicionada por
 engano, pelo comando de canais, até a F17 trazer a remoção pelo produto. A Pessoa para de receber
