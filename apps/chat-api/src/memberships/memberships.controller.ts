@@ -17,7 +17,8 @@ import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
 import { AddMembersDto } from './add-members.dto';
-import { MembershipsService, PersonSummary } from './memberships.service';
+import type { PersonSummary } from '../people/person-summary';
+import { MembershipsService } from './memberships.service';
 import { SearchPeopleQuery } from './search-people.query';
 
 // As rotas que mudam quem é Membro de uma Conversa e avisam pelo tempo real, e a busca de quem

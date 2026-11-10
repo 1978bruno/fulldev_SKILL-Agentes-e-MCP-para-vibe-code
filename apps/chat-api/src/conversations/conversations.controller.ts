@@ -1,4 +1,5 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import type { PersonSummary } from '../people/person-summary';
 import { Person } from '../people/person.entity';
 import { AuthGuard } from '../sessions/auth.guard';
 import { CurrentPerson } from '../sessions/current-person.decorator';
@@ -20,6 +21,14 @@ export class ConversationsController {
     const conversations = await this.conversations.listForMember(person.id);
     const summaries = await this.conversations.withMemberCounts(conversations);
     return { conversations: summaries.map(toConversationResponse) };
+  }
+
+  @Get(':id/members')
+  async members(
+    @CurrentPerson() person: Person,
+    @Param('id') id: string,
+  ): Promise<{ members: PersonSummary[] }> {
+    return { members: await this.conversations.listMembers(person.id, id) };
   }
 
   @Get(':id')

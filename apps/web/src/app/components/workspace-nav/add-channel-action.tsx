@@ -51,6 +51,10 @@ export function AddChannelAction() {
             <AddPeopleStep
               conversation={privateChannel}
               onDone={() => openChannel(privateChannel)}
+              secondary={{ label: "Pular", onClick: () => openChannel(privateChannel) }}
+              // Fechar abre o Canal: o foco vai para a caixa de mensagem dele, e não volta à barra
+              // lateral.
+              onCloseAutoFocus={(event) => event.preventDefault()}
             />
           ) : (
             <CreateChannelDialog

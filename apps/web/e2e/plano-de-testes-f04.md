@@ -162,3 +162,25 @@ porque o banco de desenvolvimento tem milhares de Pessoas com os nomes padrão d
 #### 5.4. adicionar-pessoas-sem-violacoes
 
 **File:** `e2e/canais-privados/adicionar-pessoas-sem-violacoes.spec.ts`
+
+### 6. Lista de Membros
+
+#### 6.1. a lista mostra os Membros com (você) e adiciona pelo passo
+
+**File:** `e2e/canais-privados/lista-de-membros.spec.ts`
+
+**Steps:**
+  1. Num Canal privado de duas Pessoas, a primeira clica em "Membros: 2"
+    - expect: a lista com as duas, a primeira com "(você)"
+  2. "Adicionar pessoas", escolher uma terceira e adicionar
+    - expect: a lista volta, com a terceira; fechada a lista, o botão diz "Membros: 3"
+  3. "Adicionar pessoas" e "Voltar"
+    - expect: a lista de novo, sem mudança
+
+#### 6.2. a quantidade e a lista mudam sem recarregar na aba da outra Pessoa
+
+**File:** `e2e/canais-privados/lista-de-membros.spec.ts`
+
+#### 6.3. no Canal público não há Adicionar pessoas, e a lista não tem violações
+
+**File:** `e2e/conversa/membros-do-canal-publico.spec.ts`

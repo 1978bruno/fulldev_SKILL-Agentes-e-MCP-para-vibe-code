@@ -22,6 +22,7 @@ import { compareNames } from './name-order';
 import { MembersNotEditableError } from './members-not-editable.error';
 import { lockPublicMembership } from './public-membership-lock';
 import { InvalidPeopleError } from '../people/invalid-people.error';
+import { PersonSummary, sortedSummaries } from '../people/person-summary';
 
 // Tipos de Canal que a Pessoa cria pelo produto.
 export type ChannelKind = Extract<
@@ -104,6 +105,19 @@ export class ConversationsService {
       .getRawMany<{ conversation_id: string; member_count: string }>();
     return new Map(
       rows.map((row) => [row.conversation_id, Number(row.member_count)]),
+    );
+  }
+
+  // Os Membros de uma Conversa de que a Pessoa é Membro, em ordem alfabética ("name-order.ts").
+  async listMembers(
+    personId: string,
+    conversationId: string,
+  ): Promise<PersonSummary[]> {
+    await this.getForMember(personId, conversationId);
+    return sortedSummaries(
+      await this.people.findSummariesByIds(
+        await this.listMemberIds(conversationId),
+      ),
     );
   }
 

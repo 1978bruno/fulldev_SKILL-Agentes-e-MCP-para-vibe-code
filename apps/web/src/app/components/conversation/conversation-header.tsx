@@ -6,11 +6,13 @@ type ConversationHeaderProps = {
   name: string;
   topic: string | null;
   kind: ConversationKind;
+  // O botão de Membros, que a página põe quando tem a Conversa inteira.
+  members?: React.ReactNode;
 };
 
 // Cabeçalho da Conversa (ConversationHeader): h-header; o Tópico some abaixo de 640 px, e o botão
 // da gaveta (Menu) só aparece abaixo de 768 px.
-export function ConversationHeader({ name, topic, kind }: ConversationHeaderProps) {
+export function ConversationHeader({ name, topic, kind, members }: ConversationHeaderProps) {
   return (
     <header className="flex h-header shrink-0 items-center gap-2 border-b border-border bg-surface pr-5 pl-2 md:pl-5">
       <OpenNavigationButton />
@@ -25,6 +27,7 @@ export function ConversationHeader({ name, topic, kind }: ConversationHeaderProp
           </p>
         )}
       </div>
+      {members}
     </header>
   );
 }

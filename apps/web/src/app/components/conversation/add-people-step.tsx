@@ -4,7 +4,7 @@ import { Check, Search, X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { addMembers } from "@/app/actions/add-members";
 import { Button } from "@/app/components/ui/button";
-import { DialogBody, DialogClose, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
+import { DialogBody, DialogContent, DialogFooter } from "@/app/components/ui/dialog";
 import { IconButton } from "@/app/components/ui/icon-button";
 import { Input } from "@/app/components/ui/input";
 import { PersonRow } from "@/app/components/user/person-row";
@@ -21,15 +21,23 @@ type SearchState =
 
 type AddPeopleStepProps = {
   conversation: { id: string; name: string };
-  // Depois de adicionar: quem abriu o passo fecha o diálogo.
+  // Depois de adicionar: quem abriu o passo decide o que vem (abrir o Canal, voltar à lista).
   onDone: () => void;
+  // O botão secundário: "Pular", que fecha o diálogo, na criação; "Voltar", na lista de Membros.
+  secondary: { label: string; onClick: () => void };
+  onCloseAutoFocus?: (event: Event) => void;
 };
 
 // Passo "Adicionar pessoas" ("Diálogos / Adicionar pessoas"): busca as Pessoas do workspace pelo
 // nome, sem os Membros, e adiciona as escolhidas ao Canal privado (spec da F04, "Passo 'Adicionar
 // pessoas'"). Usado depois de criar o Canal e pela lista de Membros. Fechar o diálogo, pelo X, pelo
 // Esc ou por "Pular", fica com quem o abriu.
-export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
+export function AddPeopleStep({
+  conversation,
+  onDone,
+  secondary,
+  onCloseAutoFocus,
+}: AddPeopleStepProps) {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState<SearchState>({ kind: "loading" });
   const [chosen, setChosen] = useState<PersonSummary[]>([]);
@@ -90,8 +98,7 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
       title={`Adicionar pessoas ao #${conversation.name}`}
       description="Só quem está no canal vê as mensagens dele."
       dismissible={!isSending}
-      // Fechar abre o Canal: o foco vai para a caixa de mensagem dele, e não volta à barra lateral.
-      onCloseAutoFocus={(event) => event.preventDefault()}
+      onCloseAutoFocus={onCloseAutoFocus}
     >
       <DialogBody>
         <div className="relative">
@@ -181,11 +188,9 @@ export function AddPeopleStep({ conversation, onDone }: AddPeopleStepProps) {
         )}
       </DialogBody>
       <DialogFooter>
-        <DialogClose asChild>
-          <Button type="button" variant="secondary" disabled={isSending}>
-            Pular
-          </Button>
-        </DialogClose>
+        <Button type="button" variant="secondary" disabled={isSending} onClick={secondary.onClick}>
+          {secondary.label}
+        </Button>
         <Button
           type="button"
           loading={isSending}

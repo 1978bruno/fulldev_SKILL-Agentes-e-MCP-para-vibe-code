@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ConversationHeader } from "@/app/components/conversation/conversation-header";
 import { ConversationHeaderSkeleton } from "@/app/components/conversation/conversation-header-skeleton";
 import { HistoryError } from "@/app/components/conversation/history-error";
+import { MembersButton } from "@/app/components/conversation/members-button";
 import { HistoryLoading } from "@/app/components/conversation/history-loading";
 import { MessageHistory } from "@/app/components/conversation/message-history";
 import { RememberConversation } from "@/app/components/conversation/remember-conversation";
@@ -28,7 +29,8 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
   if (!token) redirect(expiredSessionPath(path));
 
   // As três leituras começam juntas; só a da Conversa segura o cabeçalho.
-  const history = Promise.all([getCurrentPerson(token), listMessages(token, id)]);
+  const person = getCurrentPerson(token);
+  const history = Promise.all([person, listMessages(token, id)]);
   // Se a página sair antes de esperar o histórico, a falha dele não fica sem tratamento; quem o
   // espera recebe a mesma rejeição.
   history.catch(() => {});
@@ -52,12 +54,31 @@ export default async function ConversationPage({ params }: PageProps<"/conversas
         name={conversation.name}
         topic={conversation.topic}
         kind={conversation.kind}
+        members={
+          // O botão espera a Pessoa da Sessão sem segurar o cabeçalho.
+          <Suspense fallback={null}>
+            <HeaderMembers conversation={conversation} person={person} />
+          </Suspense>
+        }
       />
       <Suspense key={conversation.id} fallback={<HistoryLoading conversationName={conversation.name} />}>
         <ConversationHistory conversation={conversation} history={history} path={path} />
       </Suspense>
     </div>
   );
+}
+
+// O botão de Membros do cabeçalho, com a Pessoa da Sessão para ler o cache da barra lateral.
+async function HeaderMembers({
+  conversation,
+  person,
+}: {
+  conversation: Conversation;
+  person: Promise<CurrentPersonResult>;
+}) {
+  const result = await person;
+  if (result.kind !== "ok") return null;
+  return <MembersButton conversation={conversation} personId={result.person.id} />;
 }
 
 type ConversationHistoryProps = {
