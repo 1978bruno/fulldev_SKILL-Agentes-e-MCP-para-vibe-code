@@ -19,7 +19,9 @@ import { ConversationNotFoundError } from './conversation-not-found.error';
 import { Conversation, ConversationKind } from './conversation.entity';
 import { InvalidChannelError } from './invalid-channel.error';
 import { compareNames } from './name-order';
+import { MembersNotEditableError } from './members-not-editable.error';
 import { lockPublicMembership } from './public-membership-lock';
+import { InvalidPeopleError } from '../people/invalid-people.error';
 
 // Tipos de Canal que a Pessoa cria pelo produto.
 export type ChannelKind = Extract<
@@ -156,6 +158,44 @@ export class ConversationsService {
     return { ...summary, created: true, memberIds };
   }
 
+  // Adiciona Pessoas ao Canal privado de que quem pede é Membro (spec da F04, "Conversas",
+  // "Adicionar ao Canal"). Quem já é Membro fica como está e não entra em addedIds.
+  @Transactional()
+  async addMembers(
+    personId: string,
+    conversationId: string,
+    personIds: string[],
+  ): Promise<{
+    summary: ConversationSummary;
+    addedIds: string[];
+    memberIds: string[];
+  }> {
+    const conversation = await this.getForMember(personId, conversationId);
+    if (conversation.kind !== 'private_channel') {
+      throw new MembersNotEditableError();
+    }
+    // Duas adições ao mesmo Canal acontecem uma depois da outra: a segunda lê os Membros já com os
+    // da primeira, e o evento dela chega a todos.
+    await this.txHost.tx.query(
+      'SELECT 1 FROM conversations WHERE id = $1 FOR UPDATE',
+      [conversation.id],
+    );
+    const people = await this.people.findByIds(personIds);
+    if (people.length !== new Set(personIds).size) {
+      throw new InvalidPeopleError();
+    }
+    const addedIds = await this.insertMembers(
+      personIds.map((id) => [conversation.id, id]),
+    );
+    // Os Membros depois da gravação: a quantidade da resposta e os destinatários do evento.
+    const memberIds = await this.listMemberIds(conversation.id);
+    return {
+      summary: { conversation, memberCount: memberIds.length },
+      addedIds,
+      memberIds,
+    };
+  }
+
   // Cria o Canal público pelo comando de canais, sem criador nem client_id.
   @Transactional()
   async createPublicChannel(
@@ -271,17 +311,20 @@ export class ConversationsService {
 
   // Grava as participações (Conversa, Pessoa); a que já existe fica como está. Os ids saem da
   // aplicação, e os pares vão como arrays: o número de parâmetros não cresce com o workspace.
-  private async insertMembers(pairs: [string, string][]): Promise<void> {
-    await this.txHost.tx.query(
+  // Devolve as Pessoas gravadas agora.
+  private async insertMembers(pairs: [string, string][]): Promise<string[]> {
+    const rows = await this.txHost.tx.query<{ person_id: string }[]>(
       `INSERT INTO conversation_members (id, conversation_id, person_id)
        SELECT * FROM unnest($1::uuid[], $2::uuid[], $3::uuid[])
-       ON CONFLICT (conversation_id, person_id) DO NOTHING`,
+       ON CONFLICT (conversation_id, person_id) DO NOTHING
+       RETURNING person_id`,
       [
         pairs.map(() => randomUUIDv7()),
         pairs.map(([conversationId]) => conversationId),
         pairs.map(([, personId]) => personId),
       ],
     );
+    return rows.map((row) => row.person_id);
   }
 
   private memberConversations(

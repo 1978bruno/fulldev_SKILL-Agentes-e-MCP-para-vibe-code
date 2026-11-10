@@ -7,6 +7,7 @@ export type ErrorCode =
   | 'person_not_found'
   | 'conversation_not_found'
   | 'channel_name_taken'
+  | 'members_not_editable'
   | 'not_found'
   | 'payload_too_large'
   | 'request_rejected'
@@ -21,6 +22,7 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   person_not_found: 404,
   conversation_not_found: 404,
   channel_name_taken: 409,
+  members_not_editable: 409,
   not_found: 404,
   payload_too_large: 413,
   request_rejected: 400,

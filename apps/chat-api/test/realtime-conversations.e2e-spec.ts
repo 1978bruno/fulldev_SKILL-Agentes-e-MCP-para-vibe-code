@@ -6,6 +6,7 @@ import { conversationRoutes } from './support/conversation-routes';
 import {
   collectEvents,
   listenTestApp,
+  openConversation,
   realtimeRoutes,
   settle,
   testRedis,
@@ -124,6 +125,69 @@ describe('Canais novos em tempo real', () => {
     await waitForConversation(secondTab, conversation.id);
     await settle();
     expect(eventsOf(otherEvents, conversation.id)).toHaveLength(0);
+  });
+
+  const privateChannelOf = (cookie: string) =>
+    conversationRoutes.privateChannelOf(app, cookie);
+
+  it('a adição chega aos Membros antigos e novos', async () => {
+    const owner = await authRoutes.loggedIn(app);
+    const added = await authRoutes.loggedIn(app);
+    const outsider = await authRoutes.loggedIn(app);
+    const channelId = await privateChannelOf(owner.cookie);
+    const ownerEvents = await listening(owner.token);
+    const addedEvents = await listening(added.token);
+    const outsiderEvents = await listening(outsider.token);
+
+    await conversationRoutes
+      .addMembers(app, owner.cookie, channelId, [added.person.id])
+      .expect(200);
+
+    const toOwner = await waitForConversation(ownerEvents, channelId);
+    const toAdded = await waitForConversation(addedEvents, channelId);
+    expect(toOwner.person_ids).toEqual([added.person.id]);
+    expect(toOwner.conversation.member_count).toBe(2);
+    expect(toAdded.person_ids).toEqual([added.person.id]);
+    await settle();
+    expect(eventsOf(outsiderEvents, channelId)).toHaveLength(0);
+  });
+
+  it('a adição sem Pessoa nova não gera evento', async () => {
+    const owner = await authRoutes.loggedIn(app);
+    const added = await authRoutes.loggedIn(app);
+    const channelId = await privateChannelOf(owner.cookie);
+    await conversationRoutes
+      .addMembers(app, owner.cookie, channelId, [added.person.id])
+      .expect(200);
+    const events = await listening(owner.token);
+
+    await conversationRoutes
+      .addMembers(app, owner.cookie, channelId, [added.person.id])
+      .expect(200);
+
+    await settle();
+    expect(eventsOf(events, channelId)).toHaveLength(0);
+  });
+
+  it('a Pessoa adicionada recebe as Mensagens e abre a Conversa', async () => {
+    const owner = await authRoutes.loggedIn(app);
+    const added = await authRoutes.loggedIn(app);
+    const channelId = await privateChannelOf(owner.cookie);
+    const socket = await realtimeRoutes.connected(url, { token: added.token });
+    sockets.push(socket);
+    const messages = collectEvents(socket, 'message.created');
+    await conversationRoutes
+      .addMembers(app, owner.cookie, channelId, [added.person.id])
+      .expect(200);
+
+    const opened = await openConversation(socket, channelId);
+    await conversationRoutes
+      .sendMessage(app, owner.cookie, channelId, { body: 'Bem-vinda' })
+      .expect(201);
+
+    expect(opened).toEqual({ ok: true });
+    const [event] = await waitForCount(messages, 1);
+    expect(event.message.body).toBe('Bem-vinda');
   });
 
   it('o evento volta na reconexão com cursor', async () => {

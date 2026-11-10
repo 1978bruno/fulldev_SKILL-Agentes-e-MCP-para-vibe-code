@@ -305,12 +305,12 @@ de eventos do WebSocket estão a definir. As rotas já decididas:
 | API do chat: `POST /v1/conversations/:id/messages` | existe | Envio sem duplicar ("Concorrência e idempotência"): spec da F02, seção "Rotas" |
 | API do chat: `POST /v1/conversations` | existe | Criar Canal sem duplicar ("Concorrência e idempotência"): [spec da F04](funcionalidades/04-criacao-de-canais-e-convite-para-canal-privado/spec.md), seção "Rotas" |
 | API do chat: `GET /v1/conversations/:id/members` | planejada | Membros da Conversa: spec da F04, seção "Rotas" |
-| API do chat: `POST /v1/conversations/:id/members` | planejada | Adicionar ao Canal privado: spec da F04, seção "Rotas" |
-| API do chat: `GET /v1/people` | planejada | Busca de Pessoas pelo nome, fora dos Membros de uma Conversa: spec da F04, seções "Busca de Pessoas" e "Rotas" |
+| API do chat: `POST /v1/conversations/:id/members` | existe | Adicionar ao Canal privado: spec da F04, seção "Rotas" |
+| API do chat: `GET /v1/people` | existe | Busca de Pessoas pelo nome, fora dos Membros de uma Conversa: spec da F04, seções "Busca de Pessoas" e "Rotas" |
 | API do chat: WebSocket em `/socket.io`, só pelo transporte `websocket` | existe: conexão, salas, `message.created` e `conversation.member_added` com cursor, reenvio na reconexão, `sync`, abertura da Conversa, "digitando" e `session.ended` | Salas e eventos: [spec da F03](funcionalidades/03-tempo-real/spec.md), seções "Conexão" e "Eventos"; o evento da F04: spec da F04, seção "Tempo real" |
 | BFF: `GET /api/conversations/:id/messages` | existe | Páginas anteriores do histórico, lidas pelo cliente: "Cliente", "Leituras e tempo real" |
-| BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | existe: `GET /api/conversations`; as outras `planejadas` | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
-| BFF: Server Actions `createChannel` e `addMembers` | existe: `createChannel`; `addMembers` `planejado` | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
+| BFF: `GET /api/conversations`, `GET /api/conversations/:id/members` e `GET /api/people` | existe: `GET /api/conversations` e `GET /api/people`; `GET /api/conversations/:id/members` `planejada` | Leituras do cliente: a lista de Conversas no `reset`, os Membros e a busca de Pessoas (spec da F04, seção "BFF") |
+| BFF: Server Actions `createChannel` e `addMembers` | existe | Criar Canal e adicionar ao Canal privado: spec da F04, seção "BFF" |
 | Envio de mensagem no BFF (Server Action) | existe | Mensagem gravada e agente sem receber o pedido: "Conceitos transversais de implementação", seção "Erros" |
 
 ## 6. Estados e regras
@@ -436,7 +436,7 @@ quando apresentadas ("Estados e regras", seção "Sessão e login") e pela opera
 | A definir | Sessão | Atividade: Menções, DMs, Tarefas | Abrir a mensagem; concluir e reabrir tarefa | a detalhar |
 | A definir | Sessão | Perfil próprio e de outras pessoas | Editar o próprio perfil e a presença | a detalhar |
 | A definir | Sessão | Busca de pessoas | Abrir conversa direta | a detalhar |
-| Lista de Membros e passo "Adicionar pessoas" (diálogos sobre a Conversa) | Sessão; só Membro; adicionar só em Canal privado | Membros; busca de Pessoas | Adicionar ao Canal privado | planejada (F04) |
+| Lista de Membros e passo "Adicionar pessoas" (diálogos sobre a Conversa) | Sessão; só Membro; adicionar só em Canal privado | Membros; busca de Pessoas | Adicionar ao Canal privado | existe: o passo "Adicionar pessoas" na criação; a lista de Membros `planejada` (F04) |
 | A definir | Sessão; conectar e desconectar só para administrador | Agentes e estado de conexão | Conectar e desconectar agente | a detalhar |
 
 **Leituras e tempo real.** A página carrega pelos Server Components. No cliente, o SWR guarda as

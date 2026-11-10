@@ -42,6 +42,31 @@ export const conversationRoutes = {
       });
   },
 
+  // Pelo REST: um Canal privado só de quem o cria. Devolve o id.
+  async privateChannelOf(
+    app: INestApplication,
+    cookie: string,
+  ): Promise<string> {
+    const response = await conversationRoutes.createChannelByRest(app, cookie, {
+      kind: 'private_channel',
+    });
+    return (response.body as { conversation: { id: string } }).conversation.id;
+  },
+
+  // Pelo REST, como a web: as Pessoas viram Membros do Canal privado. Aceita qualquer corpo, para
+  // os testes da validação.
+  addMembers(
+    app: INestApplication,
+    cookie: string,
+    conversationId: string,
+    personIds: unknown,
+  ): request.Test {
+    return request(app.getHttpServer() as App)
+      .post(`/v1/conversations/${conversationId}/members`)
+      .set('Cookie', cookie)
+      .send({ person_ids: personIds });
+  },
+
   // Pelo REST, como a web: a Mensagem é gravada e publicada.
   sendMessage(
     app: INestApplication,

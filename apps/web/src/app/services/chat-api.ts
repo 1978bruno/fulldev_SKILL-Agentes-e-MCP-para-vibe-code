@@ -18,7 +18,7 @@ type ApiPerson = { id: string; name: string; email: string };
 export type Person = ApiPerson & { initials: string };
 
 function toPerson(person: ApiPerson): Person {
-  return { ...person, initials: initials(person.name) };
+  return withInitials(person);
 }
 
 export type LoginResult =
@@ -147,7 +147,14 @@ type ApiConversation = ConversationPayload;
 // A Mensagem da API é a mesma do evento do tempo real (pacote chat-events).
 type ApiMessage = MessagePayload;
 
-export type MessageAuthor = { id: string; name: string; initials: string };
+// Uma Pessoa com as iniciais já calculadas, para o avatar.
+export type PersonSummary = { id: string; name: string; initials: string };
+
+function withInitials<T extends { name: string }>(person: T): T & { initials: string } {
+  return { ...person, initials: initials(person.name) };
+}
+
+export type MessageAuthor = PersonSummary;
 
 export type Message = {
   id: string;
@@ -301,5 +308,58 @@ export async function sendMessage(
     return { kind: "failure" };
   }
   if (response?.status === 400) return { kind: "invalid" };
+  return commonFailure(response);
+}
+
+// Busca de Pessoas e adição ao Canal privado (spec da F04, "Rotas").
+
+export type SearchPeopleResult =
+  | { kind: "ok"; people: PersonSummary[] }
+  | { kind: "invalid" }
+  | { kind: "not_found" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export async function searchPeople(
+  token: string,
+  { q, notMemberOf }: { q: string; notMemberOf: string },
+): Promise<SearchPeopleResult> {
+  const query = new URLSearchParams({ q, not_member_of: notMemberOf });
+  const response = await request(`/v1/people?${query.toString()}`, {
+    method: "GET",
+    headers: authenticated(token),
+  });
+  if (response?.status === 400) return { kind: "invalid" };
+  if (response?.status !== 200) return commonFailure(response);
+  const body = await jsonBody<{ people: { id: string; name: string }[] }>(response);
+  return body ? { kind: "ok", people: body.people.map(withInitials) } : { kind: "failure" };
+}
+
+export type AddMembersResult =
+  | { kind: "ok"; addedPersonIds: string[]; memberCount: number }
+  | { kind: "invalid" }
+  | { kind: "not_found" }
+  | { kind: "not_editable" }
+  | { kind: "unauthenticated" }
+  | { kind: "failure" };
+
+export async function addMembers(
+  token: string,
+  conversationId: string,
+  personIds: string[],
+): Promise<AddMembersResult> {
+  const response = await request(conversationPath(conversationId, "/members"), {
+    method: "POST",
+    headers: { ...authenticated(token), "content-type": "application/json" },
+    body: JSON.stringify({ person_ids: personIds }),
+  });
+  if (response?.status === 200) {
+    const body = await jsonBody<{ added_person_ids: string[]; member_count: number }>(response);
+    return body
+      ? { kind: "ok", addedPersonIds: body.added_person_ids, memberCount: body.member_count }
+      : { kind: "failure" };
+  }
+  if (response?.status === 400) return { kind: "invalid" };
+  if (response?.status === 409) return { kind: "not_editable" };
   return commonFailure(response);
 }

@@ -23,8 +23,13 @@ test.describe("Canal privado", () => {
       await page.keyboard.press("Space");
       await expect(privateSwitch).toBeChecked();
 
-      // 2. Criar: a Conversa abre com o cadeado no cabeçalho, no começo e na barra lateral
+      // 2. Criar e pular o passo de adicionar: a Conversa abre com o cadeado no cabeçalho, no
+      // começo e na barra lateral
       await dialog.getByRole("button", { name: "Criar canal" }).click();
+      await page
+        .getByRole("dialog", { name: `Adicionar pessoas ao #${name}` })
+        .getByRole("button", { name: "Pular" })
+        .click();
       await expect(conversationIntro(page, name)).toBeVisible();
       await expect(
         conversationIntro(page, name).locator("xpath=..").locator("svg.lucide-lock"),
